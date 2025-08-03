@@ -1,0 +1,303 @@
+Innovator Nexus #01 - School Maintenance Software
+Generated on: 2025-04-19 05:07:47
+Project Overview
+This document outlines the requirements and database schema for the School Maintenance Software project under Innovator Nexus #01. It includes modules for Admin, School Admin, Teachers, and Students/Parents, with details of tables and example user entries for PostgreSQL implementation.
+Dashboard Features
+Admin Dashboard
+•	- Manage School Admins
+•	- Manage School Details
+•	- View System Analytics
+•	- Configure System Settings
+School Admin Dashboard
+•	- Financial Management (Bills, Fees)
+•	- Staff Management (Profiles, Lists)
+•	- Student Management (Profiles, Classes)
+•	- Academic Management (Attendance, Exams, Timetables)
+•	- Communication System (Messages, Notices)
+Teachers Dashboard
+•	- Lesson Plan Submission
+•	- Student Attendance
+•	- Assignments (Create, Grade)
+•	- Communication with Admin & Students
+Students/Parents Dashboard
+•	- Profile Management
+•	- Fees & Receipts
+•	- Academic Records (Marks, Attendance, Exams)
+•	- Communication (Receive Messages)
+
+🔐 1. Super Admin
+🎯 Goal: Manage the entire system and all schools.
+•	User Story 1:
+As a Super Admin, I want to create and manage school admin accounts so that new schools can use the system.
+•	User Story 2:
+As a Super Admin, I want to view analytics (e.g., number of students, fee payments, active schools) across all schools.
+•	User Story 3:
+As a Super Admin, I want to configure global settings such as grading systems or SMS/email templates.
+________________________________________
+🏫 2. School Admin
+🎯 Goal: Operate a single school, manage data, staff, and academic structure.
+•	User Story 1:
+As a School Admin, I want to add teachers, staff, and students with their details.
+•	User Story 2:
+As a School Admin, I want to set up class structures, timetables, and subject mappings so teachers can follow a schedule.
+•	User Story 3:
+As a School Admin, I want to manage fees and bills, including uploading fee structures, recording payments, and organizing monthly bills.
+•	User Story 4:
+As a School Admin, I want to broadcast announcements to students and teachers to keep them updated.
+________________________________________
+👩‍🏫 3. Teacher
+🎯 Goal: Manage academic responsibilities for assigned classes/subjects.
+•	User Story 1:
+As a Teacher, I want to mark student attendance daily, by class and date.
+•	User Story 2:
+As a Teacher, I want to submit weekly lesson plans to show what I will teach.
+•	User Story 3:
+As a Teacher, I want to create and assign homework, receive submissions, and grade them.
+•	User Story 4:
+As a Teacher, I want to view my timetable and class list to know my schedule and students.
+•	User Story 5:
+As a Teacher, I want to send messages to students or admins for academic communication.
+________________________________________
+🎓 4. Student
+🎯 Goal: Participate in academic activities and stay informed.
+•	User Story 1:
+As a Student, I want to view my attendance records and exam scores to track my performance.
+•	User Story 2:
+As a Student, I want to submit homework and download assignments from teachers.
+•	User Story 3:
+As a Student, I want to receive messages and announcements related to school events, holidays, or exams.
+•	User Story 4:
+As a Student, I want to download my payment receipt and check pending fees.
+________________________________________
+👨‍👩‍👧 5. Parent
+🎯 Goal: Monitor their child’s academic and financial records.
+•	User Story 1:
+As a Parent, I want to view my child's attendance and marks to monitor progress.
+•	User Story 2:
+As a Parent, I want to check paid and pending fees, and download receipts.
+•	User Story 3:
+As a Parent, I want to receive updates or announcements from the school.
+•	User Story 4:
+As a Parent, I want to manage profile details like contact info for communication.
+
+Database Schema Overview
+Below are the PostgreSQL tables with core fields and a sample record for each.
+users
+Columns:
+•	- id
+•	- email
+•	- password
+•	- role
+•	- created_at
+Example Entry:
+{'id': 'Sample_1', 'email': 'Sample_2', 'password': 'Sample_3', 'role': 'Sample_4', 'created_at': 'Sample_5'}
+schools
+Columns:
+•	- id
+•	- name
+•	- address
+•	- contact_email
+•	- contact_phone
+•	- created_at
+Example Entry:
+{'id': 'Sample_1', 'name': 'Sample_2', 'address': 'Sample_3', 'contact_email': 'Sample_4', 'contact_phone': 'Sample_5', 'created_at': 'Sample_6'}
+school_admins
+Columns:
+•	- id
+•	- user_id
+•	- school_id
+•	- full_name
+•	- phone_number
+Example Entry:
+{'id': 'Sample_1', 'user_id': 'Sample_2', 'school_id': 'Sample_3', 'full_name': 'Sample_4', 'phone_number': 'Sample_5'}
+teachers
+Columns:
+•	- id
+•	- user_id
+•	- school_id
+•	- full_name
+•	- subject_specialization
+•	- phone_number
+•	- joining_date
+Example Entry:
+{'id': 'Sample_1', 'user_id': 'Sample_2', 'school_id': 'Sample_3', 'full_name': 'Sample_4', 'subject_specialization': 'Sample_5', 'phone_number': 'Sample_6', 'joining_date': 'Sample_7'}
+students
+Columns:
+•	- id
+•	- user_id
+•	- school_id
+•	- class_id
+•	- full_name
+•	- dob
+•	- gender
+•	- admission_date
+•	- parent_id
+Example Entry:
+{'id': 'Sample_1', 'user_id': 'Sample_2', 'school_id': 'Sample_3', 'class_id': 'Sample_4', 'full_name': 'Sample_5', 'dob': 'Sample_6', 'gender': 'Sample_7', 'admission_date': 'Sample_8', 'parent_id': 'Sample_9'}
+parents
+Columns:
+•	- id
+•	- user_id
+•	- full_name
+•	- phone_number
+•	- address
+Example Entry:
+{'id': 'Sample_1', 'user_id': 'Sample_2', 'full_name': 'Sample_3', 'phone_number': 'Sample_4', 'address': 'Sample_5'}
+classes
+Columns:
+•	- id
+•	- school_id
+•	- name
+•	- section
+•	- class_teacher_id
+Example Entry:
+{'id': 'Sample_1', 'school_id': 'Sample_2', 'name': 'Sample_3', 'section': 'Sample_4', 'class_teacher_id': 'Sample_5'}
+subjects
+Columns:
+•	- id
+•	- school_id
+•	- name
+Example Entry:
+{'id': 'Sample_1', 'school_id': 'Sample_2', 'name': 'Sample_3'}
+class_subjects
+Columns:
+•	- id
+•	- class_id
+•	- subject_id
+•	- teacher_id
+Example Entry:
+{'id': 'Sample_1', 'class_id': 'Sample_2', 'subject_id': 'Sample_3', 'teacher_id': 'Sample_4'}
+student_attendance
+Columns:
+•	- id
+•	- student_id
+•	- class_id
+•	- date
+•	- status
+•	- marked_by
+Example Entry:
+{'id': 'Sample_1', 'student_id': 'Sample_2', 'class_id': 'Sample_3', 'date': 'Sample_4', 'status': 'Sample_5', 'marked_by': 'Sample_6'}
+teacher_attendance
+Columns:
+•	- id
+•	- teacher_id
+•	- school_id
+•	- date
+•	- status
+Example Entry:
+{'id': 'Sample_1', 'teacher_id': 'Sample_2', 'school_id': 'Sample_3', 'date': 'Sample_4', 'status': 'Sample_5'}
+lesson_plans
+Columns:
+•	- id
+•	- teacher_id
+•	- class_id
+•	- subject_id
+•	- week_start_date
+•	- plan_content
+•	- status
+Example Entry:
+{'id': 'Sample_1', 'teacher_id': 'Sample_2', 'class_id': 'Sample_3', 'subject_id': 'Sample_4', 'week_start_date': 'Sample_5', 'plan_content': 'Sample_6', 'status': 'Sample_7'}
+assignments
+Columns:
+•	- id
+•	- teacher_id
+•	- class_id
+•	- subject_id
+•	- title
+•	- description
+•	- due_date
+•	- attachment_url
+Example Entry:
+{'id': 'Sample_1', 'teacher_id': 'Sample_2', 'class_id': 'Sample_3', 'subject_id': 'Sample_4', 'title': 'Sample_5', 'description': 'Sample_6', 'due_date': 'Sample_7', 'attachment_url': 'Sample_8'}
+assignment_submissions
+Columns:
+•	- id
+•	- assignment_id
+•	- student_id
+•	- submission_date
+•	- content
+•	- grade
+•	- feedback
+Example Entry:
+{'id': 'Sample_1', 'assignment_id': 'Sample_2', 'student_id': 'Sample_3', 'submission_date': 'Sample_4', 'content': 'Sample_5', 'grade': 'Sample_6', 'feedback': 'Sample_7'}
+exams
+Columns:
+•	- id
+•	- school_id
+•	- title
+•	- start_date
+•	- end_date
+•	- term
+•	- class_id
+Example Entry:
+{'id': 'Sample_1', 'school_id': 'Sample_2', 'title': 'Sample_3', 'start_date': 'Sample_4', 'end_date': 'Sample_5', 'term': 'Sample_6', 'class_id': 'Sample_7'}
+exam_subjects
+Columns:
+•	- id
+•	- exam_id
+•	- subject_id
+•	- exam_date
+•	- max_marks
+Example Entry:
+{'id': 'Sample_1', 'exam_id': 'Sample_2', 'subject_id': 'Sample_3', 'exam_date': 'Sample_4', 'max_marks': 'Sample_5'}
+marks
+Columns:
+•	- id
+•	- student_id
+•	- exam_subject_id
+•	- marks_obtained
+Example Entry:
+{'id': 'Sample_1', 'student_id': 'Sample_2', 'exam_subject_id': 'Sample_3', 'marks_obtained': 'Sample_4'}
+fee_structures
+Columns:
+•	- id
+•	- school_id
+•	- class_id
+•	- term
+•	- amount
+Example Entry:
+{'id': 'Sample_1', 'school_id': 'Sample_2', 'class_id': 'Sample_3', 'term': 'Sample_4', 'amount': 'Sample_5'}
+fee_payments
+Columns:
+•	- id
+•	- student_id
+•	- amount_paid
+•	- payment_date
+•	- receipt_url
+•	- term
+•	- status
+Example Entry:
+{'id': 'Sample_1', 'student_id': 'Sample_2', 'amount_paid': 'Sample_3', 'payment_date': 'Sample_4', 'receipt_url': 'Sample_5', 'term': 'Sample_6', 'status': 'Sample_7'}
+bills
+Columns:
+•	- id
+•	- school_id
+•	- title
+•	- amount
+•	- bill_month
+•	- category
+•	- upload_url
+•	- status
+Example Entry:
+{'id': 'Sample_1', 'school_id': 'Sample_2', 'title': 'Sample_3', 'amount': 'Sample_4', 'bill_month': 'Sample_5', 'category': 'Sample_6', 'upload_url': 'Sample_7', 'status': 'Sample_8'}
+messages
+Columns:
+•	- id
+•	- sender_id
+•	- receiver_role
+•	- receiver_id
+•	- school_id
+•	- message_type
+•	- content
+•	- created_at
+Example Entry:
+{'id': 'Sample_1', 'sender_id': 'Sample_2', 'receiver_role': 'Sample_3', 'receiver_id': 'Sample_4', 'school_id': 'Sample_5', 'message_type': 'Sample_6', 'content': 'Sample_7', 'created_at': 'Sample_8'}
+class_messages
+Columns:
+•	- id
+•	- class_id
+•	- sender_id
+•	- content
+•	- created_at
+Example Entry:
+{'id': 'Sample_1', 'class_id': 'Sample_2', 'sender_id': 'Sample_3', 'content': 'Sample_4', 'created_at': 'Sample_5'}
