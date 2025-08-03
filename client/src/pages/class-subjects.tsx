@@ -167,16 +167,40 @@ export default function ClassSubjectsPage() {
 
   // Fetch current mappings
   useEffect(() => {
-    const fetchMappings = async () => {
+    const fetchAndProcessMappings = async () => {
       if (!classId) return;
-      console.log("fetching mappings for classId:", classId);
-      const res = await fetch(`/api/classes/${classId}/subjects`);
+      try {
+        const res = await fetch(`/api/classes/${classId}/subjects`);
+        if (!res.ok) throw new Error("Failed to fetch mappings");
 
-      if (res.ok) setMappings(await res.json());
-      console.log("Fetched mappings:", mappings);
+        type Mapping = {
+          id: number;
+          subject_id: number;
+          teacher_id: number | null;
+        };
+        const rawMappings: Mapping[] = await res.json();
+
+        const processedMappings = rawMappings.map((mapping) => {
+          const subject = subjectData.find((s) => s.id === mapping.subject_id);
+          const teacher = teachers.find((t) => t.id === mapping.teacher_id);
+          return {
+            id: mapping.id,
+            subject_name: subject?.subject_name || "Unknown Subject",
+            teacher_name: teacher?.full_name || null,
+          };
+        });
+        setMappings(processedMappings);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load subject mappings.",
+          variant: "destructive",
+        });
+      }
     };
-    fetchMappings();
-  }, [classId]);
+
+    fetchAndProcessMappings();
+  }, [classId, subjectData, teachers, toast]);
 
   // Assign subject to class
   const handleAssign = async () => {
@@ -204,7 +228,20 @@ export default function ClassSubjectsPage() {
       setSelectedTeacher("");
       // Refresh mappings
       const mappingsRes = await fetch(`/api/classes/${classId}/subjects`);
-      if (mappingsRes.ok) setMappings(await mappingsRes.json());
+      if (mappingsRes.ok) {
+        type Mapping = { id: number; subject_id: number; teacher_id: number | null };
+        const rawMappings: Mapping[] = await mappingsRes.json();
+        const processedMappings = rawMappings.map((mapping) => {
+          const subject = subjectData.find((s) => s.id === mapping.subject_id);
+          const teacher = teachers.find((t) => t.id === mapping.teacher_id);
+          return {
+            id: mapping.id,
+            subject_name: subject?.subject_name || "Unknown Subject",
+            teacher_name: teacher?.full_name || null,
+          };
+        });
+        setMappings(processedMappings);
+      }
     } else {
       toast({
         title: "Error",
