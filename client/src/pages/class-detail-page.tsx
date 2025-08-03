@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
-import { useLocation, useRoute, Link } from "wouter";
+import { useLocation, useRoute, Redirect } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/layout/dashboard-layout";
-import { DataTable, DataTableColumn } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -12,26 +11,13 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  ChevronLeft,
-  UserPlus,
-  FileText,
-  Pencil,
-  Users,
-  Calendar,
-  Clock,
-  BookOpen,
-  Edit,
-  Trash,
-} from "lucide-react";
+import { ChevronLeft, Users, Calendar, Clock, BookOpen } from "lucide-react";
 import { z } from "zod";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { StudentManager } from "./student-list-page";
-import { SchoolItem, StudentItem } from "./type";
+import { StudentItem, ClassItem, StaffItem } from "./type";
+import { useSchoolData } from "@/context/SchoolDataContext";
 
 /**
  * Class detail page that displays students of a specific grade-section combination
@@ -61,70 +47,71 @@ const studentFormSchema = z.object({
   address: z.string().optional(),
 });
 
-// commented due to aldready referred in type
-// interface StudentItem {
-//   student_email: string | undefined;
-//   id: number;
-//   full_name: string;
-
-//   gender: "male" | "female" | "other";
-//   dob: Date;
-//   className: string;
-//   parent_name: string;
-//   parent_contact: string;
-//   admissionDate: Date;
-//   status: "Active" | "Inactive";
-//   address: string;
-// }
 type StudentFormValues = z.infer<typeof studentFormSchema>;
-interface StaffItem {
-  id: number;
-
-  full_name: string;
-  email: string;
-  gender: "male" | "female" | "other";
-  joining_date: Date;
-  status: "Active" | "Inactive";
-  address: string;
-  phone_number: string;
-  subject_specialization: string;
-}
-
-type ClassItem = {
-  id: number;
-  name: string;
-  grade: string;
-  section: string;
-  class_teacher_id: string;
-  class_teacher_name: string; // Added to match API
-  studentCount: number;
-};
 
 export default function ClassDetailPage() {
   const { toast } = useToast();
   const [match, params] = useRoute("/classes/:gradeId/:sectionId");
   const [, navigate] = useLocation();
   const { user } = useAuth();
+  const { classes, students, schoolData, refetchData, loading, subjects } =
+    useSchoolData();
+
+  // Redirect if not school_admin or staff
+  if (user?.role !== "school_admin" && user?.role !== "staff") {
+    toast({
+      title: "Access Denied",
+      description: "You do not have permission to view this page.",
+      variant: "destructive",
+    });
+    return <Redirect to="/dashboard" />;
+  }
+
   const grade = params?.gradeId;
   const section = params?.sectionId;
-  const [studentData, setStudentData] = useState<StudentItem[]>([]);
-  const [classData, setClassData] = useState<ClassItem[]>([]);
-  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
-  const selectedClass = classData.find(
-    (cls) => cls.grade === grade && cls.section === section
+
+  const selectedClass = classes.find(
+    (cls: ClassItem) => cls.grade === grade && cls.section === section
   );
+
+  const studentsInClass = students.filter(
+    (student: StudentItem) => student.class_id === selectedClass?.id
+  );
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<StudentItem | null>(
     null
-  ); // Added type
+  );
   const [studentToDelete, setStudentToDelete] = useState<number | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [schoolData, setSchoolData] = useState<SchoolItem | null>(null);
 
-  // If no match, redirect to classes page
-  if (!match) {
-    return null;
+  // Initialize form (moved to top-level)
+  const form = useForm<StudentFormValues>({
+    resolver: zodResolver(studentFormSchema),
+    defaultValues: {
+      full_name: "",
+      student_email: "",
+      password: "",
+      dob: undefined,
+      gender: "male",
+      class_id: "",
+      parent_contact: "",
+      parent_name: "",
+      admissionDate: new Date(),
+      address: "",
+    },
+  });
+
+  // If no match or still loading, return loading state or redirect
+  if (!match || loading) {
+    return (
+      <DashboardLayout title="Loading Class Details...">
+        <div>Loading...</div>
+      </DashboardLayout>
+    );
   }
+
+  
 
   //handle student toggle
   const handleToggleStatus = async (student: StudentItem) => {
@@ -144,7 +131,7 @@ export default function ClassDetailPage() {
         description: `Status changed to ${newStatus}`,
       });
 
-      await fetchStudents(); // Refresh data
+      refetchData(); // Refresh data from context
     } catch (error) {
       toast({
         title: "Error",
@@ -159,88 +146,13 @@ export default function ClassDetailPage() {
     setStudentToDelete(id);
     setIsDeleteModalOpen(true);
   };
-  const fetchSchool = async () => {
-    try {
-      if (user?.role === "school_admin") {
-        console.log("calling to fetch school by user email");
-        const res = await fetch(`/api/school/${user?.email}`);
-        if (!res.ok) throw new Error("Failed to fetch school");
-        const data = await res.json();
-
-        console.log("school datas::", data);
-        // setClassName(`Class ${data.grade}${data.section}`);
-
-        setSchoolData(data);
-      }
-    } catch (error) {
-      console.log("school error: ", error);
-      toast({
-        title: "Error",
-        description: "Failed to load school list",
-        variant: "destructive",
-      });
-    }
-  };
-  // Fetch class details
-  const fetchClass = async () => {
-    try {
-      console.log("fetching class for school:", schoolData);
-      const res = await fetch(`/api/schools/${schoolData?.id}/classes`);
-
-      if (!res.ok) throw new Error("Failed to fetch class");
-      const data = await res.json();
-      console.log("class datas::", data);
-      // setClassName(`Class ${data.grade}${data.section}`);
-
-      setClassData(data);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load class list",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Fetch students for this class
-  const fetchStudents = async () => {
-    try {
-      if (!selectedClass?.id) return;
-
-      const res = await fetch(`/api/classes/${selectedClass.id}/students`);
-      if (!res.ok) throw new Error("Failed to fetch students");
-      const data = await res.json();
-      setStudentData(data);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch students",
-        variant: "destructive",
-      });
-    }
-  };
-
-  //fetch school by admin email
-  useEffect(() => {
-    fetchSchool();
-  }, []);
-
-  //if school id found , fetch class by school
-
-  useEffect(() => {
-    if (schoolData) {
-      fetchClass();
-    }
-  }, [schoolData]);
-
-  useEffect(() => {
-    if (selectedClass) fetchStudents();
-  }, [selectedClass]);
 
   // Handle edit student
   const openEditDialog = (student: StudentItem) => {
     setEditingStudent(student);
-    const classItem = classData.find((cls) => cls.id === student.class_id);
+    const classItem = classes.find(
+      (cls: ClassItem) => cls.id === student.class_id
+    );
 
     form.reset({
       full_name: student.full_name,
@@ -248,95 +160,12 @@ export default function ClassDetailPage() {
       gender: student.gender as "male" | "female" | "other",
       dob: student.dob,
       class_id: classItem?.id.toString() || "",
-
       parent_contact: student.parent_contact,
       admissionDate: student.admissionDate,
-      parent_name: student.parent_name, // Added parentName
+      parent_name: student.parent_name,
     });
     setIsDialogOpen(true);
   };
-
-  // Initialize form
-  const form = useForm<StudentFormValues>({
-    resolver: zodResolver(studentFormSchema),
-    defaultValues: {
-      full_name: "",
-      student_email: "",
-      password: "",
-      dob: undefined,
-      gender: "male",
-      class_id: "",
-      parent_contact: "",
-
-      parent_name: "",
-      admissionDate: new Date(),
-      address: "",
-    },
-  });
-
-  // Define columns for student table
-  // const studentcolumn: DataTableColumn<StudentItem>[] = [
-  //   {
-  //     header: "ID",
-  //     accessorKey: "id",
-  //   },
-  //   {
-  //     header: "Name",
-  //     accessorKey: "full_name",
-  //   },
-  //   {
-  //     header: "Email",
-  //     accessorKey: "student_email",
-  //   },
-  //   {
-  //     header: "Gender",
-  //     accessorKey: "gender",
-  //   },
-  //   {
-  //     header: "Parent Name",
-  //     accessorKey: "parent_name",
-  //   },
-  //   {
-  //     header: "Parent Contact",
-  //     accessorKey: "parent_contact",
-  //   },
-  //   {
-  //     header: "Status",
-  //     accessorKey: "status",
-  //     cell: (student) => (
-  //       <button
-  //         onClick={() => handleToggleStatus(student)} // define this function in your component
-  //         className={`text-sm px-2 py-1 rounded ${
-  //           student.status === "Active" ? "bg-green-200" : "bg-red-200"
-  //         }`}
-  //       >
-  //         {student.status === "Active" ? "Active" : "Inactive"}
-  //       </button>
-  //     ),
-  //   },
-  //   {
-  //     header: "Actions",
-  //     accessorKey: "id",
-  //     cell: (student: StudentItem) => (
-  //       <div className="flex space-x-2">
-  //         <Button
-  //           variant="ghost"
-  //           size="icon"
-  //           onClick={() => openEditDialog(student)}
-  //         >
-  //           <Edit className="h-4 w-4" />
-  //         </Button>
-  //         <Button
-  //           variant="ghost"
-  //           size="icon"
-  //           onClick={() => handleDelete(student.id)}
-  //         >
-  //           <Trash className="h-4 w-4" />
-  //         </Button>
-  //       </div>
-  //     ),
-  //   },
-  // ];
 
   return (
     <DashboardLayout title={`Class ${grade}${section} Details`}>
@@ -359,6 +188,8 @@ export default function ClassDetailPage() {
           </div>
         </div>
 
+        
+
         {/* Class Information */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg p-6 mb-6">
           <h1 className="text-2xl font-bold mb-2">
@@ -371,7 +202,7 @@ export default function ClassDetailPage() {
               <div>
                 <p className="text-sm opacity-75">Students</p>
                 <p className="text-xl font-semibold">
-                  {studentData?.length || 0} Students
+                  {studentsInClass?.length || 0} Students
                 </p>
               </div>
             </div>
@@ -402,7 +233,9 @@ export default function ClassDetailPage() {
               <CardDescription>In this class</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold">{studentData?.length || 0}</p>
+              <p className="text-3xl font-bold">
+                {studentsInClass?.length || 0}
+              </p>
             </CardContent>
           </Card>
 
@@ -413,7 +246,8 @@ export default function ClassDetailPage() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold">
-                {studentData?.filter((s) => s.gender === "male").length || 0}
+                {studentsInClass?.filter((s) => s.gender === "male").length ||
+                  0}
               </p>
             </CardContent>
           </Card>
@@ -425,7 +259,7 @@ export default function ClassDetailPage() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold">
-                {studentData?.filter(
+                {studentsInClass?.filter(
                   (s: { gender: string }) => s.gender === "female"
                 ).length || 0}
               </p>
@@ -435,9 +269,9 @@ export default function ClassDetailPage() {
 
         {/* Students Table */}
         <StudentManager
-          studentData={studentData}
-          classData={classData}
-          fetchStudents={fetchStudents}
+          studentData={studentsInClass}
+          classData={classes}
+          fetchStudents={refetchData}
         />
       </div>
     </DashboardLayout>

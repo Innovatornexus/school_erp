@@ -121,6 +121,12 @@ export function setupAuth(app: Express) {
   passport.deserializeUser(async (id: number, done) => {
     try {
       const user = await storage.getUser(id);
+      if (user && user.role === "school_admin") {
+        const schoolAdmin = await storage.getSchoolAdminByUserId(user.id);
+        if (schoolAdmin) {
+          user.school_id = schoolAdmin.school_id;
+        }
+      }
       done(null, user);
     } catch (err) {
       done(err);

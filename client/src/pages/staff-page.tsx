@@ -5,9 +5,7 @@ import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/layout/dashboard-layout";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
-
 import { Button } from "@/components/ui/button";
-
 import {
   Dialog,
   DialogContent,
@@ -50,20 +48,20 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useQuery } from "@tanstack/react-query";
 import { SchoolItem, StaffItem } from "./type";
-import { StackOffsetType } from "recharts/types/util/types";
 import { useAuth } from "@/hooks/use-auth";
+import { useSchoolData } from "@/context/SchoolDataContext";
+import { Redirect } from "wouter";
+
 // Staff form schema
 const staffFormSchema = z
   .object({
     email: z.string().email("Please enter a valid email"),
-
-    password: z.string().min(6, "Password must be at least 6 characters"),
-    status: z.enum(["Active", "Inactive"]),
+    password: z.string().min(6, "Password must be at least 6 characters").optional().or(z.literal("")),
+    status: z.enum(["Active", "Inactive"]).optional(),
     confirmPassword: z
       .string()
-      .min(6, "Confirm password must be at least 6 characters"),
+      .min(6, "Confirm password must be at least 6 characters").optional().or(z.literal("")),
     full_name: z.string().min(2, "Full name must be at least 2 characters"),
     phone_number: z.string().min(10, "Please enter a valid phone number"),
     subject_specialization: z
@@ -74,7 +72,12 @@ const staffFormSchema = z
       required_error: "Joining date is required",
     }),
   })
-  .refine((data) => data.password === data.confirmPassword, {
+  .refine((data) => {
+    if (data.password || data.confirmPassword) {
+      return data.password === data.confirmPassword;
+    }
+    return true; // No password provided, so no mismatch
+  }, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
   });
@@ -88,19 +91,18 @@ type StaffFormValues = z.infer<typeof staffFormSchema>;
 export default function StaffPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { schoolData, refetchData } = useSchoolData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [staffData, setStaffData] = useState<StaffItem[]>([]);
-  const [schoolData, setSchoolData] = useState<SchoolItem | null>(null);
 
-  const [editingStaff, setEditingStaff] = useState<StaffItem | null>(null); // Added type
+  const [editingStaff, setEditingStaff] = useState<StaffItem | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [staffToDelete, setStaffToDelete] = useState<number | null>(null);
   const form = useForm<StaffFormValues>({
     resolver: zodResolver(staffFormSchema),
     defaultValues: {
       full_name: "",
-
       email: "",
       password: "",
       confirmPassword: "",
@@ -108,67 +110,30 @@ export default function StaffPage() {
       gender: "male",
       joining_date: new Date(),
       phone_number: "",
+      status: "Active",
     },
   });
 
-  const fetchSchool = async () => {
-    try {
-      if (user?.role === "school_admin") {
-        console.log("calling to fetch school by user email");
-        const res = await fetch(`/api/school/${user?.email}`);
-        if (!res.ok) throw new Error("Failed to fetch school");
-        const data = await res.json();
-
-        console.log("school datas::", data);
-        // setClassName(`Class ${data.grade}${data.section}`);
-
-        setSchoolData(data);
-      }
-    } catch (error) {
-      console.log("school error: ", error);
-      toast({
-        title: "Error",
-        description: "Failed to load school list",
-        variant: "destructive",
-      });
-    }
-  };
-
-  //fetch staff
-  const fetchStaff = async () => {
-    try {
-      const res = await fetch(`/api/schools/${schoolData?.id}/teachers`);
-      if (!res.ok) throw new Error("Failed to fetch staff");
-      const data = await res.json();
-      console.log("staff datas::", data);
-      setStaffData(data);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load staff list",
-        variant: "destructive",
-      });
-    }
-  };
-
-  //fetch school by admin email
   useEffect(() => {
-    fetchSchool();
-  }, []);
-
-  //if school id found , fetch class by school
-
-  useEffect(() => {
-    if (schoolData) {
-      fetchStaff();
+    if (schoolData?.teachers) {
+      setStaffData(schoolData.teachers);
     }
   }, [schoolData]);
+
+  // Redirect if not school_admin
+  if (user?.role !== "school_admin") {
+    toast({
+      title: "Access Denied",
+      description: "You do not have permission to view this page.",
+      variant: "destructive",
+    });
+    return <Redirect to="/dashboard" />;
+  }
 
   //create a staff
   const createStaff = async (data: StaffFormValues) => {
     try {
       // 1. Create user
-      console.log("calling userres::");
       const userRes = await fetch("/api/register/user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -180,7 +145,6 @@ export default function StaffPage() {
           role: "staff",
         }),
       });
-      console.log("check userres:", userRes);
       if (!userRes.ok) throw new Error("Failed to create user");
       const newUser = await userRes.json();
       const userId = newUser.id;
@@ -192,18 +156,14 @@ export default function StaffPage() {
         body: JSON.stringify({
           ...data,
           user_id: userId,
-          school_id: 1, // make dynamic if needed
-          joining_date: data.joining_date ?? "2024-06-01", // fallback default
+          school_id: schoolData?.id,
+          joining_date: data.joining_date ?? new Date(),
         }),
       });
 
-      console.log("teacher res ::", staffRes);
-
       if (!staffRes.ok) throw new Error("Failed to create staff");
 
-      // 3. Refresh staff list (if available)
-
-      await fetchStaff();
+      await refetchData(); // Refresh data from context
     } catch (error) {
       console.error("Error creating staff:", error);
       throw error;
@@ -228,7 +188,7 @@ export default function StaffPage() {
         description: `Status changed to ${newStatus}`,
       });
 
-      await fetchStaff(); // Refresh data
+      await refetchData(); // Refresh data
     } catch (error) {
       toast({
         title: "Error",
@@ -252,13 +212,14 @@ export default function StaffPage() {
     setEditingStaff(staff);
     form.reset({
       email: staff.email,
-
-      password: "", // Avoid filling password for edit; may use separate modal
-      gender: staff.gender ?? "male", // Or default
+      password: "",
+      confirmPassword: "",
+      gender: staff.gender ?? "male",
       full_name: staff.full_name,
       phone_number: staff.phone_number,
       subject_specialization: staff.subject_specialization,
-      joining_date: staff.joining_date,
+      joining_date: staff.joining_date ? new Date(staff.joining_date) : new Date(),
+      status: staff.status,
     });
     setIsDialogOpen(true);
   };
@@ -285,7 +246,7 @@ export default function StaffPage() {
           : "New staff added successfully",
       });
       setIsDialogOpen(false);
-      await fetchStaff();
+      await refetchData();
     } catch (error) {
       console.log("error ::", error);
       toast({
@@ -325,10 +286,7 @@ export default function StaffPage() {
         return;
       }
 
-      // Update UI only if deletion is successful
-      setStaffData((prev) =>
-        prev.filter((staff) => staff.id !== staffToDelete)
-      );
+      await refetchData();
       toast({
         title: "Success",
         description: "Teacher removed successfully",
@@ -698,15 +656,6 @@ export default function StaffPage() {
             </Dialog>
           </div>
 
-          {/* <DataTable
-            data={staffData}
-            columns={columns}
-            searchPlaceholder="Search staff..."
-            onSearch={(query) => {
-              console.log("Search query:", query);
-              // Implement search logic in a real app
-            }}
-          /> */}
           <DataTable
             data={staffData}
             columns={columns}

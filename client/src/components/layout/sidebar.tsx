@@ -99,22 +99,22 @@ export default function Sidebar({
             Main
           </div>
 
-          <Link href="/">
-            <a className={location === "/" ? activeNavClass : inactiveNavClass}>
-              <Home className="mr-3 h-4 w-4" />
-              <span>Dashboard</span>
-            </a>
+          <Link
+            href="/"
+            className={location === "/" ? activeNavClass : inactiveNavClass}
+          >
+            <Home className="mr-3 h-4 w-4" />
+            <span>Dashboard</span>
           </Link>
 
-          <Link href="/profile">
-            <a
-              className={
-                location === "/profile" ? activeNavClass : inactiveNavClass
-              }
-            >
-              <User className="mr-3 h-4 w-4" />
-              <span>Profile</span>
-            </a>
+          <Link
+            href="/profile"
+            className={
+              location === "/profile" ? activeNavClass : inactiveNavClass
+            }
+          >
+            <User className="mr-3 h-4 w-4" />
+            <span>Profile</span>
           </Link>
 
           {/* Super Admin Navigation */}
@@ -124,28 +124,26 @@ export default function Sidebar({
                 System Management
               </div>
 
-              <Link href="/schools">
-                <a
-                  className={
-                    location === "/schools" ? activeNavClass : inactiveNavClass
-                  }
-                >
-                  <Building className="mr-3 h-4 w-4" />
-                  <span>Schools</span>
-                </a>
+              <Link
+                href="/schools"
+                className={
+                  location === "/schools" ? activeNavClass : inactiveNavClass
+                }
+              >
+                <Building className="mr-3 h-4 w-4" />
+                <span>Schools</span>
               </Link>
 
-              <Link href="/school-admins">
-                <a
-                  className={
-                    location === "/school-admins"
-                      ? activeNavClass
-                      : inactiveNavClass
-                  }
-                >
-                  <UserCog className="mr-3 h-4 w-4" />
-                  <span>School Admins</span>
-                </a>
+              <Link
+                href="/school-admins"
+                className={
+                  location === "/school-admins"
+                    ? activeNavClass
+                    : inactiveNavClass
+                }
+              >
+                <UserCog className="mr-3 h-4 w-4" />
+                <span>School Admins</span>
               </Link>
             </>
           )}
@@ -158,49 +156,45 @@ export default function Sidebar({
               </div>
 
               {user?.role === "school_admin" && (
-                <Link href="/staff">
-                  <a
-                    className={
-                      location === "/staff" ? activeNavClass : inactiveNavClass
-                    }
-                  >
-                    <Users className="mr-3 h-4 w-4" />
-                    <span>Staff</span>
-                  </a>
+                <Link
+                  href="/staff"
+                  className={
+                    location === "/staff" ? activeNavClass : inactiveNavClass
+                  }
+                >
+                  <Users className="mr-3 h-4 w-4" />
+                  <span>Staff</span>
                 </Link>
               )}
 
-              <Link href="/students">
-                <a
-                  className={
-                    location === "/students" ? activeNavClass : inactiveNavClass
-                  }
-                >
-                  <School className="mr-3 h-4 w-4" />
-                  <span>Students</span>
-                </a>
+              <Link
+                href="/students"
+                className={
+                  location === "/students" ? activeNavClass : inactiveNavClass
+                }
+              >
+                <School className="mr-3 h-4 w-4" />
+                <span>Students</span>
               </Link>
 
-              <Link href="/classes">
-                <a
-                  className={
-                    location === "/classes" ? activeNavClass : inactiveNavClass
-                  }
-                >
-                  <BookOpen className="mr-3 h-4 w-4" />
-                  <span>Classes</span>
-                </a>
+              <Link
+                href="/classes"
+                className={
+                  location === "/classes" ? activeNavClass : inactiveNavClass
+                }
+              >
+                <BookOpen className="mr-3 h-4 w-4" />
+                <span>Classes</span>
               </Link>
 
-              <Link href="/subjects">
-                <a
-                  className={
-                    location === "/subjects" ? activeNavClass : inactiveNavClass
-                  }
-                >
-                  <BookOpen className="mr-3 h-4 w-4" />
-                  <span>Subjects</span>
-                </a>
+              <Link
+                href="/subjects"
+                className={
+                  location === "/subjects" ? activeNavClass : inactiveNavClass
+                }
+              >
+                <BookOpen className="mr-3 h-4 w-4" />
+                <span>Subjects</span>
               </Link>
 
               <Link href="/attendance">
@@ -274,6 +268,20 @@ export default function Sidebar({
                 >
                   <BookOpen className="mr-3 h-4 w-4" />
                   <span>My Classes</span>
+                </a>
+              </Link>
+              
+
+              <Link href="/teacher/subjects">
+                <a
+                  className={
+                    location === "/teacher/subjects"
+                      ? activeNavClass
+                      : inactiveNavClass
+                  }
+                >
+                  <BookOpen className="mr-3 h-4 w-4" />
+                  <span>My Subjects</span>
                 </a>
               </Link>
 

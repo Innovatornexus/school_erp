@@ -97,6 +97,9 @@ export const StudentManager = ({
   const [editingStudent, setEditingStudent] = useState<StudentItem | null>(
     null
   );
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedGrade, setSelectedGrade] = useState("");
+  const [selectedSection, setSelectedSection] = useState("");
 
   const { user } = useAuth();
   const currentYear = new Date().getFullYear();
@@ -384,6 +387,36 @@ export const StudentManager = ({
       ),
     },
   ];
+
+  const filteredStudents = studentData.filter((student) => {
+    const matchesSearchTerm = student.full_name
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+
+    const studentClass = classData.find((cls) => cls.id === student.class_id);
+
+    const matchesGrade = selectedGrade
+      ? studentClass?.grade.toString() === selectedGrade
+      : true;
+    const matchesSection = selectedSection
+      ? studentClass?.section.toLowerCase() === selectedSection.toLowerCase()
+      : true;
+
+    return matchesSearchTerm && matchesGrade && matchesSection;
+  });
+
+  const grades = Array.from(new Set(filteredStudents.map((student) => {
+    const studentClass = classData.find((cls) => cls.id === student.class_id);
+    return studentClass?.grade;
+  }).filter(Boolean))).sort(
+    (a, b) => a - b
+  );
+  const sections = Array.from(
+    new Set(filteredStudents.map((student) => {
+      const studentClass = classData.find((cls) => cls.id === student.class_id);
+      return studentClass?.section;
+    }).filter(Boolean))
+  ).sort();
 
   return (
     <div className="bg-white p-6 rounded-lg shadow">
@@ -686,9 +719,49 @@ export const StudentManager = ({
           </DialogContent>
         </Dialog>
       </div>
+      <div className="flex space-x-4 mb-4">
+        <Input
+          placeholder="Search by name..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="max-w-sm"
+        />
+        <Select
+          onValueChange={setSelectedGrade}
+          value={selectedGrade}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by Grade" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Grades</SelectItem>
+            {grades.map((grade) => (
+              <SelectItem key={grade} value={grade.toString()}>
+                Grade {grade}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          onValueChange={setSelectedSection}
+          value={selectedSection}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by Section" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Sections</SelectItem>
+            {sections.map((section) => (
+              <SelectItem key={section} value={section}>
+                Section {section}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       <DataTable
-        data={studentData}
+        data={filteredStudents}
         columns={columns}
         searchPlaceholder="Search students..."
         onSearch={(query) => {

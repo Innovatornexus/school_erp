@@ -27,6 +27,9 @@ import StudentDashboardPage from "@/pages/student/student-dashboard-page"; // Ad
 import TeacherDashboardPage from "@/pages/teacher/teacher-dashboard-page"; // Added import
 import StudentAttendancePage from "./pages/student/student-attendance-page";
 import ClassSubjectsPage from "@/pages/class-subjects";
+import TeacherSubjectDetailPage from "@/pages/teacher/teacher-subject-detail-page";
+import StaffSubjectsPage from "@/pages/staff-subjects-page";
+import { SchoolDataProvider } from "./context/SchoolDataContext";
 
 function Router() {
   return (
@@ -89,6 +92,11 @@ function Router() {
         path="/teacher/messages"
         component={TeacherMessagesPage}
       />
+      <ProtectedRoute path="/teacher/subjects" component={StaffSubjectsPage} />
+      <ProtectedRoute
+        path="/teacher/classes/:classId/subjects/:subjectId"
+        component={TeacherSubjectDetailPage}
+      />
 
       {/* Fallback to 404 */}
       <Route component={NotFound} />
@@ -101,10 +109,12 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
+        <SchoolDataProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </SchoolDataProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

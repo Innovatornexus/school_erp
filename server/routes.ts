@@ -44,7 +44,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get a specific school
+  // Get a specific school by school id
   app.get(
     "/api/schools/:id",
     requireRole(["super_admin", "school_admin", "staff"]),
@@ -68,7 +68,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get a specific school by school admin
   app.get(
     "/api/school/:contact_email",
-    requireRole(["super_admin", "school_admin", "staff"]),
+    requireRole(["super_admin", "school_admin"]),
     async (req, res) => {
       try {
         let contact_email = req.params.contact_email.replace(/^:/, "").trim();
@@ -269,6 +269,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //   }
   // );
 
+  //get staff detail from staff email
   app.get(
     "/api/Teachers/:TeacherEmail/staff",
     requireRole(["super_admin", "school_admin", "staff"]),
@@ -292,7 +293,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get teachers by school
   app.get(
     "/api/schools/:schoolId/teachers",
-    requireRole(["super_admin", "school_admin"]),
+    requireRole(["super_admin", "school_admin", "staff"]),
     async (req, res) => {
       try {
         const schoolId = parseInt(req.params.schoolId);
@@ -692,7 +693,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get subjects by school
   app.get(
     "/api/schools/:schoolId/subjects",
-    requireRole(["super_admin", "school_admin", "teacher"]),
+    requireRole(["super_admin", "school_admin", "staff"]),
     async (req, res) => {
       try {
         const schoolId = parseInt(req.params.schoolId);
@@ -797,13 +798,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get subjects for a class
   app.get(
     "/api/classes/:classId/subjects",
-    requireRole([
-      "super_admin",
-      "school_admin",
-      "teacher",
-      "student",
-      "parent",
-    ]),
+    requireRole(["super_admin", "school_admin", "staff", "student", "parent"]),
     async (req, res) => {
       try {
         const classId = parseInt(req.params.classId);
