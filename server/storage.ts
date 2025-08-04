@@ -62,6 +62,12 @@ import {
   classMessages,
   ClassMessage,
   InsertClassMessage,
+  classLogs,
+  ClassLog,
+  InsertClassLog,
+  timetables,
+  Timetable,
+  InsertTimetable,
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -320,6 +326,28 @@ export interface IStorage {
     data: Partial<InsertClassMessage>
   ): Promise<ClassMessage | undefined>;
   deleteClassMessage(id: number): Promise<boolean>;
+
+  // ClassLog operations
+  getClassLog(id: number): Promise<ClassLog | undefined>;
+  getClassLogsByClassId(classId: number): Promise<ClassLog[]>;
+  getClassLogsByTeacherId(teacherId: number): Promise<ClassLog[]>;
+  createClassLog(classLog: InsertClassLog): Promise<ClassLog>;
+  updateClassLog(
+    id: number,
+    data: Partial<InsertClassLog>
+  ): Promise<ClassLog | undefined>;
+  deleteClassLog(id: number): Promise<boolean>;
+
+  // Timetable operations
+  getTimetable(id: number): Promise<Timetable | undefined>;
+  getTimetablesBySchoolId(schoolId: number): Promise<Timetable[]>;
+  getTimetablesByClassId(classId: number): Promise<Timetable[]>;
+  createTimetable(timetable: InsertTimetable): Promise<Timetable>;
+  updateTimetable(
+    id: number,
+    data: Partial<InsertTimetable>
+  ): Promise<Timetable | undefined>;
+  deleteTimetable(id: number): Promise<boolean>;
 
   // For auth compatibility
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -1388,6 +1416,23 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  // Add this method to the DatabaseStorage class in server/storage.ts
+  async createClassLog(logData: InsertClassLog): Promise<ClassLog> {
+    try {
+      const [classLog] = await db
+        .insert(classLogs)
+        .values({
+          ...logData,
+          created_at: new Date(),
+        })
+        .returning();
+      return classLog;
+    } catch (error) {
+      console.error("Error creating class log:", error);
+      throw error;
+    }
+  }
+
   async updateUser(
     id: number,
     data: Partial<InsertUser>
@@ -1578,6 +1623,27 @@ export class DatabaseStorage implements IStorage {
       .where(eq(teachers.id, id))
       .returning();
     return !!deleted;
+  }
+
+  async getClassesByTeacherId(teacherId: number) {
+    console.log("Fetching classes for teacher ID:", teacherId);
+    try {
+      const result = await db
+        .selectDistinct({
+          id: classes.id,
+          grade: classes.grade,
+          section: classes.section,
+        })
+        .from(classSubjects)
+        .innerJoin(classes, eq(classSubjects.class_id, classes.id))
+        .where(eq(classSubjects.teacher_id, teacherId));
+
+      console.log("Query result:", result);
+      return result;
+    } catch (error) {
+      console.error("Error fetching classes by teacher ID:", error);
+      throw error;
+    }
   }
 
   // Student operations
@@ -2010,6 +2076,13 @@ export class DatabaseStorage implements IStorage {
       .where(eq(teacherAttendance.id, id))
       .returning();
     return !!deleted;
+  }
+
+  //logs
+  // Add this method to the DatabaseStorage class
+  async createClassLog(logData: InsertClassLog): Promise<ClassLog> {
+    const [classLog] = await db.insert(classLogs).values(logData).returning();
+    return classLog;
   }
 
   // LessonPlan operations
