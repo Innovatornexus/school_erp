@@ -15,7 +15,8 @@ interface SchoolDataContextType {
   students: any[];
   teachers: any[];
   loading: boolean;
-  refetchData: () => void;
+  ispending?: boolean;
+  refetchData: () => Promise<void>;
 }
 
 // Create the context
@@ -36,7 +37,7 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
-    if (!user) return;
+    if (!user) return Promise.resolve();
 
     setLoading(true);
     console.log(
@@ -133,7 +134,21 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({
         setClasses(schoolDataResponse.classes || []);
         setSubjects(schoolDataResponse.subjects || []);
         setStudents(schoolDataResponse.students || []);
-        setTeachers(teachersData || []);
+        // Parse subject_specialization field for each teacher
+        const parsedTeachers = (teachersData || []).map((teacher: any) => {
+          if (typeof teacher.subject_specialization === "string") {
+            // Remove outer braces, quotes and split by comma
+            const cleaned = teacher.subject_specialization
+              .replace(/^\{/, "")
+              .replace(/\}$/, "")
+              .replace(/"/g, "");
+            const arr =
+              cleaned.length > 0 ? cleaned.split(",").map((s) => s.trim()) : [];
+            return { ...teacher, subject_specialization: arr };
+          }
+          return teacher;
+        });
+        setTeachers(parsedTeachers);
         console.log(
           "SchoolDataProvider: Fetched admin data:",
           schoolDataResponse
@@ -229,7 +244,21 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({
         setClasses(schoolDataResponse.classes || []);
         setSubjects(schoolDataResponse.subjects || []);
         setStudents(schoolDataResponse.students || []);
-        setTeachers(teachersData || []);
+        // Parse subject_specialization field for each teacher
+        const parsedTeachers = (teachersData || []).map((teacher: any) => {
+          if (typeof teacher.subject_specialization === "string") {
+            // Remove outer braces, quotes and split by comma
+            const cleaned = teacher.subject_specialization
+              .replace(/^\{/, "")
+              .replace(/\}$/, "")
+              .replace(/"/g, "");
+            const arr =
+              cleaned.length > 0 ? cleaned.split(",").map((s) => s.trim()) : [];
+            return { ...teacher, subject_specialization: arr };
+          }
+          return teacher;
+        });
+        setTeachers(parsedTeachers);
         console.log(
           "SchoolDataProvider: Fetched staff data:",
           schoolDataResponse
@@ -264,8 +293,7 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
-// Create a custom hook to use the context
-export const useSchoolData = () => {
+export const useSchoolData = (): SchoolDataContextType => {
   const context = useContext(SchoolDataContext);
   if (context === undefined) {
     throw new Error("useSchoolData must be used within a SchoolDataProvider");

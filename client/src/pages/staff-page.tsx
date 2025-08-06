@@ -24,6 +24,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -54,36 +55,47 @@ import { useSchoolData } from "@/context/SchoolDataContext";
 import { Redirect } from "wouter";
 
 // Staff form schema
+// Updated staffFormSchema
 const staffFormSchema = z
   .object({
     email: z.string().email("Please enter a valid email"),
-    password: z.string().min(6, "Password must be at least 6 characters").optional().or(z.literal("")),
+    password: z
+      .string()
+      .min(6, "Password must be at least 6 characters")
+      .optional()
+      .or(z.literal("")),
     status: z.enum(["Active", "Inactive"]).optional(),
     confirmPassword: z
       .string()
-      .min(6, "Confirm password must be at least 6 characters").optional().or(z.literal("")),
+      .min(6, "Confirm password must be at least 6 characters")
+      .optional()
+      .or(z.literal("")),
     full_name: z.string().min(2, "Full name must be at least 2 characters"),
     phone_number: z.string().min(10, "Please enter a valid phone number"),
+    // Keep subject_specialization as a string in the schema
     subject_specialization: z
-      .string()
-      .min(1, "Subject specialization is required"),
+      .array(z.string().min(1, "Each subject must be at least 1 character"))
+      .min(1, "At least one subject specialization is required"),
+
     gender: z.string().min(1, "Subject Gender is required"),
     joining_date: z.date({
       required_error: "Joining date is required",
     }),
   })
-  .refine((data) => {
-    if (data.password || data.confirmPassword) {
-      return data.password === data.confirmPassword;
+  .refine(
+    (data) => {
+      if (data.password || data.confirmPassword) {
+        return data.password === data.confirmPassword;
+      }
+      return true;
+    },
+    {
+      message: "Passwords do not match",
+      path: ["confirmPassword"],
     }
-    return true; // No password provided, so no mismatch
-  }, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  });
+  );
 
 type StaffFormValues = z.infer<typeof staffFormSchema>;
-
 /**
  * Staff management page component
  * Allows school admins to manage teachers and staff
@@ -91,7 +103,7 @@ type StaffFormValues = z.infer<typeof staffFormSchema>;
 export default function StaffPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { schoolData, refetchData } = useSchoolData();
+  const { schoolData, refetchData, teachers, subjects } = useSchoolData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [staffData, setStaffData] = useState<StaffItem[]>([]);
@@ -106,7 +118,7 @@ export default function StaffPage() {
       email: "",
       password: "",
       confirmPassword: "",
-      subject_specialization: "",
+      subject_specialization: [],
       gender: "male",
       joining_date: new Date(),
       phone_number: "",
@@ -115,10 +127,10 @@ export default function StaffPage() {
   });
 
   useEffect(() => {
-    if (schoolData?.teachers) {
-      setStaffData(schoolData.teachers);
+    if (teachers) {
+      setStaffData(teachers);
     }
-  }, [schoolData]);
+  }, [teachers]);
 
   // Redirect if not school_admin
   if (user?.role !== "school_admin") {
@@ -150,6 +162,8 @@ export default function StaffPage() {
       const userId = newUser.id;
 
       // 2. Create staff profile
+      console.log("Creating staff with data:", { ...data, user_id: userId });
+
       const staffRes = await fetch("/api/teachers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -207,42 +221,30 @@ export default function StaffPage() {
     setIsDialogOpen(open);
   };
 
-  // Set form values when editing
-  const openEditDialog = (staff: StaffItem) => {
-    setEditingStaff(staff);
-    form.reset({
-      email: staff.email,
-      password: "",
-      confirmPassword: "",
-      gender: staff.gender ?? "male",
-      full_name: staff.full_name,
-      phone_number: staff.phone_number,
-      subject_specialization: staff.subject_specialization,
-      joining_date: staff.joining_date ? new Date(staff.joining_date) : new Date(),
-      status: staff.status,
-    });
-    setIsDialogOpen(true);
-  };
-
   // Handle form submission for creating/editing staff
   const onSubmit = async (data: StaffFormValues) => {
     setIsSubmitting(true);
     try {
+      // Manually split the string into an array before sending to the API
+      const formattedData = {
+        ...data,
+      };
+
       if (editingStaff) {
         const res = await fetch(`/api/teachers/${editingStaff.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
+          body: JSON.stringify(formattedData),
         });
         if (!res.ok) throw new Error("Failed to update staff");
       } else {
-        await createStaff(data);
+        await createStaff(formattedData);
       }
 
       toast({
         title: "Success",
         description: editingStaff
-          ? "staff updated successfully"
+          ? "Staff updated successfully"
           : "New staff added successfully",
       });
       setIsDialogOpen(false);
@@ -259,6 +261,25 @@ export default function StaffPage() {
     }
   };
 
+  // Set form values when editing
+  const openEditDialog = (staff: StaffItem) => {
+    setEditingStaff(staff);
+    form.reset({
+      email: staff.email,
+      password: "",
+      confirmPassword: "",
+      gender: staff.gender ?? "male",
+      full_name: staff.full_name,
+      phone_number: staff.phone_number,
+      // Join the array back into a string for the Textarea field
+      subject_specialization: staff.subject_specialization, // ✅ no need to join
+      joining_date: staff.joining_date
+        ? new Date(staff.joining_date)
+        : new Date(),
+      status: staff.status,
+    });
+    setIsDialogOpen(true);
+  };
   // Handle staff deletion
   const handleDelete = (id: number) => {
     setStaffToDelete(id);
@@ -316,6 +337,14 @@ export default function StaffPage() {
     {
       header: "Subject",
       accessorKey: "subject_specialization",
+      cell: (staff: StaffItem) => {
+        if (!staff?.subject_specialization) return "-";
+
+        const specializations = staff.subject_specialization;
+        return Array.isArray(specializations)
+          ? specializations.join(", ")
+          : specializations;
+      },
     },
     {
       header: "Phone",
@@ -324,7 +353,7 @@ export default function StaffPage() {
     {
       header: "Joining Date",
       accessorKey: "joining_date",
-      cell: (staff: any) => {
+      cell: (staff: StaffItem) => {
         const date = new Date(staff.joining_date);
         return isNaN(date.getTime()) ? "-" : format(date, "PPP");
       },
@@ -332,42 +361,47 @@ export default function StaffPage() {
     {
       header: "Status",
       accessorKey: "status",
-      cell: (staff: StaffItem) => (
-        <Button
-          variant={staff.status === "Active" ? "outline" : "secondary"}
-          className={`text-sm px-3 py-1 rounded-full ${
-            staff.status === "Active"
-              ? "bg-green-100 text-green-700"
-              : "bg-red-100 text-red-700"
-          }`}
-          onClick={() => toggleStaffStatus(staff)}
-        >
-          {staff.status}
-        </Button>
-      ),
+      cell: (staff: StaffItem) => {
+        return (
+          <Button
+            variant={staff.status === "Active" ? "outline" : "secondary"}
+            className={`text-sm px-3 py-1 rounded-full ${
+              staff.status === "Active"
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-700"
+            }`}
+            onClick={() => toggleStaffStatus(staff)}
+          >
+            {staff.status}
+          </Button>
+        );
+      },
     },
-
     {
       header: "Actions",
       accessorKey: "id",
-      cell: (staff: any) => (
-        <div className="flex space-x-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => openEditDialog(staff)}
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => handleDelete(staff.id)}
-          >
-            <Trash className="h-4 w-4" />
-          </Button>
-        </div>
-      ),
+      cell: (staff: StaffItem) => {
+        return (
+          <div className="flex space-x-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => openEditDialog(staff)}
+              data-cy="edit-staff-button"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleDelete(staff.id)}
+              data-cy="delete-staff-button"
+            >
+              <Trash className="h-4 w-4" />
+            </Button>
+          </div>
+        );
+      },
     },
   ];
 
@@ -395,7 +429,7 @@ export default function StaffPage() {
               <p className="text-3xl font-bold">
                 {
                   new Set(
-                    staffData.map((staff) => staff.subject_specialization)
+                    staffData.flatMap((staff) => staff.subject_specialization)
                   ).size
                 }
               </p>
@@ -430,7 +464,7 @@ export default function StaffPage() {
             <h2 className="text-xl font-semibold">Staff List</h2>
             <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
               <DialogTrigger asChild>
-                <Button>
+                <Button data-cy="add-staff-button">
                   <UserPlus className="mr-2 h-4 w-4" />
                   Add Staff
                 </Button>
@@ -458,7 +492,11 @@ export default function StaffPage() {
                             <FormItem>
                               <FormLabel>Full Name</FormLabel>
                               <FormControl>
-                                <Input placeholder="John Doe" {...field} />
+                                <Input
+                                  placeholder="John Doe"
+                                  {...field}
+                                  data-cy="staff-name-input"
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -475,6 +513,7 @@ export default function StaffPage() {
                                 <Input
                                   placeholder="john.doe@school.com"
                                   {...field}
+                                  data-cy="staff-email-input"
                                 />
                               </FormControl>
                               <FormMessage />
@@ -562,9 +601,70 @@ export default function StaffPage() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Subject Specialization</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Mathematics" {...field} />
-                              </FormControl>
+                              <div className="space-y-2">
+                                {field.value?.map(
+                                  (subject: string, index: number) => (
+                                    <div
+                                      key={index}
+                                      className="flex items-center gap-2"
+                                    >
+                                      <Select
+                                        value={subject}
+                                        onValueChange={(value) => {
+                                          const newSubjects = [
+                                            ...(field.value || []),
+                                          ];
+                                          newSubjects[index] = value;
+                                          field.onChange(newSubjects);
+                                        }}
+                                      >
+                                        <SelectTrigger className="flex-1">
+                                          <SelectValue placeholder="Select subject" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {subjects.map((subject: any) => (
+                                            <SelectItem
+                                              key={subject.id}
+                                              value={subject.subject_name}
+                                            >
+                                              {subject.subject_name}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => {
+                                          const newSubjects = [
+                                            ...(field.value || []),
+                                          ];
+                                          newSubjects.splice(index, 1);
+                                          field.onChange(newSubjects);
+                                        }}
+                                      >
+                                        <Trash className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  )
+                                )}
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const newSubjects = [
+                                      ...(field.value || []),
+                                      "",
+                                    ];
+                                    field.onChange(newSubjects);
+                                  }}
+                                  className="w-full"
+                                >
+                                  Add Subject
+                                </Button>
+                              </div>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -642,7 +742,11 @@ export default function StaffPage() {
                       </div>
                     </ScrollArea>
                     <DialogFooter className="mt-4">
-                      <Button type="submit" disabled={isSubmitting}>
+                      <Button
+                        type="submit"
+                        disabled={isSubmitting}
+                        data-cy="submit-button"
+                      >
                         {isSubmitting
                           ? "Saving..."
                           : editingStaff
@@ -662,7 +766,6 @@ export default function StaffPage() {
             searchPlaceholder="Search staff..."
             onSearch={(query) => {
               console.log("Search query:", query);
-              // Implement search logic in a real app
             }}
           />
         </div>

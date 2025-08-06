@@ -23,7 +23,7 @@ export type ClassItem = {
   name: string;
   grade: string;
   section: string;
-  class_teacher_id: number;
+  class_teacher_id: number | null;
   studentCount: number;
 };
 export type SchoolItem = {
@@ -38,6 +38,7 @@ export type ClassItemWithCount = {
   grade: string;
   section: string;
   studentCount: number; // ➡️ newly added
+  class_teacher_id: number | null;
 };
 
 export type SubjectItem = {
@@ -57,5 +58,5 @@ export interface StaffItem {
   status: "Active" | "Inactive";
   address: string;
   phone_number: string;
-  subject_specialization: string;
+  subject_specialization: string[];
 }

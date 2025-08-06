@@ -6,6 +6,8 @@
     "tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo",
     "noEmit": true,
     "module": "ESNext",
+    "target": "ES2015",                             // ✅ Added here
+    "downlevelIteration": true,                    // ✅ Added here
     "strict": true,
     "lib": ["esnext", "dom", "dom.iterable"],
     "jsx": "preserve",

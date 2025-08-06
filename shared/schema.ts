@@ -10,14 +10,15 @@ import {
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { format } from "date-fns";
 
 // Core user entity with authentication info
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
+  school_id: integer("school_id").references(() => schools.id),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
-
   role: text("role").notNull(), // 'super_admin', 'school_admin', 'teacher', 'student', 'parent'
   created_at: timestamp("created_at").defaultNow().notNull(),
 });
@@ -71,10 +72,10 @@ export const teachers = pgTable("teachers", {
   full_name: text("full_name").notNull(),
   email: text("email").notNull(),
   gender: text("gender").notNull(),
-  subject_specialization: text("subject_specialization").notNull(),
   joining_date: date("joining_date").notNull(),
   phone_number: text("phone_number").notNull(),
   status: text("status").notNull(),
+  subject_specialization: text("subject_specialization").array().notNull(),
 });
 
 export const insertTeacherSchema = createInsertSchema(teachers).omit({
@@ -116,9 +117,7 @@ export const classes = pgTable("classes", {
   grade: text("grade").notNull(),
   section: text("section").notNull(),
   class_teacher_id: integer("class_teacher_id").references(() => teachers.id),
-  class_teacher_name: text("class_teacher_name").references(
-    () => teachers.full_name
-  ),
+  class_teacher_name: text("class_teacher_name"),
 });
 
 export const insertClassSchema = createInsertSchema(classes).omit({
@@ -155,6 +154,23 @@ export const insertClassSubjectSchema = createInsertSchema(classSubjects).omit({
   id: true,
 });
 
+// Teacher-Subject mapping
+export const teacherSubjects = pgTable("teacher_subjects", {
+  id: serial("id").primaryKey(),
+  teacher_id: integer("teacher_id")
+    .notNull()
+    .references(() => teachers.id),
+  subject_id: integer("subject_id")
+    .notNull()
+    .references(() => subjects.id),
+});
+
+export const insertTeacherSubjectSchema = createInsertSchema(
+  teacherSubjects
+).omit({
+  id: true,
+});
+
 // Student attendance records
 export const studentAttendance = pgTable("student_attendance", {
   id: serial("id").primaryKey(),
@@ -166,16 +182,34 @@ export const studentAttendance = pgTable("student_attendance", {
     .references(() => classes.id),
   date: date("date").notNull(),
   status: text("status").notNull(), // 'present', 'absent', 'late'
-  marked_by: integer("marked_by")
+  entry_id: integer("entry_id")
     .notNull()
-    .references(() => teachers.id),
+    .references(() => users.id),
+  entry_name: text("entry_name").notNull(),
+  notes: text("notes"),
 });
 
-export const insertStudentAttendanceSchema = createInsertSchema(
-  studentAttendance
-).omit({
-  id: true,
+// schema for data received from frontend
+export const studentAttendanceInputSchema = z.object({
+  student_id: z.number(),
+  class_id: z.number(),
+  date: z.preprocess(
+    (val) =>
+      typeof val === "string"
+        ? val
+        : val instanceof Date
+        ? format(val, "yyyy-MM-dd")
+        : undefined,
+    z.string()
+  ),
+  status: z.enum(["present", "absent", "late"]),
+  notes: z.string().optional(),
 });
+export const insertStudentAttendanceSchema =
+  studentAttendanceInputSchema.extend({
+    entry_id: z.number(),
+    entry_name: z.string().min(1, "Entry name is required"),
+  });
 
 // Teacher attendance records
 export const teacherAttendance = pgTable("teacher_attendance", {
@@ -190,10 +224,17 @@ export const teacherAttendance = pgTable("teacher_attendance", {
   status: text("status").notNull(), // 'present', 'absent', 'leave'
 });
 
-export const insertTeacherAttendanceSchema = createInsertSchema(
-  teacherAttendance
-).omit({
-  id: true,
+export const insertTeacherAttendanceSchema = z.object({
+  teacher_id: z.number(),
+  school_id: z.number(),
+  date: z.preprocess(
+    (val) =>
+      typeof val === "string" || val instanceof Date
+        ? new Date(val)
+        : undefined,
+    z.date()
+  ),
+  status: z.enum(["present", "absent", "leave"]),
 });
 
 // Weekly lesson plans submitted by teachers
@@ -403,6 +444,55 @@ export const insertClassMessageSchema = createInsertSchema(classMessages).omit({
   id: true,
   created_at: true,
 });
+
+// Class logs for subject covered updates
+export const classLogs = pgTable("class_logs", {
+  id: serial("id").primaryKey(),
+  class_id: integer("class_id")
+    .notNull()
+    .references(() => classes.id),
+  teacher_id: integer("teacher_id")
+    .notNull()
+    .references(() => teachers.id),
+  subject_id: integer("subject_id")
+    .notNull()
+    .references(() => subjects.id),
+  log_date: date("log_date").notNull(),
+  covered_topics: text("covered_topics").notNull(),
+  notes: text("notes"),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertClassLogSchema = createInsertSchema(classLogs).omit({
+  id: true,
+  created_at: true,
+});
+
+// Timetable management
+export const timetables = pgTable("timetables", {
+  id: serial("id").primaryKey(),
+  school_id: integer("school_id")
+    .notNull()
+    .references(() => schools.id),
+  class_id: integer("class_id")
+    .notNull()
+    .references(() => classes.id),
+  image_url: text("image_url").notNull(),
+  upload_date: date("upload_date").defaultNow().notNull(),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertTimetableSchema = createInsertSchema(timetables).omit({
+  id: true,
+  created_at: true,
+});
+
+// Export new types
+export type ClassLog = typeof classLogs.$inferSelect;
+export type InsertClassLog = z.infer<typeof insertClassLogSchema>;
+
+export type Timetable = typeof timetables.$inferSelect;
+export type InsertTimetable = z.infer<typeof insertTimetableSchema>;
 
 // Export types for use in the application
 export type User = typeof users.$inferSelect;

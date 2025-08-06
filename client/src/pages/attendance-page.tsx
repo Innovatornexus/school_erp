@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { format } from "date-fns";
 import DashboardLayout from "@/layout/dashboard-layout";
 import { Calendar } from "@/components/ui/calendar";
@@ -21,247 +21,331 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
 import {
   AlertCircle,
   Calendar as CalendarIcon,
   CheckCircle,
   Clock,
-  Download,
   Save,
   Search,
   User,
   Users,
-  XCircle,
+  Download,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
+import { useSchoolData } from "@/context/SchoolDataContext";
 
-// Sample class data
-const sampleClasses = [
-  { id: "1", name: "Class 8A" },
-  { id: "2", name: "Class 8B" },
-  { id: "3", name: "Class 9A" },
-  { id: "4", name: "Class 9B" },
-  { id: "5", name: "Class 10A" },
-  { id: "6", name: "Class 10B" },
-];
+interface Student {
+  id: number;
+  full_name: string;
+  roll_number?: string;
+  class_id: number;
+  present: boolean;
+}
 
-// Sample student data for attendance
-const sampleStudents = [
-  {
-    id: 1,
-    name: "Alice Johnson",
-    className: "Class 8A",
-    rollNumber: "8A01",
-    present: true,
-  },
-  {
-    id: 2,
-    name: "Bob Smith",
-    className: "Class 8A",
-    rollNumber: "8A02",
-    present: true,
-  },
-  {
-    id: 3,
-    name: "Charlie Brown",
-    className: "Class 8A",
-    rollNumber: "8A03",
-    present: false,
-  },
-  {
-    id: 4,
-    name: "Diana Evans",
-    className: "Class 8A",
-    rollNumber: "8A04",
-    present: true,
-  },
-  {
-    id: 5,
-    name: "Ethan Davis",
-    className: "Class 8A",
-    rollNumber: "8A05",
-    present: true,
-  },
-  {
-    id: 6,
-    name: "Fiona Wilson",
-    className: "Class 8A",
-    rollNumber: "8A06",
-    present: true,
-  },
-  {
-    id: 7,
-    name: "George Miller",
-    className: "Class 8A",
-    rollNumber: "8A07",
-    present: false,
-  },
-  {
-    id: 8,
-    name: "Hannah Clark",
-    className: "Class 8A",
-    rollNumber: "8A08",
-    present: true,
-  },
-  {
-    id: 9,
-    name: "Ian Thomas",
-    className: "Class 9A",
-    rollNumber: "9A01",
-    present: true,
-  },
-  {
-    id: 10,
-    name: "Julia Roberts",
-    className: "Class 9A",
-    rollNumber: "9A02",
-    present: true,
-  },
-  {
-    id: 11,
-    name: "Kevin White",
-    className: "Class 9A",
-    rollNumber: "9A03",
-    present: false,
-  },
-  {
-    id: 12,
-    name: "Linda Harris",
-    className: "Class 9A",
-    rollNumber: "9A04",
-    present: true,
-  },
-  {
-    id: 13,
-    name: "Michael Young",
-    className: "Class 10A",
-    rollNumber: "10A01",
-    present: true,
-  },
-  {
-    id: 14,
-    name: "Nancy Lee",
-    className: "Class 10A",
-    rollNumber: "10A02",
-    present: false,
-  },
-  {
-    id: 15,
-    name: "Oliver King",
-    className: "Class 10A",
-    rollNumber: "10A03",
-    present: true,
-  },
-];
+interface Class {
+  id: number;
+  grade: string;
+  section: string;
+  class_teacher_id?: number;
+  class_teacher_name?: string;
+}
 
-// Sample monthly attendance data
-const sampleMonthlyData = {
-  totalSchoolDays: 22,
-  studentAttendance: [
-    {
-      id: 1,
-      name: "Alice Johnson",
-      rollNumber: "8A01",
-      daysPresent: 21,
-      percentage: 95,
-    },
-    {
-      id: 2,
-      name: "Bob Smith",
-      rollNumber: "8A02",
-      daysPresent: 20,
-      percentage: 91,
-    },
-    {
-      id: 3,
-      name: "Charlie Brown",
-      rollNumber: "8A03",
-      daysPresent: 17,
-      percentage: 77,
-    },
-    {
-      id: 4,
-      name: "Diana Evans",
-      rollNumber: "8A04",
-      daysPresent: 22,
-      percentage: 100,
-    },
-    {
-      id: 5,
-      name: "Ethan Davis",
-      rollNumber: "8A05",
-      daysPresent: 19,
-      percentage: 86,
-    },
-  ],
-  teacherAttendance: [
-    {
-      id: 1,
-      name: "John Doe",
-      subject: "Mathematics",
-      daysPresent: 22,
-      percentage: 100,
-    },
-    {
-      id: 2,
-      name: "Jane Smith",
-      subject: "English",
-      daysPresent: 21,
-      percentage: 95,
-    },
-    {
-      id: 3,
-      name: "Bob Johnson",
-      subject: "Science",
-      daysPresent: 19,
-      percentage: 86,
-    },
-    {
-      id: 4,
-      name: "Sarah Williams",
-      subject: "History",
-      daysPresent: 20,
-      percentage: 91,
-    },
-  ],
-};
+interface Teacher {
+  id: number;
+  user_id: number;
+  full_name: string;
+  subject_specialization: string[];
+}
 
-/**
- * Attendance management page component
- * Allows marking, tracking, and viewing attendance for students and teachers
- */
 export default function AttendancePage() {
-  const { user } = useAuth();
+  const { user } = useAuth() as { user: any };
+  const { classes, students, teachers, loading } = useSchoolData();
   const { toast } = useToast();
+
+  console.log("Teachers from useSchoolData:", teachers);
+
   const [date, setDate] = useState<Date>(new Date());
   const [selectedClass, setSelectedClass] = useState<string>("");
-  const [studentsToMark, setStudentsToMark] = useState<typeof sampleStudents>(
-    []
-  );
+  const [studentsToMark, setStudentsToMark] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showAttendanceReport, setShowAttendanceReport] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [attendanceType, setAttendanceType] = useState<"student" | "teacher">(
+    "student"
+  );
+  const [teachersToMark, setTeachersToMark] = useState<any[]>([]);
+  const [teacherSearchQuery, setTeacherSearchQuery] = useState("");
 
-  // Get class students for attendance marking
+  // State for View Attendance tab
+  const [viewingDate, setViewingDate] = useState<Date>(new Date());
+  const [viewingAttendanceType, setViewingAttendanceType] = useState<
+    "student" | "teacher"
+  >("student");
+  const [viewingSelectedClass, setViewingSelectedClass] = useState<string>("");
+  const [viewingStudentAttendanceData, setViewingStudentAttendanceData] =
+    useState<any[]>([]);
+  const [viewingTeacherAttendanceData, setViewingTeacherAttendanceData] =
+    useState<any[]>([]);
+  const [viewingSearchQuery, setViewingSearchQuery] = useState("");
+
+  // Get current teacher based on logged-in user
+  const currentTeacher = useMemo(() => {
+    if (!user || !teachers.length) return null;
+    return teachers.find((t: any) => t.user_id === user.id);
+  }, [user, teachers]);
+
+  // Filter classes based on user role
+  const availableClasses = useMemo(() => {
+    if (!classes.length) return [];
+
+    if (user?.role === "school_admin" || user?.role === "super_admin") {
+      // Admins can see all classes
+      return classes;
+    } else if (user?.role === "staff" && currentTeacher) {
+      // Teachers can only see classes where they are the class teacher
+      return classes.filter(
+        (cls: any) => cls.class_teacher_id === currentTeacher.id
+      );
+    }
+
+    return [];
+  }, [classes, user, currentTeacher]);
+
+  // Get students for selected class
   const getClassStudents = (classId: string) => {
-    const className =
-      sampleClasses.find((cls) => cls.id === classId)?.name || "";
-    return sampleStudents.filter((student) => student.className === className);
+    const classIdNum = parseInt(classId);
+    return students.filter((student: any) => student.class_id === classIdNum);
   };
 
-  // Handle class selection for attendance marking
-  const handleClassChange = (classId: string) => {
-    setSelectedClass(classId);
-    setStudentsToMark(getClassStudents(classId));
+  // Get all teachers for attendance
+  const getAllTeachers = () => {
+    return teachers.map((teacher: any) => ({
+      ...teacher,
+      present: true,
+    }));
   };
+
+  // Toggle teacher attendance
+  const toggleTeacherAttendance = (teacherId: number) => {
+    setTeachersToMark((prev: any[]) =>
+      prev.map((teacher) =>
+        teacher.id === teacherId
+          ? { ...teacher, present: !teacher.present }
+          : teacher
+      )
+    );
+  };
+
+  // Mark all teachers as present
+  const markAllTeachersPresent = () => {
+    setTeachersToMark((prev: any[]) =>
+      prev.map((teacher) => ({ ...teacher, present: true }))
+    );
+  };
+
+  // Handle class selection
+  const handleClassChange = async (classId: string) => {
+    setSelectedClass(classId);
+    const classStudents = getClassStudents(classId);
+
+    try {
+      const response = await fetch(
+        `/api/classes/${classId}/attendance?date=${date.toISOString()}`
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch attendance data");
+      }
+      const attendanceData = await response.json();
+
+      const studentsWithAttendance = classStudents.map((student: any) => {
+        const attendanceRecord = attendanceData.find(
+          (record: any) => record.student_id === student.id
+        );
+        return {
+          ...student,
+          present: attendanceRecord
+            ? attendanceRecord.status === "present"
+            : true,
+        };
+      });
+      setStudentsToMark(studentsWithAttendance);
+    } catch (error) {
+      setStudentsToMark(
+        classStudents.map((s: any) => ({ ...s, present: true }))
+      );
+    }
+  };
+
+  // Handle viewing attendance
+  const handleViewAttendance = async () => {
+    console.log("Attempting to view attendance...");
+    console.log("Selected class:", viewingSelectedClass);
+    console.log("Date:", viewingDate);
+    console.log("Attendance type:", viewingAttendanceType);
+    console.log("User role:", user?.role);
+
+    setViewingStudentAttendanceData([]);
+    setViewingTeacherAttendanceData([]);
+
+    try {
+      if (viewingAttendanceType === "student") {
+        let studentAttendanceResponse;
+
+        if (user?.role === "school_admin" || user?.role === "super_admin") {
+          // Admin can view all classes or specific class
+          if (viewingSelectedClass) {
+            console.log(
+              "Admin viewing student attendance for selected class..."
+            );
+            studentAttendanceResponse = await fetch(
+              `/api/classes/${viewingSelectedClass}/attendance?date=${viewingDate.toISOString()}`
+            );
+          } else {
+            console.log("Admin viewing all student attendance...");
+            studentAttendanceResponse = await fetch(
+              `/api/schools/${
+                user.school_id
+              }/student-attendance?date=${viewingDate.toISOString()}`
+            );
+          }
+        } else if (user?.role === "staff") {
+          // Staff can only view their assigned classes
+          if (viewingSelectedClass) {
+            console.log(
+              "Staff viewing student attendance for selected class..."
+            );
+            studentAttendanceResponse = await fetch(
+              `/api/classes/${viewingSelectedClass}/attendance?date=${viewingDate.toISOString()}`
+            );
+          } else {
+            // Show message to select a class
+            toast({
+              title: "Select Class",
+              description: "Please select a class to view attendance.",
+              variant: "default",
+            });
+            return;
+          }
+        } else {
+          throw new Error("Invalid role for student attendance.");
+        }
+
+        if (!studentAttendanceResponse.ok) {
+          throw new Error("Failed to fetch student attendance data");
+        }
+        const data = await studentAttendanceResponse.json();
+        console.log("Fetched student attendance data:", data);
+
+        if (data.length === 0) {
+          toast({
+            title: "No Data",
+            description:
+              "No attendance records found for the selected date and class.",
+            variant: "default",
+          });
+        }
+
+        setViewingStudentAttendanceData(data);
+      } else if (viewingAttendanceType === "teacher") {
+        let teacherAttendanceResponse;
+
+        if (user?.role === "school_admin" || user?.role === "super_admin") {
+          // Admin can view all teacher attendance
+          console.log("Admin viewing all teacher attendance...");
+          teacherAttendanceResponse = await fetch(
+            `/api/schools/${
+              user.school_id
+            }/teacher-attendance?date=${viewingDate.toISOString()}`
+          );
+        } else if (user?.role === "staff") {
+          // Staff can only view their assigned classes
+          if (viewingSelectedClass) {
+            console.log("Staff viewing teachers for selected class...");
+            teacherAttendanceResponse = await fetch(
+              `/api/classes/${viewingSelectedClass}/teachers`
+            );
+          } else {
+            // Show message to select a class
+            toast({
+              title: "Select Class",
+              description: "Please select a class to view teacher attendance.",
+              variant: "default",
+            });
+            return;
+          }
+        } else {
+          throw new Error("Invalid role for teacher attendance.");
+        }
+
+        if (!teacherAttendanceResponse.ok) {
+          throw new Error("Failed to fetch teacher attendance data");
+        }
+        const data = await teacherAttendanceResponse.json();
+        console.log("Fetched teacher attendance data:", data);
+
+        if (data.length === 0) {
+          toast({
+            title: "No Data",
+            description: "No attendance records found for the selected date.",
+            variant: "default",
+          });
+        }
+
+        setViewingTeacherAttendanceData(data);
+      }
+    } catch (error) {
+      console.error("Error viewing attendance:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch attendance data. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Load teachers when attendance type changes to teacher
+  useEffect(() => {
+    console.log("attendanceType changed:", attendanceType);
+    if (attendanceType === "teacher" && teachers.length > 0) {
+      console.log("Populating teachersToMark with:", teachers);
+      setTeachersToMark(getAllTeachers());
+    }
+  }, [attendanceType, teachers]);
+
+  // Effect to load attendance data when viewingDate, viewingAttendanceType, or viewingSelectedClass changes
+  useEffect(() => {
+    if (viewingDate && user?.school_id) {
+      handleViewAttendance();
+    }
+  }, [
+    viewingDate,
+    viewingAttendanceType,
+    viewingSelectedClass,
+    user?.school_id,
+  ]);
+
+  // Effect to load attendance data when viewingDate, viewingAttendanceType, or viewingSelectedClass changes
+  useEffect(() => {
+    if (viewingDate && user?.school_id) {
+      handleViewAttendance();
+    }
+  }, [
+    viewingDate,
+    viewingAttendanceType,
+    viewingSelectedClass,
+    user?.school_id,
+  ]);
+
+  console.log("teachersToMark state:", teachersToMark);
 
   // Toggle student attendance
   const toggleAttendance = (studentId: number) => {
-    setStudentsToMark((students) =>
-      students.map((student) =>
+    setStudentsToMark((prev: any[]) =>
+      prev.map((student) =>
         student.id === studentId
           ? { ...student, present: !student.present }
           : student
@@ -271,18 +355,37 @@ export default function AttendancePage() {
 
   // Mark all as present
   const markAllPresent = () => {
-    setStudentsToMark((students) =>
-      students.map((student) => ({ ...student, present: true }))
+    setStudentsToMark((prev: any[]) =>
+      prev.map((student) => ({ ...student, present: true }))
     );
   };
 
   // Save attendance records
-  const saveAttendance = () => {
+  const saveAttendance = async () => {
     setIsSaving(true);
 
-    // In a real app, this would send the data to the server
-    setTimeout(() => {
-      setIsSaving(false);
+    try {
+      const attendanceData = studentsToMark.map((student) => ({
+        student_id: student.id,
+        class_id: parseInt(selectedClass),
+        date: format(date, "yyyy-MM-dd"),
+        status: student.present ? "present" : "absent",
+        entry_id: user?.id || 0,
+        entry_name: user?.name || "Unknown",
+      }));
+      console.log("Attendance Data:", attendanceData);
+      const response = await fetch(`/api/bulk-student-attendance`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(attendanceData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save attendance");
+      }
+
       toast({
         title: "Attendance Saved",
         description: `Attendance for ${format(
@@ -290,14 +393,65 @@ export default function AttendancePage() {
           "PPP"
         )} has been recorded successfully.`,
       });
-    }, 1000);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save attendance. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const saveTeacherAttendance = async () => {
+    setIsSaving(true);
+
+    try {
+      const attendanceData = teachersToMark.map((teacher) => ({
+        teacher_id: teacher.id,
+        date: format(date, "yyyy-MM-dd"),
+        status: teacher.present ? "present" : "absent",
+        entry_id: user?.id || 0,
+        entry_name: user?.name || "Unknown",
+      }));
+      console.log("Teacher Attendance Data:", attendanceData);
+      const response = await fetch(`/api/bulk-teacher-attendance`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(attendanceData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save teacher attendance");
+      }
+
+      toast({
+        title: "Teacher Attendance Saved",
+        description: `Teacher attendance for ${format(
+          date,
+          "PPP"
+        )} has been recorded successfully.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save teacher attendance. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Filter students by search query
   const filteredStudents = studentsToMark.filter(
-    (student) =>
-      student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.rollNumber.toLowerCase().includes(searchQuery.toLowerCase())
+    (student: any) =>
+      student.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (student.roll_number &&
+        student.roll_number.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   // Calculate attendance statistics
@@ -308,101 +462,35 @@ export default function AttendancePage() {
       ? Math.round((presentCount / studentsToMark.length) * 100)
       : 0;
 
-  const sampleTeachers = [
-    { id: 1, name: "Mr. Sharma", subject: "Math", present: false },
-    { id: 2, name: "Ms. Rao", subject: "Science", present: false },
-    // ...
-  ];
-
-  //calculate attendance statistic for teacher
-  const [teacherList, setTeacherList] = useState<typeof sampleTeachers>([]);
-  const [teachersToMark, setTeachersToMark] = useState<typeof sampleTeachers>(
-    []
-  );
-  const [teacherSearchQuery, setTeacherSearchQuery] = useState("");
-
-  //initialize teacher on load
-  useEffect(() => {
-    setTeacherList(sampleTeachers);
-    setTeachersToMark(sampleTeachers); // Or filter by current day/shift
-  }, []);
-
-  //to clean up user selection for attendance
-
-  //teacher attendance
-
-  const toggleTeacherAttendance = (teacherId: number) => {
-    setTeachersToMark((teachers) =>
-      teachers.map((teacher) =>
-        teacher.id === teacherId
-          ? { ...teacher, present: !teacher.present }
-          : teacher
-      )
-    );
-  };
-
-  const markAllTeachersPresent = () => {
-    setTeachersToMark((teachers) =>
-      teachers.map((teacher) => ({ ...teacher, present: true }))
-    );
-  };
-
+  // Calculate teacher attendance statistics
   const teacherPresentCount = teachersToMark.filter((t) => t.present).length;
   const teacherAbsentCount = teachersToMark.length - teacherPresentCount;
-  const teacherAttendancePercentage = teachersToMark.length
-    ? Math.round((teacherPresentCount / teachersToMark.length) * 100)
-    : 0;
-  const [attendanceType, setAttendanceType] = useState(""); // 'teacher' or 'class'
-  const [selectedDepartment, setSelectedDepartment] = useState("");
-  useEffect(() => {
-    if (attendanceType === "student") {
-      setSelectedDepartment("");
-
-      setTeacherSearchQuery("");
-      setTeachersToMark([]);
-    } else if (attendanceType === "staff") {
-      setSelectedClass("");
-      setSearchQuery("");
-      setStudentsToMark([]);
-    }
-  }, [attendanceType]);
-  // Assume these are fetched from API or context
-  const departments = ["Math", "Science", "English", "Admin"];
-  const classes = [
-    { id: "1", grade: "10", section: "A" },
-    { id: "2", grade: "10", section: "B" },
-    // ...
-  ];
-
-  const filteredTeachers = teachersToMark.filter(
-    (teacher) =>
-      teacher.name.toLowerCase().includes(teacherSearchQuery.toLowerCase()) ||
-      teacher.subject.toLowerCase().includes(teacherSearchQuery.toLowerCase())
-  );
-
-  //handle mark attendance
-  function handleAttendanceTypeChange(type: "student" | "staff") {
-    setAttendanceType(type);
-
-    if (type === "student") {
-      // reset teacher-related state
-      setSelectedDepartment("");
-
-      setTeacherSearchQuery("");
-      setTeachersToMark([]);
-    } else if (type === "staff") {
-      // reset student-related state
-      setSelectedClass("");
-      setSearchQuery("");
-      setStudentsToMark([]);
-    }
-  }
-
-  //save attendance teacher
+  const teacherAttendancePercentage =
+    teachersToMark.length > 0
+      ? Math.round((teacherPresentCount / teachersToMark.length) * 100)
+      : 0;
 
   // Check if user can mark attendance
-  const canMarkAttendance =
-    user?.role === "school_admin" || user?.role === "staff";
+  const canMarkAttendance = ["school_admin", "super_admin", "staff"].includes(
+    user?.role || ""
+  );
+
+  if (loading) {
+    return (
+      <DashboardLayout title="Attendance Management">
+        <div className="container py-6">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <p className="mt-2 text-muted-foreground">
+                Loading attendance data...
+              </p>
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout title="Attendance Management">
@@ -416,7 +504,7 @@ export default function AttendancePage() {
             <TabsTrigger value="report">Attendance Reports</TabsTrigger>
           </TabsList>
 
-          {/* Tab 1: Mark Attendance (Only for teachers and admins) */}
+          {/* Tab 1: Mark Attendance */}
           <TabsContent value="mark">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Left Column - Date Picker */}
@@ -426,15 +514,17 @@ export default function AttendancePage() {
                   <CardDescription>Choose the attendance date</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={(date) => date && setDate(date)}
-                    className="rounded-md border"
-                    disabled={(date) =>
-                      date > new Date() || date < new Date("2023-01-01")
-                    }
-                  />
+                  <div className="flex justify-center items-center space-x-2">
+                    <Calendar
+                      mode="single"
+                      selected={viewingDate}
+                      onSelect={(date) => date && setViewingDate(date)}
+                      className="rounded-md border"
+                      disabled={(date) =>
+                        date > new Date() || date < new Date("2023-01-01")
+                      }
+                    />
+                  </div>
                   <p className="mt-4 text-sm text-muted-foreground text-center">
                     Marking attendance for:{" "}
                     <span className="font-medium">{format(date, "PPP")}</span>
@@ -442,122 +532,7 @@ export default function AttendancePage() {
                 </CardContent>
               </Card>
 
-              {/* Middle Column - Class Selection */}
-              {user?.role === "student" && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Select Class</CardTitle>
-                    <CardDescription>
-                      Choose the class to mark attendance
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <Select
-                      onValueChange={handleClassChange}
-                      value={selectedClass}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a class" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {sampleClasses.map((cls) => (
-                          <SelectItem key={cls.id} value={cls.id}>
-                            {cls.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    {selectedClass && (
-                      <div className="space-y-2">
-                        <div className="flex gap-2">
-                          <Badge
-                            variant="outline"
-                            className="bg-success-100 text-success"
-                          >
-                            Present: {presentCount}
-                          </Badge>
-                          <Badge
-                            variant="outline"
-                            className="bg-destructive-100 text-destructive"
-                          >
-                            Absent: {absentCount}
-                          </Badge>
-                        </div>
-                        <Progress
-                          value={attendancePercentage}
-                          className="h-2"
-                        />
-                        <p className="text-sm text-muted-foreground">
-                          Attendance:{" "}
-                          <span className="font-medium">
-                            {attendancePercentage}%
-                          </span>
-                        </p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* for teacher attendance */}
-              {user?.role === "staff" && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Select Class</CardTitle>
-                    <CardDescription>
-                      Choose the class to mark attendance
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <Select
-                      onValueChange={handleClassChange}
-                      value={selectedClass}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a class" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {sampleClasses.map((cls) => (
-                          <SelectItem key={cls.id} value={cls.id}>
-                            {cls.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    {selectedClass && (
-                      <div className="space-y-2">
-                        <div className="flex gap-2">
-                          <Badge
-                            variant="outline"
-                            className="bg-success-100 text-success"
-                          >
-                            Present: {presentCount}
-                          </Badge>
-                          <Badge
-                            variant="outline"
-                            className="bg-destructive-100 text-destructive"
-                          >
-                            Absent: {absentCount}
-                          </Badge>
-                        </div>
-                        <Progress
-                          value={attendancePercentage}
-                          className="h-2"
-                        />
-                        <p className="text-sm text-muted-foreground">
-                          Attendance:{" "}
-                          <span className="font-medium">
-                            {attendancePercentage}%
-                          </span>
-                        </p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
+              {/* Middle Column - Attendance Type and Class Selection for Admin */}
               {(user?.role === "school_admin" ||
                 user?.role === "super_admin") && (
                 <Card>
@@ -568,43 +543,57 @@ export default function AttendancePage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {/* Attendance Type: Teacher or Class */}
+                    {/* Attendance Type: Teacher or Student */}
                     <Select
                       value={attendanceType}
-                      onValueChange={setAttendanceType}
+                      onValueChange={(value) => {
+                        setAttendanceType(value as "student" | "teacher");
+                        setSelectedClass("");
+                        setTeachersToMark([]);
+                        setStudentsToMark([]);
+                      }}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select target: Teacher or Class" />
+                        <SelectValue placeholder="Select target: Teacher or Student" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="teacher">Teacher</SelectItem>
-                        <SelectItem value="class">Class</SelectItem>
+                        <SelectItem value="student">Student</SelectItem>
                       </SelectContent>
                     </Select>
 
-                    {/* Class Mode: Same as Student View */}
-                    {attendanceType === "class" && (
+                    {/* Student Attendance Mode */}
+                    {attendanceType === "student" && (
                       <>
                         {/* Class Selection */}
                         <Select
                           onValueChange={handleClassChange}
                           value={selectedClass}
+                          disabled={availableClasses.length === 0}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a class" />
+                            <SelectValue
+                              placeholder={
+                                availableClasses.length === 0
+                                  ? "No classes assigned"
+                                  : "Select a class"
+                              }
+                            />
                           </SelectTrigger>
                           <SelectContent>
-                            {sampleClasses.map((cls) => (
-                              <SelectItem key={cls.id} value={cls.id}>
-                                {cls.name}
+                            {availableClasses.map((cls: any) => (
+                              <SelectItem
+                                key={cls.id}
+                                value={cls.id.toString()}
+                              >
+                                {cls.grade} {cls.section}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
 
-                        {/* Attendance Stats + Progress */}
                         {selectedClass && (
-                          <>
+                          <div className="space-y-2">
                             <div className="flex gap-2">
                               <Badge
                                 variant="outline"
@@ -629,35 +618,57 @@ export default function AttendancePage() {
                                 {attendancePercentage}%
                               </span>
                             </p>
-                          </>
+                          </div>
                         )}
                       </>
                     )}
 
                     {/* Teacher Attendance Mode */}
-                    {/* Teacher Attendance View */}
                     {attendanceType === "teacher" && (
                       <>
-                        {/* Select Department/Subject */}
-                        <Select
-                          onValueChange={(value) =>
-                            setSelectedDepartment(value)
+                        {/* The teacher list will be rendered in a separate card below */}
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+              {/* Middle Column - Class Selection for non-admin */}
+              {!(
+                user?.role === "school_admin" || user?.role === "super_admin"
+              ) && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Select Class</CardTitle>
+                    <CardDescription>
+                      Choose the class to mark attendance
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <Select
+                      onValueChange={handleClassChange}
+                      value={selectedClass}
+                      disabled={availableClasses.length === 0}
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            availableClasses.length === 0
+                              ? "No classes assigned"
+                              : "Select a class"
                           }
-                          value={selectedDepartment}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select Department" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {departments.map((dept) => (
-                              <SelectItem key={dept} value={dept}>
-                                {dept}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableClasses.map((cls: any) => (
+                          <SelectItem key={cls.id} value={cls.id.toString()}>
+                            {cls.grade} {cls.section}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
 
-                        {/* Attendance Stats */}
+                    {selectedClass && (
+                      <div className="space-y-2">
                         <div className="flex gap-2">
                           <Badge
                             variant="outline"
@@ -682,7 +693,7 @@ export default function AttendancePage() {
                             {attendancePercentage}%
                           </span>
                         </p>
-                      </>
+                      </div>
                     )}
                   </CardContent>
                 </Card>
@@ -699,8 +710,16 @@ export default function AttendancePage() {
                 <CardContent className="space-y-4">
                   <Button
                     className="w-full"
-                    onClick={markAllPresent}
-                    disabled={!selectedClass || studentsToMark.length === 0}
+                    onClick={
+                      attendanceType === "teacher"
+                        ? markAllTeachersPresent
+                        : markAllPresent
+                    }
+                    disabled={
+                      attendanceType === "student"
+                        ? !selectedClass || studentsToMark.length === 0
+                        : teachersToMark.length === 0
+                    }
                   >
                     <CheckCircle className="mr-2 h-4 w-4" />
                     Mark All Present
@@ -709,10 +728,18 @@ export default function AttendancePage() {
                   <Button
                     className="w-full"
                     variant="outline"
-                    onClick={() =>
-                      setStudentsToMark(getClassStudents(selectedClass))
+                    onClick={() => {
+                      if (attendanceType === "student") {
+                        setStudentsToMark(getClassStudents(selectedClass));
+                      } else {
+                        setTeachersToMark(getAllTeachers());
+                      }
+                    }}
+                    disabled={
+                      attendanceType === "student"
+                        ? !selectedClass || studentsToMark.length === 0
+                        : teachersToMark.length === 0
                     }
-                    disabled={!selectedClass || studentsToMark.length === 0}
                   >
                     <Clock className="mr-2 h-4 w-4" />
                     Reset Attendance
@@ -721,9 +748,17 @@ export default function AttendancePage() {
                   <Button
                     className="w-full"
                     variant="default"
-                    onClick={saveAttendance}
+                    onClick={
+                      attendanceType === "teacher"
+                        ? saveTeacherAttendance
+                        : saveAttendance
+                    }
                     disabled={
-                      !selectedClass || studentsToMark.length === 0 || isSaving
+                      attendanceType === "student"
+                        ? !selectedClass ||
+                          studentsToMark.length === 0 ||
+                          isSaving
+                        : teachersToMark.length === 0 || isSaving
                     }
                   >
                     <Save className="mr-2 h-4 w-4" />
@@ -740,8 +775,19 @@ export default function AttendancePage() {
                   <div>
                     <CardTitle>Student Attendance</CardTitle>
                     <CardDescription>
-                      {sampleClasses.find((cls) => cls.id === selectedClass)
-                        ?.name || "Class"}{" "}
+                      {availableClasses.find(
+                        (cls: any) => cls.id.toString() === selectedClass
+                      )
+                        ? `${
+                            availableClasses.find(
+                              (cls: any) => cls.id.toString() === selectedClass
+                            )?.grade
+                          } ${
+                            availableClasses.find(
+                              (cls: any) => cls.id.toString() === selectedClass
+                            )?.section
+                          }`
+                        : "Class"}{" "}
                       | {format(date, "PPP")}
                     </CardDescription>
                   </div>
@@ -751,7 +797,9 @@ export default function AttendancePage() {
                       placeholder="Search students..."
                       className="pl-8"
                       value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        setSearchQuery(e.target.value)
+                      }
                     />
                   </div>
                 </CardHeader>
@@ -773,9 +821,9 @@ export default function AttendancePage() {
                               <User className="h-4 w-4 text-primary" />
                             </div>
                             <div>
-                              <p className="font-medium">{student.name}</p>
+                              <p className="font-medium">{student.full_name}</p>
                               <p className="text-xs text-muted-foreground">
-                                Roll: {student.rollNumber}
+                                Roll: {student.roll_number || "N/A"}
                               </p>
                             </div>
                           </div>
@@ -802,126 +850,240 @@ export default function AttendancePage() {
               </Card>
             )}
 
-            {attendanceType === "teacher" &&
-              (user?.role === "school_admin" ||
-                user?.role === "super_admin") && (
-                <>
-                  {attendanceType === "teacher" &&
-                    selectedDepartment &&
-                    teachersToMark.length > 0 && (
-                      <Card className="mt-6">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                          <div>
-                            <CardTitle>Teacher Attendance</CardTitle>
-                            <CardDescription>
-                              {selectedDepartment || "Department"} |{" "}
-                              {format(date, "PPP")}
-                            </CardDescription>
+            {availableClasses.length === 0 && (
+              <Card className="mt-6">
+                <CardContent className="text-center py-12">
+                  <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-lg font-medium mb-2">
+                    No Classes Assigned
+                  </h3>
+                  <p className="text-muted-foreground">
+                    {user?.role === "staff"
+                      ? "You are not assigned as a class teacher for any classes."
+                      : "No classes found in the system."}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Teacher List for Attendance Marking */}
+            {attendanceType === "teacher" && teachersToMark.length > 0 && (
+              <Card className="mt-6">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <div>
+                    <CardTitle>Teacher Attendance</CardTitle>
+                    <CardDescription>
+                      Mark attendance for teachers | {format(date, "PPP")}
+                    </CardDescription>
+                  </div>
+                  <div className="relative w-64">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search teachers..."
+                      className="pl-8"
+                      value={teacherSearchQuery}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        setTeacherSearchQuery(e.target.value)
+                      }
+                    />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 mb-4">
+                    <div className="flex gap-2">
+                      <Badge
+                        variant="outline"
+                        className="bg-success-100 text-success"
+                      >
+                        Present: {teacherPresentCount}
+                      </Badge>
+                      <Badge
+                        variant="outline"
+                        className="bg-destructive-100 text-destructive"
+                      >
+                        Absent: {teacherAbsentCount}
+                      </Badge>
+                    </div>
+                    <Progress
+                      value={teacherAttendancePercentage}
+                      className="h-2"
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Attendance:{" "}
+                      <span className="font-medium">
+                        {teacherAttendancePercentage}%
+                      </span>
+                    </p>
+                  </div>
+                  <Button
+                    className="w-full mb-4"
+                    onClick={markAllTeachersPresent}
+                  >
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Mark All Teachers Present
+                  </Button>
+                  <div className="space-y-4">
+                    {teachersToMark
+                      .filter((teacher) =>
+                        teacher.full_name
+                          .toLowerCase()
+                          .includes(teacherSearchQuery.toLowerCase())
+                      )
+                      .map((teacher) => (
+                        <div
+                          key={teacher.id}
+                          className="flex items-center justify-between p-2 border rounded-md"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 rounded-full bg-primary-50 flex items-center justify-center">
+                              <User className="h-4 w-4 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-medium">{teacher.full_name}</p>
+                            </div>
                           </div>
-                          <div className="relative w-64">
-                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                              placeholder="Search teachers..."
-                              className="pl-8"
-                              value={teacherSearchQuery}
-                              onChange={(e) =>
-                                setTeacherSearchQuery(e.target.value)
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`teacher-attendance-${teacher.id}`}
+                              checked={teacher.present}
+                              onCheckedChange={() =>
+                                toggleTeacherAttendance(teacher.id)
                               }
                             />
+                            <Label
+                              htmlFor={`teacher-attendance-${teacher.id}`}
+                              className="text-sm"
+                            >
+                              {teacher.present ? "Present" : "Absent"}
+                            </Label>
                           </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-4">
-                            {filteredTeachers.length === 0 ? (
-                              <div className="text-center py-6 text-muted-foreground">
-                                <AlertCircle className="h-6 w-6 mx-auto mb-2" />
-                                <p>No teachers found</p>
-                              </div>
-                            ) : (
-                              filteredTeachers.map((teacher) => (
-                                <div
-                                  key={teacher.id}
-                                  className="flex items-center justify-between p-2 border rounded-md"
-                                >
-                                  <div className="flex items-center space-x-3">
-                                    <div className="w-8 h-8 rounded-full bg-primary-50 flex items-center justify-center">
-                                      <User className="h-4 w-4 text-primary" />
-                                    </div>
-                                    <div>
-                                      <p className="font-medium">
-                                        {teacher.name}
-                                      </p>
-                                      <p className="text-xs text-muted-foreground">
-                                        Subject: {teacher.subject}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id={`teacher-attendance-${teacher.id}`}
-                                      checked={teacher.present}
-                                      onCheckedChange={() =>
-                                        toggleTeacherAttendance(teacher.id)
-                                      }
-                                    />
-                                    <Label
-                                      htmlFor={`teacher-attendance-${teacher.id}`}
-                                      className="text-sm"
-                                    >
-                                      {teacher.present ? "Present" : "Absent"}
-                                    </Label>
-                                  </div>
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-                </>
-              )}
+                        </div>
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Tab 2: View Attendance */}
           <TabsContent value="view">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Left Column - Date & Class Selection */}
               <Card className="md:col-span-1">
                 <CardHeader>
                   <CardTitle>Filter Attendance</CardTitle>
                   <CardDescription>Select date and class</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
+                <CardContent className="space-y-3">
+                  <div className="space-y-3">
                     <Label>Date</Label>
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left font-normal"
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {format(new Date(), "PPP")}
-                      </Button>
+                    <div className="flex justify-center items-center space-x-2">
+                      <Calendar
+                        mode="single"
+                        selected={viewingDate}
+                        onSelect={(date) => date && setViewingDate(date)}
+                        className="rounded-md border"
+                        disabled={(date) =>
+                          date > new Date() || date < new Date("2023-01-01")
+                        }
+                      />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Class</Label>
-                    <Select defaultValue="1">
+                    <Label>Attendance Type</Label>
+                    <Select
+                      value={viewingAttendanceType}
+                      onValueChange={(value) => {
+                        setViewingAttendanceType(
+                          value as "student" | "teacher"
+                        );
+                        setViewingSelectedClass(""); // Reset class selection when type changes
+                      }}
+                    >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a class" />
+                        <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                       <SelectContent>
-                        {sampleClasses.map((cls) => (
-                          <SelectItem key={cls.id} value={cls.id}>
-                            {cls.name}
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="student">Student</SelectItem>
+                        <SelectItem value="teacher">Teacher</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
-                  <Button className="w-full mt-4">
+                  {viewingAttendanceType === "student" && (
+                    <div className="space-y-2">
+                      <Label>Class</Label>
+                      <Select
+                        value={viewingSelectedClass}
+                        onValueChange={setViewingSelectedClass}
+                        disabled={availableClasses.length === 0}
+                      >
+                        <SelectTrigger>
+                          <SelectValue
+                            placeholder={
+                              availableClasses.length === 0
+                                ? "No classes available"
+                                : "Select a class"
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableClasses.map((cls: any) => (
+                            <SelectItem key={cls.id} value={cls.id.toString()}>
+                              {cls.grade} {cls.section}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {viewingAttendanceType === "teacher" &&
+                    (user?.role === "school_admin" ||
+                      user?.role === "super_admin") && (
+                      <div className="space-y-2">
+                        <Label>Teachers (All)</Label>
+                        <Input value="All teachers" disabled />
+                      </div>
+                    )}
+
+                  {viewingAttendanceType === "teacher" &&
+                    user?.role === "staff" && (
+                      <div className="space-y-2">
+                        <Label>Class Teachers</Label>
+                        <Select
+                          value={viewingSelectedClass}
+                          onValueChange={setViewingSelectedClass}
+                          disabled={availableClasses.length === 0}
+                        >
+                          <SelectTrigger>
+                            <SelectValue
+                              placeholder={
+                                availableClasses.length === 0
+                                  ? "No classes assigned"
+                                  : "Select your class"
+                              }
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableClasses.map((cls: any) => (
+                              <SelectItem
+                                key={cls.id}
+                                value={cls.id.toString()}
+                              >
+                                {cls.grade} {cls.section}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                  <Button
+                    className="w-full mt-4"
+                    onClick={handleViewAttendance}
+                  >
                     <Search className="mr-2 h-4 w-4" />
                     View Attendance
                   </Button>
@@ -934,100 +1096,136 @@ export default function AttendancePage() {
               </Card>
 
               {/* Right Column - Attendance Data */}
-              <Card className="md:col-span-3">
+              <Card className="md:col-span-2">
                 <CardHeader>
-                  <CardTitle>Class 8A Attendance</CardTitle>
+                  <CardTitle>
+                    {viewingAttendanceType === "student"
+                      ? "Student Attendance"
+                      : "Teacher Attendance"}
+                  </CardTitle>
                   <CardDescription>
-                    Showing attendance for {format(new Date(), "PPP")}
+                    Showing attendance for {format(viewingDate, "PPP")}
+                    {viewingSelectedClass &&
+                      viewingAttendanceType === "student" &&
+                      ` for ${
+                        availableClasses.find(
+                          (cls: any) =>
+                            cls.id.toString() === viewingSelectedClass
+                        )?.grade
+                      } ${
+                        availableClasses.find(
+                          (cls: any) =>
+                            cls.id.toString() === viewingSelectedClass
+                        )?.section
+                      }`}
+                    {viewingSelectedClass &&
+                      viewingAttendanceType === "teacher" &&
+                      user?.role === "staff" &&
+                      ` for ${
+                        availableClasses.find(
+                          (cls: any) =>
+                            cls.id.toString() === viewingSelectedClass
+                        )?.grade
+                      } ${
+                        availableClasses.find(
+                          (cls: any) =>
+                            cls.id.toString() === viewingSelectedClass
+                        )?.section
+                      }`}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="rounded-md border">
-                    <div className="grid grid-cols-12 bg-muted/50 p-3 font-medium">
-                      <div className="col-span-1">#</div>
-                      <div className="col-span-5">Name</div>
-                      <div className="col-span-2">Roll No</div>
-                      <div className="col-span-2">Status</div>
-                      <div className="col-span-2">Marked By</div>
-                    </div>
-
-                    <div className="divide-y">
-                      {sampleStudents
-                        .filter((s) => s.className === "Class 8A")
-                        .map((student, index) => (
-                          <div
-                            key={student.id}
-                            className="grid grid-cols-12 p-3 items-center"
-                          >
-                            <div className="col-span-1">{index + 1}</div>
-                            <div className="col-span-5">{student.name}</div>
-                            <div className="col-span-2">
-                              {student.rollNumber}
+                  {viewingAttendanceType === "student" &&
+                  viewingStudentAttendanceData.length > 0 ? (
+                    <div className="space-y-4">
+                      {viewingStudentAttendanceData.map((record: any) => (
+                        <div
+                          key={record.id}
+                          className="flex items-center justify-between p-2 border rounded-md"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 rounded-full bg-primary-50 flex items-center justify-center">
+                              <User className="h-4 w-4 text-primary" />
                             </div>
-                            <div className="col-span-2">
-                              {student.present ? (
-                                <Badge
-                                  variant="outline"
-                                  className="bg-success-100 text-success"
-                                >
-                                  Present
-                                </Badge>
-                              ) : (
-                                <Badge
-                                  variant="outline"
-                                  className="bg-destructive-100 text-destructive"
-                                >
-                                  Absent
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="col-span-2">
-                              <span className="text-sm text-muted-foreground">
-                                Mr. Johnson
-                              </span>
+                            <div>
+                              <p className="font-medium">
+                                {students.find(
+                                  (s) => s.id === record.student_id
+                                )?.full_name || "Unknown Student"}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Class:{" "}
+                                {
+                                  classes.find((c) => c.id === record.class_id)
+                                    ?.grade
+                                }{" "}
+                                {
+                                  classes.find((c) => c.id === record.class_id)
+                                    ?.section
+                                }
+                              </p>
                             </div>
                           </div>
-                        ))}
+                          <Badge
+                            variant="outline"
+                            className={
+                              record.status === "present"
+                                ? "bg-success-100 text-success"
+                                : "bg-destructive-100 text-destructive"
+                            }
+                          >
+                            {record.status}
+                          </Badge>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-
-                  <div className="flex justify-between mt-4">
-                    <div className="flex items-center space-x-4">
-                      <div className="flex items-center">
-                        <div className="w-3 h-3 bg-success rounded-full mr-2"></div>
-                        <span className="text-sm">
-                          Present:{" "}
-                          {
-                            sampleStudents.filter(
-                              (s) => s.className === "Class 8A" && s.present
-                            ).length
-                          }
-                        </span>
-                      </div>
-                      <div className="flex items-center">
-                        <div className="w-3 h-3 bg-destructive rounded-full mr-2"></div>
-                        <span className="text-sm">
-                          Absent:{" "}
-                          {
-                            sampleStudents.filter(
-                              (s) => s.className === "Class 8A" && !s.present
-                            ).length
-                          }
-                        </span>
-                      </div>
+                  ) : viewingAttendanceType === "teacher" &&
+                    viewingTeacherAttendanceData.length > 0 ? (
+                    <div className="space-y-4">
+                      {viewingTeacherAttendanceData.map((record: any) => (
+                        <div
+                          key={record.id}
+                          className="flex items-center justify-between p-2 border rounded-md"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 rounded-full bg-primary-50 flex items-center justify-center">
+                              <User className="h-4 w-4 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-medium">
+                                {teachers.find(
+                                  (t) => t.id === record.teacher_id
+                                )?.full_name ||
+                                  record.full_name ||
+                                  "Unknown Teacher"}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className={
+                              record.status === "present"
+                                ? "bg-success-100 text-success"
+                                : "bg-destructive-100 text-destructive"
+                            }
+                          >
+                            {record.status}
+                          </Badge>
+                        </div>
+                      ))}
                     </div>
-                    <div>
-                      <span className="text-sm font-medium">
-                        Total:{" "}
-                        {
-                          sampleStudents.filter(
-                            (s) => s.className === "Class 8A"
-                          ).length
-                        }{" "}
-                        students
-                      </span>
+                  ) : (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Users className="h-12 w-12 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium mb-2">
+                        Select Options to View
+                      </h3>
+                      <p>
+                        Choose a date, attendance type, and class (if
+                        applicable) from the left panel to view attendance data.
+                      </p>
                     </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -1096,9 +1294,9 @@ export default function AttendancePage() {
                         <SelectValue placeholder="Select class" />
                       </SelectTrigger>
                       <SelectContent>
-                        {sampleClasses.map((cls) => (
-                          <SelectItem key={cls.id} value={cls.id}>
-                            {cls.name}
+                        {availableClasses.map((cls: any) => (
+                          <SelectItem key={cls.id} value={cls.id.toString()}>
+                            {cls.grade} {cls.section}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1125,14 +1323,13 @@ export default function AttendancePage() {
                 <CardHeader>
                   <CardTitle>Monthly Attendance Report</CardTitle>
                   <CardDescription>
-                    Class 8A | May 2025 | {sampleMonthlyData.totalSchoolDays}{" "}
-                    working days
+                    Configure options and generate report
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {!showAttendanceReport ? (
                     <div className="text-center py-12 text-muted-foreground">
-                      <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                      <Users className="h-12 w-12 mx-auto mb-4" />
                       <h3 className="text-lg font-medium mb-2">
                         No Report Generated
                       </h3>
@@ -1142,166 +1339,9 @@ export default function AttendancePage() {
                       </p>
                     </div>
                   ) : (
-                    <>
-                      <Tabs defaultValue="student">
-                        <TabsList className="mb-4">
-                          <TabsTrigger value="student">
-                            Student Attendance
-                          </TabsTrigger>
-                          <TabsTrigger value="staff">
-                            Teacher Attendance
-                          </TabsTrigger>
-                        </TabsList>
-
-                        <TabsContent value="student">
-                          <div className="rounded-md border">
-                            <div className="grid grid-cols-12 bg-muted/50 p-3 font-medium">
-                              <div className="col-span-1">#</div>
-                              <div className="col-span-5">Name</div>
-                              <div className="col-span-2">Roll No</div>
-                              <div className="col-span-2">Present Days</div>
-                              <div className="col-span-2">Percentage</div>
-                            </div>
-
-                            <div className="divide-y">
-                              {sampleMonthlyData.studentAttendance.map(
-                                (student, index) => (
-                                  <div
-                                    key={student.id}
-                                    className="grid grid-cols-12 p-3 items-center"
-                                  >
-                                    <div className="col-span-1">
-                                      {index + 1}
-                                    </div>
-                                    <div className="col-span-5">
-                                      {student.name}
-                                    </div>
-                                    <div className="col-span-2">
-                                      {student.rollNumber}
-                                    </div>
-                                    <div className="col-span-2">
-                                      {student.daysPresent}/
-                                      {sampleMonthlyData.totalSchoolDays}
-                                    </div>
-                                    <div className="col-span-2">
-                                      <div className="flex items-center space-x-2">
-                                        <Progress
-                                          value={student.percentage}
-                                          className="h-2 w-16"
-                                        />
-                                        <span>{student.percentage}%</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )
-                              )}
-                            </div>
-                          </div>
-                        </TabsContent>
-
-                        <TabsContent value="staff">
-                          <div className="rounded-md border">
-                            <div className="grid grid-cols-12 bg-muted/50 p-3 font-medium">
-                              <div className="col-span-1">#</div>
-                              <div className="col-span-5">Name</div>
-                              <div className="col-span-2">Subject</div>
-                              <div className="col-span-2">Present Days</div>
-                              <div className="col-span-2">Percentage</div>
-                            </div>
-
-                            <div className="divide-y">
-                              {sampleMonthlyData.teacherAttendance.map(
-                                (teacher, index) => (
-                                  <div
-                                    key={teacher.id}
-                                    className="grid grid-cols-12 p-3 items-center"
-                                  >
-                                    <div className="col-span-1">
-                                      {index + 1}
-                                    </div>
-                                    <div className="col-span-5">
-                                      {teacher.name}
-                                    </div>
-                                    <div className="col-span-2">
-                                      {teacher.subject}
-                                    </div>
-                                    <div className="col-span-2">
-                                      {teacher.daysPresent}/
-                                      {sampleMonthlyData.totalSchoolDays}
-                                    </div>
-                                    <div className="col-span-2">
-                                      <div className="flex items-center space-x-2">
-                                        <Progress
-                                          value={teacher.percentage}
-                                          className="h-2 w-16"
-                                        />
-                                        <span>{teacher.percentage}%</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )
-                              )}
-                            </div>
-                          </div>
-                        </TabsContent>
-                      </Tabs>
-
-                      <div className="mt-4 space-y-2">
-                        <h3 className="font-medium">Summary</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="bg-muted/30 p-4 rounded-md">
-                            <div className="flex items-center space-x-2">
-                              <CheckCircle className="h-5 w-5 text-success" />
-                              <span className="font-medium">
-                                Good Attendance ({">"}90%)
-                              </span>
-                            </div>
-                            <p className="text-2xl font-bold mt-2">
-                              {
-                                sampleMonthlyData.studentAttendance.filter(
-                                  (s) => s.percentage >= 90
-                                ).length
-                              }{" "}
-                              students
-                            </p>
-                          </div>
-
-                          <div className="bg-muted/30 p-4 rounded-md">
-                            <div className="flex items-center space-x-2">
-                              <AlertCircle className="h-5 w-5 text-amber-500" />
-                              <span className="font-medium">
-                                Average (75-90%)
-                              </span>
-                            </div>
-                            <p className="text-2xl font-bold mt-2">
-                              {
-                                sampleMonthlyData.studentAttendance.filter(
-                                  (s) => s.percentage >= 75 && s.percentage < 90
-                                ).length
-                              }{" "}
-                              students
-                            </p>
-                          </div>
-
-                          <div className="bg-muted/30 p-4 rounded-md">
-                            <div className="flex items-center space-x-2">
-                              <XCircle className="h-5 w-5 text-destructive" />
-                              <span className="font-medium">
-                                Poor ({"<"}75%)
-                              </span>
-                            </div>
-                            <p className="text-2xl font-bold mt-2">
-                              {
-                                sampleMonthlyData.studentAttendance.filter(
-                                  (s) => s.percentage < 75
-                                ).length
-                              }{" "}
-                              students
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </>
+                    <div className="text-center py-12">
+                      <p>Report data would appear here</p>
+                    </div>
                   )}
                 </CardContent>
               </Card>

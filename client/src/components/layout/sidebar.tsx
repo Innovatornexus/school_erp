@@ -297,6 +297,19 @@ export default function Sidebar({
                   <span>Messages</span>
                 </a>
               </Link>
+
+              <Link href="/class-logs">
+                <a
+                  className={
+                    location === "/class-logs"
+                      ? activeNavClass
+                      : inactiveNavClass
+                  }
+                >
+                  <BookOpen className="mr-3 h-4 w-4" />
+                  <span>Class Logs</span>
+                </a>
+              </Link>
             </>
           )}
 

@@ -152,16 +152,25 @@ export default function StudentsPage() {
         <StudentManager
           studentData={
             user?.role === "staff" && currentTeacher
-              ? students.filter((s) =>
-                  classes.some(
-                    (c) =>
-                      c.id === s.class_id &&
-                      (c.class_teacher_id === currentTeacher.id ||
-                        c.subjects?.some(
-                          (sub) => sub.teacher_id === currentTeacher.id
-                        ))
-                  )
-                )
+              ? students.filter((s) => {
+                  // Find the class for this student
+                  const studentClass = classes.find((c) => c.id === s.class_id);
+
+                  // If we can't find the class, exclude the student
+                  if (!studentClass) return false;
+
+                  // Check if the current teacher is the class teacher
+                  const isClassTeacher =
+                    studentClass.class_teacher_id === currentTeacher.id;
+
+                  // Check if the current teacher teaches any subjects in this class
+                  const teachesSubjectsInClass = studentClass.subjects?.some(
+                    (sub: any) => sub.teacher_id === currentTeacher.id
+                  );
+
+                  // Include the student if either condition is true
+                  return isClassTeacher || teachesSubjectsInClass;
+                })
               : students
           }
           classData={classes}

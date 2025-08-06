@@ -53,7 +53,7 @@ const formSchema = z.object({
 
 export default function ClassesPage() {
   const { user } = useAuth();
-  const { classes, loading, schoolData, refetchData } = useSchoolData();
+  const { classes, loading, schoolData, refetchData, teachers } = useSchoolData();
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -197,7 +197,7 @@ export default function ClassesPage() {
       header: "Class Teacher",
       accessorKey: "class_teacher_id",
       cell: (classItem: ClassItem) => {
-        const teacher = schoolData?.teachers?.find(
+        const teacher = teachers?.find(
           (staff: StaffItem) => staff.id === classItem.class_teacher_id
         );
         return teacher?.full_name || "Unassigned";
@@ -297,13 +297,7 @@ export default function ClassesPage() {
             Class Distribution by Grade
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-auto">
-            {Array.from(
-              new Set(
-                classes.map(
-                  (cls) => cls.grade
-                )
-              )
-            )
+            {Array.from(new Set(classes.map((cls) => cls.grade)))
               .sort((a, b) => Number(a) - Number(b))
               .map((grade) => {
                 const gradeClasses = classes.filter(
@@ -460,14 +454,16 @@ export default function ClassesPage() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {schoolData?.teachers?.map((staff: StaffItem) => (
-                                  <SelectItem
-                                    key={staff.id}
-                                    value={staff.id.toString()}
-                                  >
-                                    {staff.full_name}
-                                  </SelectItem>
-                                ))}
+                                {teachers?.map(
+                                  (staff: StaffItem) => (
+                                    <SelectItem
+                                      key={staff.id}
+                                      value={staff.id.toString()}
+                                    >
+                                      {staff.full_name}
+                                    </SelectItem>
+                                  )
+                                )}
                               </SelectContent>
                             </Select>
                             <FormMessage />

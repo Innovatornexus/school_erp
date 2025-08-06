@@ -23,12 +23,14 @@ import StudentFeesPage from "@/pages/student/student-fees-page";
 import StudentMessagesPage from "@/pages/student/student-messages-page";
 import TeacherClassesPage from "@/pages/teacher/teacher-classes-page";
 import TeacherMessagesPage from "@/pages/teacher/teacher-messages-page";
-import StudentDashboardPage from "@/pages/student/student-dashboard-page"; // Added import
-import TeacherDashboardPage from "@/pages/teacher/teacher-dashboard-page"; // Added import
+import StudentDashboardPage from "@/pages/student/student-dashboard-page";
+import TeacherDashboardPage from "@/pages/teacher/teacher-dashboard-page";
 import StudentAttendancePage from "./pages/student/student-attendance-page";
 import ClassSubjectsPage from "@/pages/class-subjects";
 import TeacherSubjectDetailPage from "@/pages/teacher/teacher-subject-detail-page";
 import StaffSubjectsPage from "@/pages/staff-subjects-page";
+import StaffClassLogsPage from "@/pages/staff-class-logs-page";
+import TimetableUploadPage from "@/pages/timetable-upload-page";
 import { SchoolDataProvider } from "./context/SchoolDataContext";
 
 function Router() {
@@ -69,6 +71,11 @@ function Router() {
       <ProtectedRoute path="/fees" component={FeesPage} />
       <ProtectedRoute path="/bills" component={BillsPage} />
       <ProtectedRoute path="/messages" component={MessagesPage} />
+      <ProtectedRoute path="/class-logs" component={StaffClassLogsPage} />
+      <ProtectedRoute
+        path="/timetables/upload"
+        component={TimetableUploadPage}
+      />
 
       {/* Student routes */}
       <ProtectedRoute path="/student/classes" component={StudentClassesPage} />
@@ -96,6 +103,14 @@ function Router() {
       <ProtectedRoute
         path="/teacher/classes/:classId/subjects/:subjectId"
         component={TeacherSubjectDetailPage}
+      />
+      <ProtectedRoute
+        path="/teacher/class-logs"
+        component={StaffClassLogsPage}
+      />
+      <ProtectedRoute
+        path="/teacher/timetables/upload"
+        component={TimetableUploadPage}
       />
 
       {/* Fallback to 404 */}
