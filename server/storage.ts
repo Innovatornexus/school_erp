@@ -25,7 +25,6 @@ import {
   InsertClassSubject,
   studentAttendance,
   StudentAttendance,
-  InsertStudentAttendance,
   teacherAttendance,
   TeacherAttendance,
   InsertTeacherAttendance,
@@ -68,14 +67,17 @@ import {
   timetables,
   Timetable,
   InsertTimetable,
+  teacher_messages,
 } from "@shared/schema";
 
 import { db, pool } from "./db";
-import { eq, and, sql } from "drizzle-orm";
+
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-
+import { and, eq, gte, lte, sql, desc } from "drizzle-orm"; // Make sure gte and lte are imported
+``;
 import type { ClassItemWithCount } from "../client/src/pages/type";
+import { alias } from "drizzle-orm/pg-core";
 
 // Initialize the session store
 const PostgresSessionStore = connectPg(session);
@@ -90,6 +92,29 @@ export class DatabaseStorage {
       pool,
       createTableIfMissing: true,
     });
+  }
+
+  // Messages operations for teacher messages
+
+  async getMessagesByTeacherId(teacherId: number): Promise<Message[]> {
+    return await db
+      .select()
+      .from(messages)
+      .where(eq(messages.sender_id, teacherId));
+  }
+
+  async markMessageAsRead(
+    messageId: number,
+    teacherId: number
+  ): Promise<boolean> {
+    const [updated] = await db
+      .update(messages)
+      .set({ status: "read" })
+      .where(
+        and(eq(messages.id, messageId), eq(messages.receiver_id, teacherId))
+      )
+      .returning();
+    return !!updated;
   }
 
   // User operations
@@ -348,6 +373,14 @@ export class DatabaseStorage {
       .from(classSubjects)
       .innerJoin(classes, eq(classSubjects.class_id, classes.id))
       .where(eq(classSubjects.teacher_id, teacherId));
+  }
+
+  //fetching classes that staff assigned as classteacher
+  async getAllClassesByTeacherId(teacherId: number): Promise<Class[]> {
+    return await db
+      .select()
+      .from(classes)
+      .where(eq(classes.class_teacher_id, teacherId));
   }
 
   async getTeachersByClassId(classId: number): Promise<Teacher[]> {
@@ -712,18 +745,18 @@ export class DatabaseStorage {
       );
   }
 
-  async createStudentAttendance(
-    insertAttendance: InsertStudentAttendance
-  ): Promise<StudentAttendance> {
-    const [attendance] = await db
-      .insert(studentAttendance)
-      .values(insertAttendance)
-      .returning();
-    return attendance;
-  }
+  // async createStudentAttendance(
+  //   insertAttendance: InsertStudentAttendance
+  // ): Promise<StudentAttendance> {
+  //   const [attendance] = await db
+  //     .insert(studentAttendance)
+  //     .values(insertAttendance)
+  //     .returning();
+  //   return attendance;
+  // }
 
   async createStudentAttendances(
-    attendances: InsertStudentAttendance[]
+    attendances: StudentAttendance[]
   ): Promise<StudentAttendance[]> {
     const formattedAttendances = attendances.map((att) => {
       // Ensure att.date is a valid date object before formatting
@@ -744,16 +777,44 @@ export class DatabaseStorage {
     return newAttendances;
   }
 
-  async updateStudentAttendance(
-    id: number,
-    data: Partial<InsertStudentAttendance>
-  ): Promise<StudentAttendance | undefined> {
-    const [updated] = await db
-      .update(studentAttendance)
-      .set(data)
-      .where(eq(studentAttendance.id, id))
-      .returning();
-    return updated;
+  async updateStudentAttendances(
+    attendances: StudentAttendance[]
+  ): Promise<any[]> {
+    // Use a transaction to ensure all updates are atomic (all or nothing)
+    const updatedRecords = await db.transaction(async (tx) => {
+      // Create an array of update promises to run them concurrently
+      const updatePromises = attendances.map((record) => {
+        if (!record.student_id || !record.date) {
+          throw new Error("Missing student_id or date in one of the records.");
+        }
+
+        return tx
+          .update(studentAttendance)
+          .set({
+            // Fields to update
+            status: record.status,
+            entry_id: record.entry_id,
+            entry_name: record.entry_name,
+            // You could also update a 'notes' field here if needed
+            // notes: record.notes,
+          })
+          .where(
+            // Condition to find the specific record to update
+            and(
+              eq(studentAttendance.student_id, record.student_id),
+              eq(studentAttendance.date, record.date)
+            )
+          )
+          .returning(); // Return the entire updated row from the database
+      });
+
+      // Wait for all update operations to complete
+      return Promise.all(updatePromises);
+    });
+
+    // The result from Drizzle is an array of arrays, so we flatten it
+    // into a single array of updated attendance objects.
+    return updatedRecords.flat();
   }
 
   async deleteStudentAttendance(id: number): Promise<boolean> {
@@ -796,6 +857,69 @@ export class DatabaseStorage {
         and(
           eq(teacherAttendance.school_id, schoolId),
           eq(teacherAttendance.date, dateStr)
+        )
+      );
+  }
+
+  // In server/storage.ts, inside the DatabaseStorage class
+
+  // Method to get student attendance within a date range
+  async getStudentAttendanceByDateRange(filters: {
+    school_id: number;
+    class_id?: number;
+    startDate: Date;
+    endDate: Date;
+  }): Promise<any[]> {
+    const { school_id, class_id, startDate, endDate } = filters;
+
+    const conditions = [
+      eq(students.school_id, school_id),
+      gte(studentAttendance.date, startDate.toISOString().split("T")[0]),
+      lte(studentAttendance.date, endDate.toISOString().split("T")[0]),
+    ];
+
+    if (class_id) {
+      conditions.push(eq(studentAttendance.class_id, class_id));
+    }
+
+    return db
+      .select({
+        id: studentAttendance.id,
+        status: studentAttendance.status,
+        date: studentAttendance.date,
+        full_name: students.full_name,
+        class_id: classes.id,
+        grade: classes.grade,
+        section: classes.section,
+      })
+      .from(studentAttendance)
+      .innerJoin(students, eq(studentAttendance.student_id, students.id))
+      .innerJoin(classes, eq(studentAttendance.class_id, classes.id))
+      .where(and(...conditions));
+  }
+
+  // Method to get teacher attendance within a date range
+  async getTeacherAttendanceByDateRange(filters: {
+    school_id: number;
+    startDate: Date;
+    endDate: Date;
+  }): Promise<any[]> {
+    const { school_id, startDate, endDate } = filters;
+
+    return db
+      .select({
+        id: teacherAttendance.id,
+        status: teacherAttendance.status,
+        date: teacherAttendance.date,
+        full_name: teachers.full_name,
+      })
+      .from(teacherAttendance)
+      .innerJoin(teachers, eq(teacherAttendance.teacher_id, teachers.id))
+      .where(
+        and(
+          eq(teacherAttendance.school_id, school_id),
+          gte(teacherAttendance.date, startDate.toISOString().split("T")[0]),
+          lte(teacherAttendance.date, endDate.toISOString().split("T")[0])
         )
       );
   }
@@ -1292,20 +1416,20 @@ export class DatabaseStorage {
   }
 
   // Message operations
-  async getMessage(id: number): Promise<Message | undefined> {
-    const [message] = await db
-      .select()
-      .from(messages)
-      .where(eq(messages.id, id));
-    return message;
-  }
+  // async getMessage(id: number): Promise<Message | undefined> {
+  //   const [message] = await db
+  //     .select()
+  //     .from(messages)
+  //     .where(eq(messages.id, id));
+  //   return message;
+  // }
 
-  async getMessagesBySenderId(senderId: number): Promise<Message[]> {
-    return await db
-      .select()
-      .from(messages)
-      .where(eq(messages.sender_id, senderId));
-  }
+  // async getMessagesBySenderId(senderId: number): Promise<Message[]> {
+  //   return await db
+  //     .select()
+  //     .from(messages)
+  //     .where(eq(messages.sender_id, senderId));
+  // }
 
   async getMessagesBySchoolId(schoolId: number): Promise<Message[]> {
     return await db
@@ -1314,94 +1438,138 @@ export class DatabaseStorage {
       .where(eq(messages.school_id, schoolId));
   }
 
-  async getMessagesByReceiverId(
-    receiverId: number,
-    receiverRole: string
-  ): Promise<Message[]> {
+  // async getMessagesByReceiverId(
+  //   receiverId: number,
+  //   receiverRole: string
+  // ): Promise<Message[]> {
+  //   return await db
+  //     .select()
+  //     .from(messages)
+  //     .where(
+  //       and(
+  //         eq(messages.receiver_id, receiverId),
+  //         eq(messages.receiver_role, receiverRole)
+  //       )
+  //     );
+  // }
+
+  // async createMessage(insertMessage: InsertMessage): Promise<Message> {
+  //   const [message] = await db
+  //     .insert(messages)
+  //     .values(insertMessage)
+  //     .returning();
+  //   return message;
+  // }
+
+  //chatgpt
+  // Fetch all messages sent to a specific user
+  async getMessagesForUser(userId: number): Promise<Message[]> {
     return await db
       .select()
       .from(messages)
-      .where(
-        and(
-          eq(messages.receiver_id, receiverId),
-          eq(messages.receiver_role, receiverRole)
-        )
-      );
+      .where(eq(messages.receiver_id, userId));
   }
 
-  async createMessage(insertMessage: InsertMessage): Promise<Message> {
-    const [message] = await db
+  // Accept array or single number
+  async sendMessage(messageData: InsertMessage): Promise<Message[]> {
+    const receiverIds = Array.isArray(messageData.receiver_id)
+      ? messageData.receiver_id
+      : [messageData.receiver_id];
+
+    const valuesToInsert = receiverIds.map((id) => ({
+      ...messageData,
+      receiver_id: id,
+    }));
+
+    const inserted = await db
       .insert(messages)
-      .values(insertMessage)
+      .values(valuesToInsert)
       .returning();
-    return message;
+
+    return inserted;
   }
 
-  async updateMessage(
-    id: number,
-    data: Partial<InsertMessage>
-  ): Promise<Message | undefined> {
-    const [updated] = await db
-      .update(messages)
-      .set(data)
-      .where(eq(messages.id, id))
-      .returning();
-    return updated;
-  }
-
-  async deleteMessage(id: number): Promise<boolean> {
-    const [deleted] = await db
-      .delete(messages)
-      .where(eq(messages.id, id))
-      .returning();
-    return !!deleted;
-  }
-
-  // ClassMessage operations
-  async getClassMessage(id: number): Promise<ClassMessage | undefined> {
-    const [message] = await db
+  // Optional: Fetch messages sent by a user
+  async getMessagesSentByUser(senderId: number): Promise<Message[]> {
+    return await db
       .select()
-      .from(classMessages)
-      .where(eq(classMessages.id, id));
-    return message;
+      .from(messages)
+      .where(eq(messages.sender_id, senderId));
   }
 
-  async getClassMessagesByClassId(classId: number): Promise<ClassMessage[]> {
+  // Fetch class-based messages for a student
+  async getMessagesForClass(classId: number): Promise<ClassMessage[]> {
     return await db
       .select()
       .from(classMessages)
       .where(eq(classMessages.class_id, classId));
   }
 
-  async createClassMessage(
-    insertClassMessage: InsertClassMessage
-  ): Promise<ClassMessage> {
-    const [message] = await db
-      .insert(classMessages)
-      .values(insertClassMessage)
-      .returning();
-    return message;
-  }
+  // async updateMessage(
+  //   id: number,
+  //   data: Partial<InsertMessage>
+  // ): Promise<Message | undefined> {
+  //   const [updated] = await db
+  //     .update(messages)
+  //     .set(data)
+  //     .where(eq(messages.id, id))
+  //     .returning();
+  //   return updated;
+  // }
 
-  async updateClassMessage(
-    id: number,
-    data: Partial<InsertClassMessage>
-  ): Promise<ClassMessage | undefined> {
-    const [updated] = await db
-      .update(classMessages)
-      .set(data)
-      .where(eq(classMessages.id, id))
-      .returning();
-    return updated;
-  }
+  // async deleteMessage(id: number): Promise<boolean> {
+  //   const [deleted] = await db
+  //     .delete(messages)
+  //     .where(eq(messages.id, id))
+  //     .returning();
+  //   return !!deleted;
+  // }
 
-  async deleteClassMessage(id: number): Promise<boolean> {
-    const [deleted] = await db
-      .delete(classMessages)
-      .where(eq(classMessages.id, id))
-      .returning();
-    return !!deleted;
-  }
+  // // ClassMessage operations
+  // async getClassMessage(id: number): Promise<ClassMessage | undefined> {
+  //   const [message] = await db
+  //     .select()
+  //     .from(classMessages)
+  //     .where(eq(classMessages.id, id));
+  //   return message;
+  // }
+
+  // async getClassMessagesByClassId(classId: number): Promise<ClassMessage[]> {
+  //   return await db
+  //     .select()
+  //     .from(classMessages)
+  //     .where(eq(classMessages.class_id, classId));
+  // }
+
+  // async createClassMessage(
+  //   insertClassMessage: InsertClassMessage
+  // ): Promise<ClassMessage> {
+  //   const [message] = await db
+  //     .insert(classMessages)
+  //     .values(insertClassMessage)
+  //     .returning();
+  //   return message;
+  // }
+
+  // async updateClassMessage(
+  //   id: number,
+  //   data: Partial<InsertClassMessage>
+  // ): Promise<ClassMessage | undefined> {
+  //   const [updated] = await db
+  //     .update(classMessages)
+  //     .set(data)
+  //     .where(eq(classMessages.id, id))
+  //     .returning();
+  //   return updated;
+  // }
+
+  // async deleteClassMessage(id: number): Promise<boolean> {
+  //   const [deleted] = await db
+  //     .delete(classMessages)
+  //     .where(eq(classMessages.id, id))
+  //     .returning();
+  //   return !!deleted;
+  // }
 
   // ClassLog operations
   async getClassLog(id: number): Promise<ClassLog | undefined> {
@@ -1503,6 +1671,64 @@ export class DatabaseStorage {
       .where(eq(timetables.id, id))
       .returning();
     return !!deleted;
+  }
+  async getMessagesByClass(classId: number) {
+    const receiverUser = alias(users, "receiverUser");
+
+    return await db
+      .select({
+        id: teacher_messages.id,
+        message: teacher_messages.message,
+        created_at: teacher_messages.created_at,
+        sender: {
+          id: users.id,
+          name: users.name,
+          role: users.role,
+        },
+        receiver: {
+          id: receiverUser.id,
+          name: receiverUser.name,
+          role: receiverUser.role,
+        },
+      })
+      .from(teacher_messages)
+      .leftJoin(users, eq(teacher_messages.sender_id, users.id))
+      .leftJoin(receiverUser, eq(teacher_messages.receiver_id, receiverUser.id))
+      .where(eq(users.class_id, classId)) // sender belongs to this class
+      .orderBy(desc(teacher_messages.created_at));
+  }
+
+  async getMessagesWithUserInfo(schoolId: number) {
+    const sender = alias(users, "sender");
+    const receiver = alias(users, "receiver");
+
+    return await db
+      .select({
+        id: messages.id,
+        content: messages.content,
+        messageType: messages.message_type,
+        status: messages.status,
+        createdAt: messages.created_at,
+
+        sender: {
+          id: sender.id,
+          name: sender.name,
+          role: sender.role,
+          email: sender.email,
+        },
+
+        receiver: {
+          id: receiver.id,
+          name: receiver.name,
+          role: receiver.role,
+          email: receiver.email,
+        },
+      })
+      .from(messages)
+      .leftJoin(sender, eq(messages.sender_id, sender.id))
+      .leftJoin(receiver, eq(messages.receiver_id, receiver.id))
+      .where(eq(messages.school_id, schoolId))
+      .orderBy(desc(messages.created_at));
   }
 }
 

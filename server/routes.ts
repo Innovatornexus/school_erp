@@ -11,7 +11,6 @@ import {
   insertClassSchema,
   insertSubjectSchema,
   insertClassSubjectSchema,
-  insertStudentAttendanceSchema,
   insertTeacherAttendanceSchema,
   insertMessageSchema,
   insertClassMessageSchema,
@@ -26,7 +25,14 @@ import {
   insertExamSubjectSchema,
   insertMarkSchema,
   insertTimetableSchema,
+  messages,
+  users,
+  studentAttendanceInputSchema,
+  studentAttendanceApiSchema,
+  updateStudentAttendanceApiSchema,
 } from "@shared/schema";
+import { eq } from "drizzle-orm";
+import { db } from "./db";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
@@ -37,6 +43,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // API Routes
   // All routes are prefixed with /api
+
+  // Teacher Messages Routes
+  app.get(
+    "/api/teachers/:teacherId/messages",
+    requireRole(["teacher"]),
+    async (req, res) => {
+      try {
+        const teacherId = parseInt(req.params.teacherId);
+        const messages = await storage.getMessagesByTeacherId(teacherId);
+        res.json(messages);
+      } catch (error) {
+        res
+          .status(500)
+          .json({ message: "Failed to fetch teacher messages", error });
+      }
+    }
+  );
+
+  app.put(
+    "/api/teachers/:teacherId/messages/:messageId/read",
+    requireRole(["teacher"]),
+    async (req, res) => {
+      try {
+        const teacherId = parseInt(req.params.teacherId);
+        const messageId = parseInt(req.params.messageId);
+        const success = await storage.markMessageAsRead(messageId, teacherId);
+        if (!success) {
+          return res.status(404).json({ message: "Message not found" });
+        }
+        res.json({ success: true });
+      } catch (error) {
+        res
+          .status(500)
+          .json({ message: "Failed to mark message as read", error });
+      }
+    }
+  );
 
   // ============ School Routes ============
 
@@ -837,62 +880,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     requireRole(["school_admin", "staff"]),
     async (req, res) => {
       try {
-        console.log("✅ [POST] /api/bulk-student-attendance - Route hit");
-
         const user = req.user as Express.User;
-        console.log("👤 Authenticated user:", {
-          id: user.id,
-          name: user.name,
-          role: user.role,
-        });
 
-        const attendanceData = z
-          .array(insertStudentAttendanceSchema)
+        // FIX: Parse the request body using the new, less strict schema.
+        const incomingData = z
+          .array(studentAttendanceInputSchema)
           .parse(req.body);
-        console.log(`📦 Received ${attendanceData.length} attendance records`);
 
-        // Role-based validation for staff
-        if (user?.role === "staff") {
-          console.log("🔒 Role is staff. Validating teacher access...");
-
-          const teacher = await storage.getTeacherByUserId(user.id);
-          if (!teacher) {
-            console.warn("❌ No teacher found for user");
-            return res.status(403).json({ message: "Forbidden" });
-          }
-
-          const classIds = await storage.getClassesByTeacherId(teacher.id);
-          const classIdSet = new Set(classIds.map((c) => c.id));
-          console.log("🧾 Staff has access to class IDs:", [...classIdSet]);
-
-          for (const attendance of attendanceData) {
-            if (!classIdSet.has(attendance.class_id)) {
-              console.warn(
-                "🚫 Forbidden class ID in attendance:",
-                attendance.class_id
-              );
-              return res.status(403).json({ message: "Forbidden" });
-            }
-          }
-
-          console.log("✅ Staff role validation passed.");
-        }
-
-        // Add metadata to each attendance record
-        const attendanceWithMeta = attendanceData.map((record) => ({
+        // Now, add the metadata that the server is responsible for.
+        const attendanceWithMeta = incomingData.map((record) => ({
           ...record,
           entry_id: user.id,
           entry_name: user.name || "Unknown",
         }));
-        console.log(
-          "📝 Final attendance data with metadata:",
-          attendanceWithMeta
-        );
 
+        // The 'attendanceWithMeta' array now matches the full database schema.
         const newAttendances = await storage.createStudentAttendances(
           attendanceWithMeta
         );
-        console.log("✅ Attendance records successfully stored.");
+
+        //this error due to demanding id , but id incremented
 
         res.status(201).json(newAttendances);
       } catch (error) {
@@ -900,6 +907,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           "❌ Error occurred in bulk-student-attendance route:",
           error
         );
+        // Return a more specific error message for Zod issues
+        if (error instanceof z.ZodError) {
+          return res
+            .status(400)
+            .json({ message: "Invalid data format", errors: error.errors });
+        }
         res.status(500).json({ message: "Internal Server Error" });
       }
     }
@@ -915,14 +928,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (user.role !== "school_admin") {
           return res.status(403).json({ message: "Forbidden" });
         }
-        const attendanceData = z
-          .array(insertTeacherAttendanceSchema)
-          .parse(
-            req.body.map((record: any) => ({
-              ...record,
-              school_id: user.school_id,
-            }))
-          );
+        const attendanceData = z.array(insertTeacherAttendanceSchema).parse(
+          req.body.map((record: any) => ({
+            ...record,
+            school_id: user.school_id,
+          }))
+        );
         const newAttendances = await storage.createTeacherAttendances(
           attendanceData
         );
@@ -954,7 +965,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
   );
+  //update student
+  app.put(
+    "/api/bulk-student-attendance",
+    requireRole(["school_admin", "staff"]),
+    async (req, res) => {
+      try {
+        const user = req.user as Express.User;
 
+        // FIX: Use the new, correct schema to validate the array from the request body.
+        const incomingData = z
+          .array(updateStudentAttendanceApiSchema)
+          .parse(req.body);
+
+        // Prepare the data for the database update operation by adding server-side metadata.
+        const attendanceToUpdate = incomingData.map((record) => ({
+          ...record,
+          entry_id: user.id,
+          entry_name: user.name || "Unknown",
+        }));
+
+        // Call the storage method to perform the bulk update.
+        const updatedAttendances = await storage.updateStudentAttendances(
+          attendanceToUpdate
+        );
+
+        res.status(200).json(updatedAttendances);
+      } catch (error) {
+        console.error("❌ Error in PUT /api/bulk-student-attendance:", error);
+        if (error instanceof z.ZodError) {
+          return res
+            .status(400)
+            .json({ message: "Validation failed", errors: error.errors });
+        }
+        res.status(500).json({ message: "Failed to update attendance" });
+      }
+    }
+  );
   // Get teacher attendance by school and date
   app.get(
     "/api/schools/:schoolId/teacher-attendance",
@@ -1052,7 +1099,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (!teacher) {
             return res.status(403).json({ message: "Forbidden" });
           }
-          const classesAssigned = await storage.getClassesByTeacherId(
+          const classesAssigned = await storage.getAllClassesByTeacherId(
             teacher.id
           );
           const isAssignedToClass = classesAssigned.some(
@@ -1173,7 +1220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (error instanceof Error) {
           console.error("Full error:", error);
           return res.status(500).json({
-            message: "Failed to fetch teachers for class",
+            message: "Failed to fetch student attendance by class id",
             error: error.message,
             stack: error.stack,
           });
@@ -1183,6 +1230,185 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Unknown error occurred",
           error: JSON.stringify(error),
         });
+      }
+    }
+  );
+
+  // Helper function to transform flat records into a grid structure for the frontend table
+  const transformRecordsToGrid = (records: any[], type: string) => {
+    if (!records || records.length === 0) {
+      return { headers: [], rows: [] };
+    }
+
+    // 1. Create a sorted, unique list of dates for the table headers
+    const dateSet = new Set(records.map((r: { date: any }) => r.date));
+    // FIX: Explicitly convert Date objects to numbers for sorting
+    const headers = Array.from(dateSet).sort(
+      (a, b) => new Date(a).getTime() - new Date(b).getTime()
+    );
+
+    const groupedData = new Map();
+
+    // 2. Group records by the appropriate ID (student, teacher, or class)
+    for (const record of records) {
+      let key;
+      let name;
+
+      switch (type) {
+        case "student":
+          key = record.student_id;
+          name = record.full_name;
+          break;
+        case "teacher":
+          key = record.teacher_id;
+          name = record.full_name;
+          break;
+        case "class":
+          key = record.class_id;
+          name = `${record.grade} ${record.section}`;
+          break;
+        default:
+          continue; // Skip if type is unknown
+      }
+
+      // If we haven't seen this student/teacher/class before, initialize it
+      if (!groupedData.has(key)) {
+        groupedData.set(key, {
+          id: key,
+          name: name,
+          // The attendance object will store date-status pairs
+          attendance: {},
+        });
+      }
+
+      // 3. Handle data differently for class reports (calculate percentages)
+      if (type === "class") {
+        // Initialize daily stats if not present
+        const dailyStats = groupedData.get(key).attendance[record.date] || {
+          present: 0,
+          total: 0,
+        };
+
+        dailyStats.total += 1;
+        if (record.status === "present") {
+          dailyStats.present += 1;
+        }
+
+        groupedData.get(key).attendance[record.date] = dailyStats;
+      } else {
+        // For students and teachers, just record the status
+        groupedData.get(key).attendance[record.date] = record.status;
+      }
+    }
+
+    // 4. Convert the Map into the final array of rows
+    const rows = Array.from(groupedData.values());
+
+    // 5. Final processing step for class reports to convert stats to percentages
+    if (type === "class") {
+      for (const row of rows) {
+        for (const date in row.attendance) {
+          const stats = row.attendance[date];
+          // Calculate percentage and round it
+          row.attendance[date] =
+            stats.total > 0
+              ? Math.round((stats.present / stats.total) * 100)
+              : 0;
+        }
+      }
+    }
+
+    // 6. Ensure every row has a value (or null) for every date in the header
+    for (const row of rows) {
+      for (const headerDate of headers) {
+        if (!row.attendance.hasOwnProperty(headerDate)) {
+          row.attendance[headerDate] = null; // Indicates no record for this day
+        }
+      }
+    }
+
+    return { headers, rows };
+  };
+
+  // The main API route handler
+  app.get(
+    "/api/attendance-report",
+    requireRole(["school_admin", "staff"]),
+    async (req, res) => {
+      try {
+        const { type, period, month, year, class_id } = req.query;
+        const user = req.user as Express.User;
+
+        if (typeof user.school_id !== "number") {
+          return res
+            .status(400)
+            .json({ message: "User is not associated with a school." });
+        }
+
+        if (!type || !period || !month || !year) {
+          return res
+            .status(400)
+            .json({ message: "Missing required query parameters" });
+        }
+
+        const yearNum = parseInt(year as string);
+        const monthNum = parseInt(month as string);
+        const startDate = new Date(yearNum, monthNum, 1);
+        const endDate = new Date(yearNum, monthNum + 1, 0);
+
+        let records = [];
+
+        // Fetch the raw, flat data from your storage/database
+        if (type === "student" || type === "class") {
+          records = await storage.getStudentAttendanceByDateRange({
+            school_id: user.school_id,
+            class_id: class_id ? parseInt(class_id as string) : undefined,
+            startDate,
+            endDate,
+          });
+        } else if (type === "teacher") {
+          records = await storage.getTeacherAttendanceByDateRange({
+            school_id: user.school_id,
+            startDate,
+            endDate,
+          });
+        }
+
+        // Calculate the summary from the raw data
+        const total_present = records.filter(
+          (r) => r.status === "present"
+        ).length;
+        const total_absent = records.filter(
+          (r) => r.status === "absent"
+        ).length;
+        const total_records = records.length;
+        const attendance_percentage =
+          total_records > 0
+            ? Math.round((total_present / total_records) * 100)
+            : 0;
+
+        const summary = {
+          total_present,
+          total_absent,
+          total_records,
+          attendance_percentage,
+        };
+
+        // **NEW**: Transform the flat data into the grid structure
+        const { headers, rows } = transformRecordsToGrid(
+          records,
+          type as string
+        );
+
+        // Send the new, structured response
+        res.json({
+          summary,
+          headers,
+          rows,
+        });
+      } catch (error) {
+        console.error("❌ Error generating attendance report:", error);
+        res.status(500).json({ message: "Internal Server Error" });
       }
     }
   );
@@ -1316,6 +1542,273 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res
           .status(500)
           .json({ message: "Failed to record fee payment", error });
+      }
+    }
+  );
+
+  // ============ Message Routes ============
+
+  // Get messages by school
+  app.get(
+    "/api/schools/:schoolId/messages",
+    requireRole(["super_admin", "school_admin", "staff", "teacher", "student"]),
+    async (req, res) => {
+      try {
+        const schoolId = parseInt(req.params.schoolId);
+        const messages = await storage.getMessagesBySchoolId(schoolId);
+        res.json(messages);
+      } catch (error) {
+        res.status(500).json({ message: "Failed to fetch messages", error });
+      }
+    }
+  );
+
+  // // Get messages by sender
+  // app.get(
+  //   "/api/messages/sent/:senderId",
+  //   requireRole(["super_admin", "school_admin", "staff", "teacher"]),
+  //   async (req, res) => {
+  //     try {
+  //       const senderId = parseInt(req.params.senderId);
+  //       const messages = await storage.getMessagesBySenderId(senderId);
+  //       res.json(messages);
+  //     } catch (error) {
+  //       res
+  //         .status(500)
+  //         .json({ message: "Failed to fetch sent messages", error });
+  //     }
+  //   }
+  // );
+
+  // // Get messages by receiver
+  // app.get(
+  //   "/api/messages/received/:receiverId/:receiverRole",
+  //   requireRole(["super_admin", "school_admin", "staff", "teacher", "student"]),
+  //   async (req, res) => {
+  //     try {
+  //       const receiverId = parseInt(req.params.receiverId);
+  //       const receiverRole = req.params.receiverRole;
+  //       const messages = await storage.getMessagesByReceiverId(
+  //         receiverId,
+  //         receiverRole
+  //       );
+  //       res.json(messages);
+  //     } catch (error) {
+  //       res
+  //         .status(500)
+  //         .json({ message: "Failed to fetch received messages", error });
+  //     }
+  //   }
+  // );
+
+  // // Create a new message
+  // app.post(
+  //   "/api/messages",
+  //   requireRole(["super_admin", "school_admin", "staff", "teacher"]),
+  //   async (req, res) => {
+  //     try {
+  //       const messageData = insertMessageSchema.parse(req.body);
+  //       const newMessage = await storage.createMessage(messageData);
+  //       res.status(201).json(newMessage);
+  //     } catch (error) {
+  //       if (error instanceof z.ZodError) {
+  //         return res
+  //           .status(400)
+  //           .json({ message: "Validation failed", errors: error.errors });
+  //       }
+  //       res.status(500).json({ message: "Failed to create message", error });
+  //     }
+  //   }
+  // );
+
+  // // Update a message
+  // app.put(
+  //   "/api/messages/:id",
+  //   requireRole(["super_admin", "school_admin", "staff", "teacher"]),
+  //   async (req, res) => {
+  //     try {
+  //       const id = parseInt(req.params.id);
+  //       const messageData = insertMessageSchema.partial().parse(req.body);
+
+  //       const updatedMessage = await storage.updateMessage(id, messageData);
+  //       if (!updatedMessage) {
+  //         return res.status(404).json({ message: "Message not found" });
+  //       }
+
+  //       res.json(updatedMessage);
+  //     } catch (error) {
+  //       if (error instanceof z.ZodError) {
+  //         return res
+  //           .status(400)
+  //           .json({ message: "Validation failed", errors: error.errors });
+  //       }
+  //       res.status(500).json({ message: "Failed to update message", error });
+  //     }
+  //   }
+  // );
+
+  // // Delete a message
+  // app.delete(
+  //   "/api/messages/:id",
+  //   requireRole(["super_admin", "school_admin", "staff", "teacher"]),
+  //   async (req, res) => {
+  //     try {
+  //       const id = parseInt(req.params.id);
+  //       const success = await storage.deleteMessage(id);
+
+  //       if (!success) {
+  //         return res.status(404).json({ message: "Message not found" });
+  //       }
+
+  //       res.status(204).end();
+  //     } catch (error) {
+  //       res.status(500).json({ message: "Failed to delete message", error });
+  //     }
+  //   }
+  // );
+
+  // // Get a specific message
+  // app.get(
+  //   "/api/messages/:id",
+  //   requireRole(["super_admin", "school_admin", "staff", "teacher", "student"]),
+  //   async (req, res) => {
+  //     try {
+  //       const id = parseInt(req.params.id);
+  //       const message = await storage.getMessage(id);
+
+  //       if (!message) {
+  //         return res.status(404).json({ message: "Message not found" });
+  //       }
+
+  //       res.json(message);
+  //     } catch (error) {
+  //       res.status(500).json({ message: "Failed to fetch message", error });
+  //     }
+  //   }
+  // );
+
+  //chatgpt
+
+  app.get(
+    "/api/messages",
+    requireRole(["super_admin", "school_admin", "teacher", "student"]),
+    async (req, res) => {
+      try {
+        const schoolId = req.user?.school_id;
+        if (!schoolId)
+          return res.status(400).json({ message: "Missing school ID" });
+
+        const messages = await storage.getMessagesWithUserInfo(schoolId);
+        res.json(messages);
+      } catch (error) {
+        console.error("Error fetching messages:", error);
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  );
+
+  app.post(
+    "/api/messages/send",
+    requireRole(["super_admin", "school_admin"]),
+    async (req, res) => {
+      const sender_id = req.user?.id;
+      const sender_role = req.user?.role;
+      const school_id = req.user?.school_id;
+
+      const { content, message_type, receiver_role, receiver_ids } = req.body;
+
+      // Validate required values
+      if (
+        !sender_id ||
+        !sender_role ||
+        !school_id ||
+        !content ||
+        !message_type ||
+        !receiver_role ||
+        !Array.isArray(receiver_ids) ||
+        receiver_ids.length === 0
+      ) {
+        return res.status(400).json({ error: "Missing or invalid fields" });
+      }
+
+      try {
+        // Prepare message entries
+        const messagesToInsert = receiver_ids.map((receiver_id: number) => ({
+          sender_id,
+          sender_role,
+          receiver_id,
+          receiver_role,
+          school_id,
+          content,
+          message_type,
+        }));
+
+        // Insert all messages
+        await db.insert(messages).values(messagesToInsert);
+
+        res.json({ success: true, count: messagesToInsert.length });
+      } catch (err) {
+        console.error("Error sending messages:", err);
+        res.status(500).json({
+          error: "Failed to send messages",
+          details: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+  );
+
+  app.get(
+    "/api/users/:userId/messages",
+    requireRole([
+      "super_admin",
+      "school_admin",
+      "teacher",
+      "student",
+      "parent",
+    ]),
+    async (req, res) => {
+      try {
+        const userId = parseInt(req.params.userId);
+        const userMessages = await storage.getMessagesForUser(userId);
+        res.json(userMessages);
+      } catch (error) {
+        res.status(500).json({ message: "Failed to fetch messages", error });
+      }
+    }
+  );
+
+  app.get(
+    "/api/users/:userId/messages/sent",
+    requireRole(["super_admin", "school_admin", "teacher", "student"]),
+    async (req, res) => {
+      try {
+        const userId = parseInt(req.params.userId);
+        const sent = await storage.getMessagesSentByUser(userId);
+        res.json(sent);
+      } catch (err) {
+        res
+          .status(500)
+          .json({ message: "Failed to fetch sent messages", error: err });
+      }
+    }
+  );
+
+  app.get(
+    "/api/classes/:classId/messages",
+    requireRole(["super_admin", "school_admin", "staff"]),
+    async (req, res) => {
+      try {
+        const classId = parseInt(req.params.classId);
+        if (isNaN(classId)) {
+          return res.status(400).json({ error: "Invalid class ID" });
+        }
+
+        const messages = await storage.getMessagesByClass(classId);
+
+        res.json({ messages });
+      } catch (error) {
+        console.error("Error fetching class messages:", error);
+        res.status(500).json({ error: "Internal server error" });
       }
     }
   );

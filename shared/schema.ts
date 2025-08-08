@@ -16,6 +16,7 @@ import { format } from "date-fns";
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   school_id: integer("school_id").references(() => schools.id),
+  class_id: integer("class_id"),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
@@ -88,6 +89,7 @@ export const students = pgTable("students", {
   user_id: integer("user_id")
     .notNull()
     .references(() => users.id),
+  roll_no: integer("roll_no"),
   school_id: integer("school_id")
     .notNull()
     .references(() => schools.id),
@@ -180,6 +182,7 @@ export const studentAttendance = pgTable("student_attendance", {
   class_id: integer("class_id")
     .notNull()
     .references(() => classes.id),
+  roll_no: integer("roll_no").references(() => students.roll_no),
   date: date("date").notNull(),
   status: text("status").notNull(), // 'present', 'absent', 'late'
   entry_id: integer("entry_id")
@@ -189,6 +192,20 @@ export const studentAttendance = pgTable("student_attendance", {
   notes: text("notes"),
 });
 
+export const studentAttendanceApiSchema = z.object({
+  id: z.number(), // required for update
+  student_id: z.number(),
+  class_id: z.number(),
+  date: z.string(),
+  status: z.enum(["present", "absent", "late"]),
+  notes: z.string().nullable().optional(),
+});
+export const updateStudentAttendanceApiSchema = z.object({
+  student_id: z.number(),
+  class_id: z.number(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), // Validates 'YYYY-MM-DD' format
+  status: z.string(),
+});
 // schema for data received from frontend
 export const studentAttendanceInputSchema = z.object({
   student_id: z.number(),
@@ -205,11 +222,11 @@ export const studentAttendanceInputSchema = z.object({
   status: z.enum(["present", "absent", "late"]),
   notes: z.string().optional(),
 });
-export const insertStudentAttendanceSchema =
-  studentAttendanceInputSchema.extend({
-    entry_id: z.number(),
-    entry_name: z.string().min(1, "Entry name is required"),
-  });
+// export const insertStudentAttendanceSchema =
+//   studentAttendanceInputSchema.extend({
+//     entry_id: z.number(),
+//     entry_name: z.string().min(1, "Entry name is required"),
+//   });
 
 // Teacher attendance records
 export const teacherAttendance = pgTable("teacher_attendance", {
@@ -409,22 +426,48 @@ export const insertBillSchema = createInsertSchema(bills).omit({
 // Messages for communication
 export const messages = pgTable("messages", {
   id: serial("id").primaryKey(),
-  sender_id: integer("sender_id")
-    .notNull()
-    .references(() => users.id),
-  receiver_role: text("receiver_role").notNull(), // 'teacher', 'student', 'parent', 'school_admin', 'all'
-  receiver_id: integer("receiver_id"), // can be null for broadcast messages
-  school_id: integer("school_id")
-    .notNull()
-    .references(() => schools.id),
-  message_type: text("message_type").notNull(), // 'announcement', 'personal', 'notice'
+  sender_id: integer("sender_id").notNull(),
+  sender_role: text("sender_role"),
+  receiver_role: text("receiver_role"), // e.g., 'student', 'teacher', etc.
+  receiver_id: integer("receiver_id"), // null for role-based broadcast
+  school_id: integer("school_id").notNull(),
+  message_type: text("message_type").notNull(), // e.g., 'announcement', 'direct'
   content: text("content").notNull(),
-  created_at: timestamp("created_at").defaultNow().notNull(),
+  status: text("status").default("unread"), // optional column
+  created_at: timestamp("created_at", { withTimezone: false }).defaultNow(),
 });
 
-export const insertMessageSchema = createInsertSchema(messages).omit({
-  id: true,
-  created_at: true,
+export const teacher_messages = pgTable("teacher_messages", {
+  id: serial("id").primaryKey(),
+  sender_id: integer("sender_id").references(() => users.id),
+  receiver_id: integer("receiver_id").references(() => users.id),
+  message: text("message").notNull(),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+});
+export const messageTargets = pgTable("message_targets", {
+  id: serial("id").primaryKey(),
+  message_id: integer("message_id")
+    .notNull()
+    .references(() => messages.id),
+  target_type: text("target_type").notNull(), // 'user', 'class', 'subject', 'role'
+  target_id: integer("target_id"), // nullable for 'role'
+});
+export const messageReads = pgTable("message_reads", {
+  id: serial("id").primaryKey(),
+  message_id: integer("message_id").references(() => messages.id),
+  user_id: integer("user_id").references(() => users.id),
+  read_at: timestamp("read_at"),
+});
+
+export const insertMessageSchema = z.object({
+  sender_id: z.number(),
+  sender_role: z.string(),
+  receiver_role: z.string().nullable(),
+  receiver_id: z.union([z.number(), z.array(z.number())]), // <-- updated
+  school_id: z.number(),
+  message_type: z.string(),
+  content: z.string(),
+  status: z.string().nullable().default("unread"),
 });
 
 // Class-specific messages
@@ -520,9 +563,9 @@ export type ClassSubject = typeof classSubjects.$inferSelect;
 export type InsertClassSubject = z.infer<typeof insertClassSubjectSchema>;
 
 export type StudentAttendance = typeof studentAttendance.$inferSelect;
-export type InsertStudentAttendance = z.infer<
-  typeof insertStudentAttendanceSchema
->;
+// export type InsertStudentAttendance = z.infer<
+//   typeof insertStudentAttendanceSchema
+// >;
 
 export type TeacherAttendance = typeof teacherAttendance.$inferSelect;
 export type InsertTeacherAttendance = z.infer<

@@ -60,3 +60,11 @@ export interface StaffItem {
   phone_number: string;
   subject_specialization: string[];
 }
+
+export type ClassMessage = {
+  id: number;
+  class_id: number;
+  sender_id: number;
+  content: string;
+  created_at: Date;
+};
