@@ -6,6 +6,8 @@ import { toast, useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/layout/dashboard-layout";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 
+import { Search } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 
 import {
@@ -312,6 +314,10 @@ export const StudentManager = ({
   // DataTable columns
   const columns: DataTableColumn<StudentItem>[] = [
     {
+      header: "Roll No",
+      accessorKey: "roll_no",
+    },
+    {
       header: "Name",
       accessorKey: "full_name",
     },
@@ -405,17 +411,29 @@ export const StudentManager = ({
     return matchesSearchTerm && matchesGrade && matchesSection;
   });
 
-  const grades = Array.from(new Set(filteredStudents.map((student) => {
-    const studentClass = classData.find((cls) => cls.id === student.class_id);
-    return studentClass?.grade;
-  }).filter(Boolean))).sort(
-    (a, b) => a - b
-  );
+  const grades = Array.from(
+    new Set(
+      filteredStudents
+        .map((student) => {
+          const studentClass = classData.find(
+            (cls) => cls.id === student.class_id
+          );
+          return studentClass?.grade;
+        })
+        .filter(Boolean)
+    )
+  ).sort((a: any, b: any) => (a || 0) - (b || 0));
   const sections = Array.from(
-    new Set(filteredStudents.map((student) => {
-      const studentClass = classData.find((cls) => cls.id === student.class_id);
-      return studentClass?.section;
-    }).filter(Boolean))
+    new Set(
+      filteredStudents
+        .map((student) => {
+          const studentClass = classData.find(
+            (cls) => cls.id === student.class_id
+          );
+          return studentClass?.section;
+        })
+        .filter(Boolean)
+    )
   ).sort();
 
   return (
@@ -720,54 +738,50 @@ export const StudentManager = ({
         </Dialog>
       </div>
       <div className="flex space-x-4 mb-4">
-        <Input
-          placeholder="Search by name..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
-        />
-        <Select
-          onValueChange={setSelectedGrade}
-          value={selectedGrade}
-        >
+        <div className="relative">
+          {/* 1. Position the icon inside the container */}
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+
+          {/* 2. Add left padding to the Input so text doesn't overlap the icon */}
+          <Input
+            placeholder="Search by name or email..."
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            className="max-w-sm pl-10" // Increased padding for the icon
+          />
+        </div>
+        <Select onValueChange={setSelectedGrade} value={selectedGrade}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Filter by Grade" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Grades</SelectItem>
             {grades.map((grade) => (
-              <SelectItem key={grade} value={grade.toString()}>
+              <SelectItem key={grade} value={String(grade)}>
                 Grade {grade}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <Select
-          onValueChange={setSelectedSection}
-          value={selectedSection}
-        >
+        <Select onValueChange={setSelectedSection} value={selectedSection}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Filter by Section" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Sections</SelectItem>
-            {sections.map((section) => (
-              <SelectItem key={section} value={section}>
-                Section {section}
-              </SelectItem>
-            ))}
+            {sections.map((section) =>
+              // FIX: Add a check to ensure 'section' is not undefined before rendering
+              section ? (
+                <SelectItem key={section} value={section}>
+                  Section {section}
+                </SelectItem>
+              ) : null
+            )}
           </SelectContent>
         </Select>
       </div>
 
-      <DataTable
-        data={filteredStudents}
-        columns={columns}
-        searchPlaceholder="Search students..."
-        onSearch={(query) => {
-          // Optional: implement search logic here if needed
-        }}
-      />
+      <DataTable data={filteredStudents} columns={columns} />
 
       {/* delete confirmation page */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>

@@ -68,9 +68,20 @@ import {
   Timetable,
   InsertTimetable,
   teacher_messages,
+  holidays,
+  InsertStudentAttendance,
 } from "@shared/schema";
 
 import { db, pool } from "./db";
+import {
+  startOfYear,
+  endOfYear,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  getDay,
+  format,
+} from "date-fns";
 
 import session from "express-session";
 import connectPg from "connect-pg-simple";
@@ -101,6 +112,182 @@ export class DatabaseStorage {
       .select()
       .from(messages)
       .where(eq(messages.sender_id, teacherId));
+  }
+
+  // Function to save holidays for a year
+  async createOrUpdateHolidays(
+    schoolId: number,
+    year: number,
+    holidayList: { date: string; name: string }[]
+  ) {
+    // Drizzle's ON CONFLICT DO UPDATE (upsert) is perfect here
+    return db
+      .insert(holidays)
+      .values(
+        holidayList.map((h) => ({
+          school_id: schoolId,
+          date: h.date,
+          name: h.name,
+        }))
+      )
+      .onConflictDoUpdate({
+        target: [holidays.school_id, holidays.date], // Unique constraint
+        set: {
+          name: sql`excluded.name`, // Update the name if the date already exists
+        },
+      })
+      .returning();
+  }
+
+  // Main function to generate reports
+  async generateAttendanceReport(params: {
+    reportType: "student" | "teacher";
+    periodType: "month" | "year";
+    year: number;
+    month?: number;
+    classId?: number;
+    schoolId: number;
+  }) {
+    // 1. Determine Date Range
+    let startDate, endDate;
+    if (params.periodType === "year") {
+      startDate = startOfYear(new Date(params.year, 0, 1));
+      endDate = endOfYear(new Date(params.year, 0, 1));
+    } else if (params.periodType === "month" && params.month !== undefined) {
+      startDate = startOfMonth(new Date(params.year, params.month));
+      endDate = endOfMonth(new Date(params.year, params.month));
+    } else {
+      throw new Error("Invalid period type or missing month.");
+    }
+
+    // 2. Get all holidays within the date range
+    const holidaysInPeriod = await db.query.holidays.findMany({
+      where: and(
+        eq(holidays.school_id, params.schoolId),
+        gte(holidays.date, format(startDate, "yyyy-MM-dd")),
+        lte(holidays.date, format(endDate, "yyyy-MM-dd"))
+      ),
+    });
+    const holidayDates = new Set(holidaysInPeriod.map((h) => h.date));
+
+    // 3. Calculate Total Working Days (excluding Sundays and holidays)
+    let totalWorkingDays = 0;
+    const daysInInterval = eachDayOfInterval({
+      start: startDate,
+      end: endDate,
+    });
+    for (const day of daysInInterval) {
+      const dayOfWeek = getDay(day); // 0 = Sunday
+      const formattedDate = format(day, "yyyy-MM-dd");
+      if (dayOfWeek !== 0 && !holidayDates.has(formattedDate)) {
+        totalWorkingDays++;
+      }
+    }
+
+    // 4. Fetch and Aggregate Attendance Data
+    let reportData: any;
+    if (params.reportType === "student") {
+      if (!params.classId)
+        throw new Error("Class ID is required for student reports.");
+
+      const studentAttendances = await db
+        .select({
+          id: students.id,
+          name: students.full_name,
+          roll_no: students.roll_no,
+          daysPresent:
+            sql<number>`count(CASE WHEN ${studentAttendance.status} = 'present' THEN 1 END)`.mapWith(
+              Number
+            ),
+        })
+        .from(students) // <-- START from the 'students' table
+        .leftJoin(
+          studentAttendance,
+          and(
+            // <-- USE leftJoin to include all students, even those with no attendance records
+            eq(studentAttendance.student_id, students.id),
+            // Move date filter for attendance records into the join condition for correctness
+            gte(studentAttendance.date, format(startDate, "yyyy-MM-dd")),
+            lte(studentAttendance.date, format(endDate, "yyyy-MM-dd"))
+          )
+        )
+        .where(
+          // Filter the main table (students) by classId
+          eq(students.class_id, params.classId)
+        )
+        .groupBy(students.id, students.full_name, students.roll_no)
+        .orderBy(students.roll_no);
+      reportData = studentAttendances.map((row) => ({
+        ...row,
+        percentage:
+          totalWorkingDays > 0
+            ? Math.round((row.daysPresent / totalWorkingDays) * 100)
+            : 0,
+      }));
+      // Inside generateAttendanceReport function
+    } else {
+      // This is the block for params.reportType === "teacher"
+      const teacherAttendances = await db
+        .select({
+          id: teachers.id,
+          name: teachers.full_name,
+          daysPresent:
+            sql<number>`count(CASE WHEN ${teacherAttendance.status} = 'present' THEN 1 END)`.mapWith(
+              Number
+            ),
+        })
+        .from(teachers)
+        .leftJoin(
+          teacherAttendance,
+          and(
+            eq(teacherAttendance.teacher_id, teachers.id),
+            // Add a filter for the school to ensure you only get teachers from the correct school
+            eq(teacherAttendance.school_id, params.schoolId),
+            gte(teacherAttendance.date, format(startDate, "yyyy-MM-dd")),
+            lte(teacherAttendance.date, format(endDate, "yyyy-MM-dd"))
+          )
+        )
+        // Add a WHERE clause to select teachers of the specific school
+        .where(eq(teachers.school_id, params.schoolId))
+        .groupBy(teachers.id, teachers.full_name)
+        .orderBy(teachers.full_name);
+
+      // Assign the calculated and mapped data to reportData
+      reportData = teacherAttendances.map((row) => ({
+        ...row,
+        percentage:
+          totalWorkingDays > 0
+            ? Math.round((row.daysPresent / totalWorkingDays) * 100)
+            : 0,
+      }));
+
+      // The line "reportData = [];" has been removed.
+    }
+    let good = 0;
+    let average = 0;
+    let poor = 0;
+
+    // Loop through the report data you just generated
+    for (const record of reportData) {
+      if (record.percentage >= 90) {
+        good++;
+      } else if (record.percentage >= 75) {
+        average++;
+      } else {
+        poor++;
+      }
+    }
+    // 5. Return the final report object
+    return {
+      data: reportData,
+      summary: {
+        totalWorkingDays,
+        good, // <-- ADDED
+        average, // <-- ADDED
+        poor,
+        // You can add more summary data here
+      },
+    };
   }
 
   async markMessageAsRead(
@@ -445,6 +632,43 @@ export class DatabaseStorage {
         throw new Error("Student with this email already exists.");
       }
 
+      // Ensure class_id is provided
+      if (!insertStudent.class_id) {
+        throw new Error("class_id is required to generate roll number.");
+      }
+
+      // Fetch class details for grade and section
+      const [classItem] = await db
+        .select()
+        .from(classes)
+        .where(eq(classes.id, insertStudent.class_id))
+        .limit(1);
+
+      if (!classItem) {
+        throw new Error("Class not found for the given class_id.");
+      }
+
+      // Count existing students in the class
+      const existingStudents = await db
+        .select()
+        .from(students)
+        .where(eq(students.class_id, insertStudent.class_id));
+
+      const count = existingStudents.length;
+
+      // Convert section letter to number: 'a' -> 1, 'b' -> 2, etc.
+      const sectionLetter = classItem.section.toLowerCase();
+      const sectionNumber = sectionLetter.charCodeAt(0) - "a".charCodeAt(0) + 1;
+
+      // Generate roll_no as grade + sectionNumber + (count + 1) padded to 2 digits
+      // Assuming grade is numeric string, e.g., "9"
+      const ascendingOrder = (count + 1).toString().padStart(2, "0");
+      const rollNoStr = `${classItem.grade}${sectionNumber}${ascendingOrder}`;
+      const rollNo = parseInt(rollNoStr);
+
+      // Assign roll_no to insertStudent
+      insertStudent.roll_no = rollNo;
+
       const [studentItem] = await db
         .insert(students)
         .values(insertStudent)
@@ -728,10 +952,10 @@ export class DatabaseStorage {
         student_id: studentAttendance.student_id,
         class_id: studentAttendance.class_id,
         date: studentAttendance.date,
+        day: studentAttendance.day,
         status: studentAttendance.status,
         notes: studentAttendance.notes,
-
-        // Renamed to avoid conflict with existing columns
+        roll_no: studentAttendance.roll_no,
         entry_id: students.id,
         entry_name: students.full_name,
       })
@@ -756,7 +980,7 @@ export class DatabaseStorage {
   // }
 
   async createStudentAttendances(
-    attendances: StudentAttendance[]
+    attendances: InsertStudentAttendance[]
   ): Promise<StudentAttendance[]> {
     const formattedAttendances = attendances.map((att) => {
       // Ensure att.date is a valid date object before formatting
@@ -778,7 +1002,7 @@ export class DatabaseStorage {
   }
 
   async updateStudentAttendances(
-    attendances: StudentAttendance[]
+    attendances: InsertStudentAttendance[]
   ): Promise<any[]> {
     // Use a transaction to ensure all updates are atomic (all or nothing)
     const updatedRecords = await db.transaction(async (tx) => {
@@ -803,6 +1027,49 @@ export class DatabaseStorage {
             and(
               eq(studentAttendance.student_id, record.student_id),
               eq(studentAttendance.date, record.date)
+            )
+          )
+          .returning(); // Return the entire updated row from the database
+      });
+
+      // Wait for all update operations to complete
+      return Promise.all(updatePromises);
+    });
+
+    // The result from Drizzle is an array of arrays, so we flatten it
+    // into a single array of updated attendance objects.
+    return updatedRecords.flat();
+  }
+
+  async updateTeacherAttendances(
+    attendances: InsertTeacherAttendance[]
+  ): Promise<any[]> {
+    // Use a transaction to ensure all updates are atomic (all or nothing)
+    const updatedRecords = await db.transaction(async (tx) => {
+      // Create an array of update promises to run them concurrently
+      const updatePromises = attendances.map((record) => {
+        if (!record.teacher_id || !record.date) {
+          throw new Error("Missing student_id or date in one of the records.");
+        }
+
+        return tx
+          .update(teacherAttendance)
+          .set({
+            // Fields to update
+            status: record.status,
+
+            // You could also update a 'notes' field here if needed
+            // notes: record.notes,
+          })
+          .where(
+            // Condition to find the specific record to update
+            and(
+              eq(teacherAttendance.teacher_id, record.teacher_id),
+              // FIX: Format the date to a string
+              eq(
+                teacherAttendance.date,
+                format(new Date(record.date), "yyyy-MM-dd")
+              )
             )
           )
           .returning(); // Return the entire updated row from the database

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -32,7 +32,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Edit, PlusCircle, Trash } from "lucide-react";
+import { BookOpen, Edit, PlusCircle, Search, Trash } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { SubjectItem } from "./type";
 import { useSchoolData } from "@/context/SchoolDataContext";
@@ -48,7 +48,9 @@ type SubjectFormValues = z.infer<typeof subjectFormSchema>;
 
 export default function SubjectsPage() {
   const { user } = useAuth();
-  const { subjects, loading, schoolData } = useSchoolData();
+  const { subjects, loading, schoolData, refetchData } = useSchoolData();
+  // Inside the SubjectsPage component, with other useState hooks
+  const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,7 +67,17 @@ export default function SubjectsPage() {
       subject_description: "",
     },
   });
+  // Inside the SubjectsPage component, before the columns definition
 
+  const filteredSubjects = useMemo(() => {
+    if (!searchTerm) {
+      return subjects; // Return all subjects if search is empty
+    }
+
+    return subjects.filter((subject) =>
+      subject.subject_name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [subjects, searchTerm]); // Dependencies for the memo
   const openEditDialog = (subject?: SubjectItem) => {
     if (subject) {
       setEditingSubject(subject);
@@ -307,13 +319,23 @@ export default function SubjectsPage() {
             </Dialog>
           </div>
 
+          {/* NEW: Add the Search Input field */}
+          <div className="flex items-center py-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search by subject name..."
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                className="max-w-sm pl-10"
+              />
+            </div>
+          </div>
+
           <DataTable
-            data={subjects}
+            data={filteredSubjects} // <-- USE the new filtered list here
             columns={columns}
             searchPlaceholder="Search subjects..."
-            onSearch={(query) => {
-              console.log("Search query:", query);
-            }}
           />
         </div>
       </div>

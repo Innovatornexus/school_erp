@@ -1,11 +1,24 @@
 import { useEffect, useState, useMemo, ChangeEvent } from "react";
-import { format } from "date-fns";
+// At the top of attendance-page.tsx
+import { format, eachDayOfInterval, getDay } from "date-fns";
 import DashboardLayout from "@/layout/dashboard-layout";
 import { Calendar } from "@/components/ui/calendar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Calendar as CalendarIcon } from "lucide-react"; // Assuming you have this icon
+
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -17,7 +30,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -40,20 +52,19 @@ import {
   Users,
   Download,
   XCircle,
-  UserCircle,
-  MoreVertical,
+  Pencil,
+  X,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useSchoolData } from "@/context/SchoolDataContext";
 import { Switch } from "@/components/ui/switch";
-import { CardFooter } from "@/components/ui/card";
-import { Pencil, X } from "lucide-react";
-// Interfaces for our data structures
+
+// Interfaces
 interface Student {
   id: number;
   full_name: string;
-  roll_number?: string;
+  roll_no?: string;
   class_id: number;
   present: boolean;
 }
@@ -63,7 +74,6 @@ interface Class {
   grade: string;
   section: string;
   class_teacher_id?: number;
-  class_teacher_name?: string;
 }
 
 interface Teacher {
@@ -78,25 +88,11 @@ interface DataTableProps {
   data: any[];
   columns: any[];
   searchPlaceholder: string;
-  onSearch?: (query: string) => void;
 }
 
-// A basic DataTable component for displaying reports
-const DataTable = ({
-  data,
-  columns,
-  searchPlaceholder,
-  onSearch,
-}: DataTableProps) => {
+// DataTable Component for Reports
+const DataTable = ({ data, columns, searchPlaceholder }: DataTableProps) => {
   const [filter, setFilter] = useState("");
-
-  const handleSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const query = event.target.value;
-    setFilter(query);
-    if (onSearch) {
-      onSearch(query);
-    }
-  };
 
   const filteredData = useMemo(() => {
     if (!filter) return data;
@@ -115,7 +111,9 @@ const DataTable = ({
           <Input
             placeholder={searchPlaceholder}
             value={filter}
-            onChange={handleSearchChange}
+            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+              setFilter(e.target.value)
+            }
             className="pl-8"
           />
         </div>
@@ -157,32 +155,47 @@ const DataTable = ({
   );
 };
 
+// Main Attendance Page Component
 export default function AttendancePage() {
   const { user } = useAuth() as { user: any };
   const { classes, students, teachers, loading } = useSchoolData();
   const { toast } = useToast();
-  const [isEditingAttendance, setIsEditingAttendance] = useState(false);
-  const [originalStudentsState, setOriginalStudentsState] = useState<Student[]>(
-    []
-  );
+
   // State for Marking Attendance
   const [date, setDate] = useState<Date>(new Date());
-  const [selectedClass, setSelectedClass] = useState<string>("");
-  const [studentsToMark, setStudentsToMark] = useState<Student[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
   const [attendanceType, setAttendanceType] = useState<"student" | "teacher">(
     "student"
   );
+  const [selectedClass, setSelectedClass] = useState<string>("");
+  const [studentsToMark, setStudentsToMark] = useState<Student[]>([]);
   const [teachersToMark, setTeachersToMark] = useState<Teacher[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Add new state variables inside the component
+  const [isHolidayDialogOpen, setIsHolidayDialogOpen] = useState(false);
+  const [holidayYear, setHolidayYear] = useState(new Date().getFullYear());
+  const [selectedHolidays, setSelectedHolidays] = useState<Date[]>([]);
+
+  // State for UI control
+  const [isAttendanceMarked, setIsAttendanceMarked] = useState(false);
+  const [isEditingAttendance, setIsEditingAttendance] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // State for 'Cancel' functionality
+  const [originalStudentsState, setOriginalStudentsState] = useState<Student[]>(
+    []
+  );
+  const [originalTeachersState, setOriginalTeachersState] = useState<Teacher[]>(
+    []
+  );
 
   // State for Reports
   const [reportType, setReportType] = useState<"student" | "teacher">(
     "student"
   );
-  const [reportTimePeriod, setReportTimePeriod] = useState<
-    "week" | "month" | "term"
-  >("month");
+  const [reportTimePeriod, setReportTimePeriod] = useState<"month" | "term">(
+    "month"
+  );
   const [reportMonth, setReportMonth] = useState<string>(
     new Date().getMonth().toString()
   );
@@ -195,30 +208,37 @@ export default function AttendancePage() {
   const [reportSummary, setReportSummary] = useState<any>(null);
   const [showAttendanceReport, setShowAttendanceReport] = useState(false);
 
-  const currentTeacher = useMemo(() => {
-    if (!user || !teachers.length) return null;
-    return teachers.find((t: any) => t.user_id === user.id);
-  }, [user, teachers]);
-
   const availableClasses = useMemo(() => {
-    if (!classes.length) return [];
-    if (user?.role === "school_admin" || user?.role === "super_admin") {
+    if (!classes.length || !user) return [];
+    if (["school_admin", "super_admin"].includes(user.role)) {
       return classes;
-    } else if (user?.role === "staff" && currentTeacher) {
-      return classes.filter(
-        (cls: any) => cls.class_teacher_id === currentTeacher.id
-      );
+    } else if (user.role === "staff") {
+      const currentTeacher = teachers.find((t: any) => t.user_id === user.id);
+      return currentTeacher
+        ? classes.filter(
+            (cls: any) => cls.class_teacher_id === currentTeacher.id
+          )
+        : [];
     }
     return [];
-  }, [classes, user, currentTeacher]);
+  }, [classes, user, teachers]);
 
-  // Fetch student attendance when class or date changes
+  // Reset UI state when selection changes
+  const resetAttendanceState = () => {
+    setIsAttendanceMarked(false);
+    setIsEditingAttendance(false);
+    setStudentsToMark([]);
+    setTeachersToMark([]);
+    setSearchQuery("");
+  };
+
   useEffect(() => {
     const fetchStudentAttendance = async () => {
       if (!selectedClass) {
-        setStudentsToMark([]);
+        resetAttendanceState();
         return;
       }
+      resetAttendanceState(); // Ensure clean state before fetch
       const classIdNum = parseInt(selectedClass);
       const classStudents = students.filter(
         (student: any) => student.class_id === classIdNum
@@ -228,25 +248,29 @@ export default function AttendancePage() {
         const response = await fetch(
           `/api/classes/${selectedClass}/attendance?date=${date.toISOString()}`
         );
-        if (!response.ok) {
-          throw new Error("Failed to fetch attendance data");
-        }
-        const attendanceData = await response.json();
+        if (!response.ok) throw new Error("API fetch failed");
 
-        const studentsWithAttendance = classStudents.map((student: any) => {
-          const attendanceRecord = attendanceData.find(
-            (record: any) => record.student_id === student.id
+        const attendanceData = await response.json();
+        if (attendanceData && attendanceData.length > 0) {
+          setIsAttendanceMarked(true);
+          const studentsWithAttendance = classStudents.map((student: any) => {
+            const record = attendanceData.find(
+              (r: any) => r.student_id === student.id
+            );
+            return {
+              ...student,
+              present: record ? record.status === "present" : true,
+            };
+          });
+          setStudentsToMark(studentsWithAttendance);
+        } else {
+          setIsAttendanceMarked(false);
+          setStudentsToMark(
+            classStudents.map((s: any) => ({ ...s, present: true }))
           );
-          return {
-            ...student,
-            present: attendanceRecord
-              ? attendanceRecord.status === "present"
-              : true, // Default to present if no record found
-          };
-        });
-        setStudentsToMark(studentsWithAttendance);
+        }
       } catch (error) {
-        // On error or if no records exist, default all to present
+        setIsAttendanceMarked(false);
         setStudentsToMark(
           classStudents.map((s: any) => ({ ...s, present: true }))
         );
@@ -258,10 +282,10 @@ export default function AttendancePage() {
     }
   }, [selectedClass, date, students, attendanceType]);
 
-  // Fetch teacher attendance when date changes
   useEffect(() => {
     const fetchTeacherAttendance = async () => {
       if (!teachers.length || !user?.school_id) return;
+      resetAttendanceState(); // Ensure clean state before fetch
 
       try {
         const response = await fetch(
@@ -269,23 +293,29 @@ export default function AttendancePage() {
             user.school_id
           }/teacher-attendance?date=${date.toISOString()}`
         );
-        if (!response.ok) {
-          throw new Error("Failed to fetch teacher attendance");
-        }
+        if (!response.ok) throw new Error("API fetch failed");
+
         const attendanceData = await response.json();
-        const teachersWithAttendance = teachers.map((teacher: any) => {
-          const attendanceRecord = attendanceData.find(
-            (record: any) => record.teacher_id === teacher.id
+        if (attendanceData && attendanceData.length > 0) {
+          setIsAttendanceMarked(true);
+          const teachersWithAttendance = teachers.map((teacher: any) => {
+            const record = attendanceData.find(
+              (r: any) => r.teacher_id === teacher.id
+            );
+            return {
+              ...teacher,
+              present: record ? record.status === "present" : true,
+            };
+          });
+          setTeachersToMark(teachersWithAttendance);
+        } else {
+          setIsAttendanceMarked(false);
+          setTeachersToMark(
+            teachers.map((t: any) => ({ ...t, present: true }))
           );
-          return {
-            ...teacher,
-            present: attendanceRecord
-              ? attendanceRecord.status === "present"
-              : true,
-          };
-        });
-        setTeachersToMark(teachersWithAttendance);
+        }
       } catch (error) {
+        setIsAttendanceMarked(false);
         setTeachersToMark(teachers.map((t: any) => ({ ...t, present: true })));
       }
     };
@@ -295,93 +325,82 @@ export default function AttendancePage() {
     }
   }, [attendanceType, date, teachers, user?.school_id]);
 
+  // Handlers for interaction
   const toggleStudentAttendance = (studentId: number) => {
     setStudentsToMark((prev) =>
-      prev.map((student) =>
-        student.id === studentId
-          ? { ...student, present: !student.present }
-          : student
-      )
+      prev.map((s) => (s.id === studentId ? { ...s, present: !s.present } : s))
     );
   };
 
   const toggleTeacherAttendance = (teacherId: number) => {
     setTeachersToMark((prev) =>
-      prev.map((teacher) =>
-        teacher.id === teacherId
-          ? { ...teacher, present: !teacher.present }
-          : teacher
-      )
+      prev.map((t) => (t.id === teacherId ? { ...t, present: !t.present } : t))
     );
   };
 
-  const markAllStudentsPresent = () => {
-    setStudentsToMark((prev) =>
-      prev.map((student) => ({ ...student, present: true }))
-    );
+  const markAll = (present: boolean) => {
+    if (attendanceType === "student") {
+      setStudentsToMark(studentsToMark.map((s) => ({ ...s, present })));
+    } else {
+      setTeachersToMark(teachersToMark.map((t) => ({ ...t, present })));
+    }
   };
 
-  const markAllTeachersPresent = () => {
-    setTeachersToMark((prev) =>
-      prev.map((teacher) => ({ ...teacher, present: true }))
-    );
-  };
-
-  const saveStudentAttendance = async () => {
-    setIsSaving(true);
-    try {
-      const formattedDate = format(date, "yyyy-MM-dd");
-      const classId = parseInt(selectedClass);
-
-      // Step 1: Check if attendance already exists
-      const checkResponse = await fetch(
-        `/api/classes/${classId}/attendance?date=${formattedDate}`,
-        {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        }
+  const handleReset = () => {
+    // Re-trigger the appropriate useEffect to re-fetch original data
+    if (attendanceType === "student") {
+      const classIdNum = parseInt(selectedClass);
+      const classStudents = students.filter(
+        (student: any) => student.class_id === classIdNum
       );
+      setStudentsToMark(classStudents.map((s) => ({ ...s, present: true })));
+    } else {
+      setTeachersToMark(teachers.map((t) => ({ ...t, present: true })));
+    }
+  };
 
-      if (!checkResponse.ok) {
-        throw new Error("Failed to check existing attendance");
-      }
+  // API Interaction: Save (Create)
+  const saveAttendance = async () => {
+    setIsSaving(true);
+    const isStudent = attendanceType === "student";
+    const url = isStudent
+      ? "/api/bulk-student-attendance"
+      : "/api/bulk-teacher-attendance";
+    const payload = isStudent
+      ? studentsToMark.map((s) => ({
+          student_id: s.id,
+          roll_no: s.roll_no,
+          class_id: parseInt(selectedClass),
+          date: format(date, "yyyy-MM-dd"),
+          day: format(date, "EEEE"),
+          status: s.present ? "present" : "absent",
+        }))
+      : teachersToMark.map((t) => ({
+          teacher_id: t.id,
+          teacher_name: t.full_name,
+          date: format(date, "yyyy-MM-dd"),
+          day: format(date, "EEEE"),
+          status: t.present ? "present" : "absent",
+        }));
 
-      const existingAttendance = await checkResponse.json();
-
-      if (existingAttendance && existingAttendance.length > 0) {
-        toast({
-          title: "Already Marked",
-          description: `Attendance for ${format(
-            date,
-            "PPP"
-          )} has already been recorded.`,
-          variant: "destructive",
-        });
-        setIsSaving(false);
-        return;
-      }
-      const attendanceData = studentsToMark.map((student) => ({
-        student_id: student.id,
-        class_id: parseInt(selectedClass),
-        date: format(date, "yyyy-MM-dd"),
-        status: student.present ? "present" : "absent",
-      }));
-      const response = await fetch(`/api/bulk-student-attendance`, {
+    try {
+      const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(attendanceData),
+        body: JSON.stringify(payload),
       });
-
+      console.log("Payload ::", payload);
       if (!response.ok) throw new Error("Failed to save attendance");
 
       toast({
-        title: "Attendance Saved",
-        description: `Attendance for ${format(date, "PPP")} has been recorded.`,
+        title: "Attendance Saved ✅",
+        description: "The records have been saved successfully.",
       });
+      setIsAttendanceMarked(true);
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to save attendance. Please try again.",
+        title: "Error ❌",
+        description: "Could not save attendance. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -389,115 +408,145 @@ export default function AttendancePage() {
     }
   };
 
-  const saveTeacherAttendance = async () => {
+  // API Interaction: Update
+  const updateAttendance = async () => {
     setIsSaving(true);
-    try {
-      const formattedDate = format(date, "yyyy-MM-dd");
+    const isStudent = attendanceType === "student";
+    const url = isStudent
+      ? "/api/bulk-student-attendance"
+      : "/api/bulk-teacher-attendance";
+    const originalStateMap = new Map(
+      (isStudent ? originalStudentsState : originalTeachersState).map((p) => [
+        p.id,
+        p.present,
+      ])
+    );
 
-      // We don't need to check for existing attendance here,
-      // as the backend should handle upserts or throw errors if duplication is not allowed.
-      // The initial fetch already informs the user if data exists.
-
-      const attendanceData = teachersToMark.map((teacher) => ({
-        teacher_id: teacher.id,
-        date: formattedDate,
-        status: teacher.present ? "present" : "absent",
-      }));
-
-      const response = await fetch(`/api/bulk-teacher-attendance`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(attendanceData),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save teacher attendance");
+    const changedRecords = (isStudent ? studentsToMark : teachersToMark).filter(
+      (p) => {
+        const originalStatus = originalStateMap.get(p.id);
+        return originalStatus !== undefined && p.present !== originalStatus;
       }
+    );
 
+    if (changedRecords.length === 0) {
       toast({
-        title: "Teacher Attendance Saved",
-        description: `Teacher attendance for ${format(
-          date,
-          "PPP"
-        )} has been recorded.`,
+        title: "No Changes Detected",
+        description: "You haven't made any changes.",
       });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save teacher attendance. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
       setIsSaving(false);
+      setIsEditingAttendance(false);
+      return;
     }
-  };
-  const updateStudentAttendance = async () => {
-    setIsSaving(true);
+
+    const payload = isStudent
+      ? (changedRecords as Student[]).map((s) => ({
+          student_id: s.id,
+          class_id: parseInt(selectedClass),
+          date: format(date, "yyyy-MM-dd"),
+          day: format(date, "EEEE"), // <-- ADD THIS LINE
+          status: s.present ? "present" : "absent",
+        }))
+      : (changedRecords as Teacher[]).map((t) => ({
+          teacher_id: t.id,
+          teacher_name: t.full_name,
+          date: format(date, "yyyy-MM-dd"),
+          day: format(date, "EEEE"), // <-- ADD THIS LINE
+          status: t.present ? "present" : "absent",
+        }));
     try {
-      // Create a map of the original state for efficient lookups
-      const originalStateMap = new Map(
-        originalStudentsState.map((student) => [student.id, student.present])
-      );
-
-      // NEW: Filter the list to find only the students whose status has changed
-      const changedStudents = studentsToMark.filter((student) => {
-        const originalStatus = originalStateMap.get(student.id);
-        // A student's record has changed if their current 'present' status
-        // is different from what it was when "Edit" was clicked.
-        return (
-          originalStatus !== undefined && student.present !== originalStatus
-        );
-      });
-
-      // If no changes were made, inform the user and stop.
-      if (changedStudents.length === 0) {
-        toast({
-          title: "No Changes Detected",
-          description: "You haven't made any changes to the attendance.",
-        });
-        setIsSaving(false);
-        return;
-      }
-
-      // Prepare the data payload using ONLY the changed records
-      const attendanceData = changedStudents.map((student) => ({
-        student_id: student.id,
-        class_id: parseInt(selectedClass),
-        date: format(date, "yyyy-MM-dd"),
-        status: student.present ? "present" : "absent",
-      }));
-
-      console.log(
-        "Sending only updated records to the server:",
-        attendanceData
-      );
-
-      // Call the PUT endpoint with the smaller, optimized payload
-      const response = await fetch(`/api/bulk-student-attendance`, {
+      const response = await fetch(url, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(attendanceData),
+        body: JSON.stringify(payload),
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to update attendance records");
-      }
-
-      // After a successful update, the new state becomes the original for the next edit session
-      setOriginalStudentsState(studentsToMark);
+      console.log("Payload update::", payload);
+      if (!response.ok) throw new Error("Failed to update attendance");
 
       toast({
         title: "Attendance Updated ✅",
-        description: `${changedStudents.length} record(s) have been saved successfully.`,
+        description: `${changedRecords.length} record(s) have been saved.`,
       });
     } catch (error) {
       toast({
         title: "Update Failed ❌",
-        description: "Could not save the attendance changes. Please try again.",
+        description: "Could not save changes.",
         variant: "destructive",
       });
     } finally {
       setIsSaving(false);
+      setIsEditingAttendance(false);
+    }
+  };
+
+  // Filtering and Calculated values
+  const filteredPeople = useMemo(() => {
+    const people =
+      attendanceType === "student" ? studentsToMark : teachersToMark;
+    if (!searchQuery) return people;
+    return people.filter(
+      (p) =>
+        p.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (attendanceType === "student" &&
+          (p as Student).roll_no
+            ?.toLowerCase()
+            .includes(searchQuery.toLowerCase()))
+    );
+  }, [searchQuery, studentsToMark, teachersToMark, attendanceType]);
+
+  // Add this new handler function inside your AttendancePage component
+  const handleSaveHolidays = async () => {
+    if (!selectedHolidays) {
+      toast({ title: "No dates selected", variant: "destructive" });
+      return;
+    }
+
+    const allDates = new Set(
+      selectedHolidays.map((d) => format(d, "yyyy-MM-dd"))
+    );
+
+    // Automatically add all Sundays for the year
+    const yearStartDate = new Date(holidayYear, 0, 1);
+    const yearEndDate = new Date(holidayYear, 11, 31);
+    const daysInYear = eachDayOfInterval({
+      start: yearStartDate,
+      end: yearEndDate,
+    });
+
+    daysInYear.forEach((day) => {
+      if (getDay(day) === 0) {
+        // 0 is Sunday
+        allDates.add(format(day, "yyyy-MM-dd"));
+      }
+    });
+
+    const payload = {
+      year: holidayYear,
+      holidays: Array.from(allDates).map((dateStr) => ({
+        date: dateStr,
+        name: "Holiday/Sunday", // You can enhance the dialog to add names per date
+      })),
+    };
+
+    try {
+      const response = await fetch("/api/holidays", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) throw new Error("Failed to save holidays");
+
+      toast({
+        title: "Holidays Saved!",
+        description: "The holiday calendar has been updated.",
+      });
+      setIsHolidayDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Could not save holidays.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -514,31 +563,33 @@ export default function AttendancePage() {
     setShowAttendanceReport(true);
     setReportData([]);
     setReportSummary(null);
-
+    // Use URLSearchParams to build the query string
+    const params = new URLSearchParams({
+      reportType: reportType,
+      periodType: reportTimePeriod, // Use 'monthly' or 'yearly'
+      year: reportYear,
+    });
+    if (reportTimePeriod === "month") {
+      params.append("month", reportMonth);
+    }
+    if (reportType === "student" && reportClass) {
+      params.append("classId", reportClass);
+    }
     try {
-      // FIX: Replace mock data generation with a real API call.
-      const params = new URLSearchParams({
-        reportType: reportType,
-        timePeriod: reportTimePeriod,
-        month: reportMonth,
-        year: reportYear,
-      });
-      if (reportType === "student" && reportClass) {
-        params.append("classId", reportClass);
-      }
-
       const response = await fetch(
         `/api/reports/attendance?${params.toString()}`
       );
+
       if (!response.ok) {
         throw new Error("Failed to fetch report data.");
       }
       const result = await response.json();
-
+      console.log("report response ::", result);
       // Assuming the API returns data in the format: { data: [], summary: {} }
       setReportData(result.data || []);
       setReportSummary(result.summary || null);
     } catch (error) {
+      console.log("report error ", error);
       toast({
         title: "Report Generation Failed",
         description:
@@ -550,53 +601,6 @@ export default function AttendancePage() {
       setReportLoading(false);
     }
   };
-
-  // Add this function alongside your other state management functions
-  const setStudentAttendance = (studentId: number, status: boolean) => {
-    setStudentsToMark((prev) =>
-      prev.map((student) =>
-        student.id === studentId ? { ...student, present: status } : student
-      )
-    );
-  };
-  const filteredStudents = studentsToMark.filter(
-    (student: any) =>
-      student.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (student.roll_number &&
-        student.roll_number.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
-
-  const presentCount = studentsToMark.filter((s) => s.present).length;
-  const absentCount = studentsToMark.length - presentCount;
-  const attendancePercentage =
-    studentsToMark.length > 0
-      ? Math.round((presentCount / studentsToMark.length) * 100)
-      : 0;
-
-  const teacherPresentCount = teachersToMark.filter((t) => t.present).length;
-  const teacherAbsentCount = teachersToMark.length - teacherPresentCount;
-  const teacherAttendancePercentage =
-    teachersToMark.length > 0
-      ? Math.round((teacherPresentCount / teachersToMark.length) * 100)
-      : 0;
-
-  const canMarkAttendance = ["school_admin", "super_admin", "staff"].includes(
-    user?.role || ""
-  );
-
-  if (loading) {
-    return (
-      <DashboardLayout title="Attendance Management">
-        <div className="container py-6 flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-2 text-muted-foreground">Loading school data...</p>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
   const months = [
     "January",
     "February",
@@ -611,152 +615,94 @@ export default function AttendancePage() {
     "November",
     "December",
   ];
+  // ---- JSX ----
+  if (loading) {
+    return (
+      <DashboardLayout title="Attendance Management">
+        <div className="container py-6 flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-2 text-muted-foreground">Loading school data...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
-  // The rest of the JSX remains the same, with one key change to the save button's onClick.
   return (
     <DashboardLayout title="Attendance Management">
       <div className="container py-6">
-        <Tabs defaultValue={canMarkAttendance ? "mark" : "report"}>
+        <Tabs defaultValue="mark">
           <TabsList className="mb-6">
-            <TabsTrigger value="mark" disabled={!canMarkAttendance}>
-              Mark Attendance
-            </TabsTrigger>
+            <TabsTrigger value="mark">Mark Attendance</TabsTrigger>
             <TabsTrigger value="report">Attendance Reports</TabsTrigger>
           </TabsList>
 
-          {/* Tab 1: Mark Attendance */}
+          {/* Mark Attendance Tab */}
           <TabsContent value="mark">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 ">
+              <Card className="justify-items-center">
                 <CardHeader>
                   <CardTitle>Select Date</CardTitle>
-                  <CardDescription>Choose the attendance date</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={(d) => d && setDate(d)}
-                    className="rounded-md border"
-                    disabled={(d) =>
-                      d > new Date() || d < new Date("2023-01-01")
-                    }
-                  />
-                  <p className="mt-4 text-sm text-muted-foreground text-center">
-                    Marking attendance for:{" "}
-                    <span className="font-medium">{format(date, "PPP")}</span>
-                  </p>
+                  <div className="max-w-[270px]">
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={(d) => d && setDate(d)}
+                      className="rounded-md border w-full"
+                      disabled={(d) => d > new Date()}
+                    />
+                  </div>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Mark Attendance</CardTitle>
-                  <CardDescription>Select category and class</CardDescription>
+                  <CardTitle>Select Group</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {(user?.role === "school_admin" ||
-                    user?.role === "super_admin") && (
+                  {["school_admin", "super_admin"].includes(user.role) && (
                     <Select
                       value={attendanceType}
-                      onValueChange={(value) => {
-                        setAttendanceType(value as "student" | "teacher");
-                        setSelectedClass("");
-                        setStudentsToMark([]);
-                        setTeachersToMark([]);
-                      }}
+                      onValueChange={(v) => setAttendanceType(v as any)}
                     >
+                      {" "}
+                      <p>Select Attendance Type</p>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select target" />
+                        <SelectValue />
                       </SelectTrigger>
+                      <p>Select Class Type</p>
                       <SelectContent>
                         <SelectItem value="teacher">Teacher</SelectItem>
                         <SelectItem value="student">Student</SelectItem>
                       </SelectContent>
                     </Select>
                   )}
-
                   {attendanceType === "student" && (
-                    <>
-                      <Select
-                        onValueChange={setSelectedClass}
-                        value={selectedClass}
-                        disabled={availableClasses.length === 0}
-                      >
-                        <SelectTrigger>
-                          <SelectValue
-                            placeholder={
-                              availableClasses.length === 0
-                                ? "No classes available"
-                                : "Select a class"
-                            }
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableClasses.map((cls: any) => (
-                            <SelectItem key={cls.id} value={cls.id.toString()}>
-                              {cls.grade} {cls.section}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {selectedClass && (
-                        <div className="space-y-2">
-                          <div className="flex gap-2">
-                            <Badge
-                              variant="outline"
-                              className="bg-green-100 text-green-800"
-                            >
-                              Present: {presentCount}
-                            </Badge>
-                            <Badge
-                              variant="outline"
-                              className="bg-red-100 text-red-800"
-                            >
-                              Absent: {absentCount}
-                            </Badge>
-                          </div>
-                          <Progress
-                            value={attendancePercentage}
-                            className="h-2"
-                          />
-                          <p className="text-sm text-muted-foreground">
-                            Attendance:{" "}
-                            <span className="font-medium">
-                              {attendancePercentage}%
-                            </span>
-                          </p>
-                        </div>
-                      )}
-                    </>
-                  )}
-                  {attendanceType === "teacher" && (
-                    <div className="space-y-2">
-                      <div className="flex gap-2">
-                        <Badge
-                          variant="outline"
-                          className="bg-green-100 text-green-800"
-                        >
-                          Present: {teacherPresentCount}
-                        </Badge>
-                        <Badge
-                          variant="outline"
-                          className="bg-red-100 text-red-800"
-                        >
-                          Absent: {teacherAbsentCount}
-                        </Badge>
-                      </div>
-                      <Progress
-                        value={teacherAttendancePercentage}
-                        className="h-2"
-                      />
-                      <p className="text-sm text-muted-foreground">
-                        Attendance:{" "}
-                        <span className="font-medium">
-                          {teacherAttendancePercentage}%
-                        </span>
-                      </p>
-                    </div>
+                    <Select
+                      onValueChange={setSelectedClass}
+                      value={selectedClass}
+                      disabled={availableClasses.length === 0}
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            availableClasses.length === 0
+                              ? "No classes available"
+                              : "Select a class"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableClasses.map((cls: any) => (
+                          <SelectItem key={cls.id} value={cls.id.toString()}>
+                            {cls.grade} {cls.section}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   )}
                 </CardContent>
               </Card>
@@ -764,230 +710,218 @@ export default function AttendancePage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Actions</CardTitle>
-                  <CardDescription>Manage attendance entries</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* NEW: Add Holidays Button */}
+                  <Dialog
+                    open={isHolidayDialogOpen}
+                    onOpenChange={setIsHolidayDialogOpen}
+                  >
+                    <DialogTrigger asChild>
+                      <Button variant="outline" className="w-full">
+                        <CalendarIcon className="mr-2 h-4 w-4" /> Manage
+                        Holidays
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>
+                          Manage Holidays for {holidayYear}
+                        </DialogTitle>
+                      </DialogHeader>
+                      <div className="py-4">
+                        <Calendar
+                          mode="multiple"
+                          selected={selectedHolidays}
+                          // Change the onSelect handler like this:
+                          onSelect={(days) => setSelectedHolidays(days || [])}
+                          defaultMonth={new Date(holidayYear, 0)}
+                        />
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Select all holidays for the year. Sundays are added
+                          automatically.
+                        </p>
+                      </div>
+                      <DialogFooter>
+                        <DialogClose asChild>
+                          <Button variant="ghost">Cancel</Button>
+                        </DialogClose>
+                        <Button onClick={handleSaveHolidays}>
+                          Save Holidays
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                   <Button
                     className="w-full"
-                    onClick={
-                      attendanceType === "teacher"
-                        ? markAllTeachersPresent
-                        : markAllStudentsPresent
-                    }
+                    onClick={() => markAll(true)}
                     disabled={
-                      (attendanceType === "student" &&
-                        (!selectedClass || studentsToMark.length === 0)) ||
-                      (attendanceType === "teacher" &&
-                        teachersToMark.length === 0)
+                      isAttendanceMarked ||
+                      (attendanceType === "student" && !selectedClass)
                     }
                   >
                     <CheckCircle className="mr-2 h-4 w-4" /> Mark All Present
                   </Button>
-
-                  {/* The Reset button re-triggers the data fetch useEffects by changing state */}
                   <Button
                     className="w-full"
                     variant="outline"
-                    onClick={() => {
-                      if (attendanceType === "student" && selectedClass) {
-                        // Re-trigger the student fetch useEffect
-                        setDate(new Date(date.getTime()));
-                      } else if (attendanceType === "teacher") {
-                        // Re-trigger the teacher fetch useEffect
-                        setDate(new Date(date.getTime()));
-                      }
-                    }}
+                    onClick={handleReset}
                     disabled={
-                      attendanceType === "student"
-                        ? !selectedClass || studentsToMark.length === 0
-                        : teachersToMark.length === 0
+                      isAttendanceMarked ||
+                      (attendanceType === "student" && !selectedClass)
                     }
                   >
                     <Clock className="mr-2 h-4 w-4" /> Reset Changes
                   </Button>
-
-                  {/* FIX: The onClick handler now points to the correct, refactored functions */}
-                  <Button
-                    className="w-full"
-                    variant="default"
-                    onClick={
-                      attendanceType === "teacher"
-                        ? saveTeacherAttendance
-                        : saveStudentAttendance
-                    }
-                    disabled={
-                      (attendanceType === "student"
-                        ? !selectedClass || studentsToMark.length === 0
-                        : teachersToMark.length === 0) || isSaving
-                    }
-                  >
-                    <Save className="mr-2 h-4 w-4" />{" "}
-                    {isSaving ? "Saving..." : "Save Attendance"}
-                  </Button>
+                  {!isAttendanceMarked && (
+                    <Button
+                      className="w-full"
+                      onClick={saveAttendance}
+                      disabled={
+                        isSaving ||
+                        (attendanceType === "student" && !selectedClass)
+                      }
+                    >
+                      <Save className="mr-2 h-4 w-4" />{" "}
+                      {isSaving ? "Saving..." : "Save Attendance"}
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             </div>
 
-            {attendanceType === "student" && selectedClass && (
+            {((attendanceType === "student" && selectedClass) ||
+              attendanceType === "teacher") && (
               <Card className="mt-6">
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
-                    <CardTitle>Mark Student Attendance</CardTitle>
+                    <CardTitle>
+                      {isAttendanceMarked
+                        ? "Daily Attendance"
+                        : "Mark Attendance"}
+                    </CardTitle>
                     <CardDescription>
-                      {
-                        availableClasses.find(
-                          (c) => c.id.toString() === selectedClass
-                        )?.grade
-                      }{" "}
-                      {
-                        availableClasses.find(
-                          (c) => c.id.toString() === selectedClass
-                        )?.section
-                      }{" "}
-                      | {format(date, "PPP")}
+                      {attendanceType === "student"
+                        ? availableClasses.find(
+                            (c) => c.id.toString() === selectedClass
+                          )?.grade +
+                          " " +
+                          availableClasses.find(
+                            (c) => c.id.toString() === selectedClass
+                          )?.section
+                        : "All Teachers"}{" "}
+                      | {format(date, "EEEE, PPP")}
                     </CardDescription>
                   </div>
-
-                  {/* NEW: Edit/Cancel Button in the top right */}
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      if (isEditingAttendance) {
-                        // If CANCEL is clicked, revert changes to the original state
-                        setStudentsToMark(originalStudentsState);
-                        setIsEditingAttendance(false);
-                      } else {
-                        // If EDIT is clicked, save the current state as the original
-                        setOriginalStudentsState(studentsToMark);
+                  {isAttendanceMarked && !isEditingAttendance && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        if (attendanceType === "student")
+                          setOriginalStudentsState(studentsToMark);
+                        else setOriginalTeachersState(teachersToMark);
                         setIsEditingAttendance(true);
-                      }
-                    }}
-                  >
-                    {isEditingAttendance ? (
-                      <>
-                        <X className="mr-2 h-4 w-4" />
-                        Cancel
-                      </>
-                    ) : (
-                      <>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Edit
-                      </>
-                    )}
-                  </Button>
+                      }}
+                    >
+                      <Pencil className="mr-2 h-4 w-4" /> Edit
+                    </Button>
+                  )}
+                  {isEditingAttendance && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        if (attendanceType === "student")
+                          setStudentsToMark(originalStudentsState);
+                        else setTeachersToMark(originalTeachersState);
+                        setIsEditingAttendance(false);
+                      }}
+                    >
+                      <X className="mr-2 h-4 w-4" /> Cancel
+                    </Button>
+                  )}
                 </CardHeader>
-
                 <CardContent>
-                  {filteredStudents.length > 0 ? (
-                    // NEW: Responsive grid layout to utilize width
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {filteredStudents.map((student) => (
+                  <div className="relative w-full md:w-1/3 mb-4">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by name or roll no..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-8"
+                    />
+                  </div>
+                  {filteredPeople.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {filteredPeople.map((person) => (
                         <div
-                          key={student.id}
-                          className="border rounded-lg p-4 flex flex-col justify-between"
+                          key={person.id}
+                          className="border rounded-lg p-4 flex flex-row items-center gap-5"
                         >
-                          {/* Student Info Section */}
-                          <div>
-                            <p className="font-bold text-lg">
-                              {student.full_name}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              Roll No: {student.roll_number || "NA"}
-                            </p>
-                          </div>
-
-                          {/* NEW: Conditional display for Read-only vs. Edit mode */}
-                          <div className="flex items-center justify-between mt-4">
-                            <p className="text-sm font-medium">Status:</p>
-                            {isEditingAttendance ? (
-                              // EDIT MODE: Show a toggle switch
-                              <div className="flex items-center space-x-2">
-                                <Label htmlFor={`att-switch-${student.id}`}>
-                                  {student.present ? "Present" : "Absent"}
-                                </Label>
-                                <Switch
-                                  id={`att-switch-${student.id}`}
-                                  checked={student.present}
-                                  onCheckedChange={() =>
-                                    toggleStudentAttendance(student.id)
+                          <img
+                            src={
+                              attendanceType === "student"
+                                ? "https://cdn-icons-png.flaticon.com/512/4196/4196591.png"
+                                : "https://cdn-icons-png.flaticon.com/512/4288/4288270.png"
+                            }
+                            alt="Profile"
+                            className="w-16 h-16 rounded-full object-cover"
+                          />
+                          <div className="w-px bg-blue-500 self-stretch" />
+                          <div className="flex flex-col justify-between h-full w-full">
+                            <div>
+                              <p className="font-bold text-lg">
+                                {person.full_name}
+                              </p>
+                              {attendanceType === "student" && (
+                                <p className="text-sm text-muted-foreground">
+                                  Roll No: {(person as Student).roll_no || "NA"}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex items-center mt-2 gap-3">
+                              <h2 className="text-sm font-medium">Status:</h2>
+                              {isEditingAttendance || !isAttendanceMarked ? (
+                                <div className="flex items-center space-x-2">
+                                  <Label htmlFor={`att-switch-${person.id}`}>
+                                    {person.present ? "Present" : "Absent"}
+                                  </Label>
+                                  <Switch
+                                    id={`att-switch-${person.id}`}
+                                    checked={person.present}
+                                    onCheckedChange={() =>
+                                      attendanceType === "student"
+                                        ? toggleStudentAttendance(person.id)
+                                        : toggleTeacherAttendance(person.id)
+                                    }
+                                  />
+                                </div>
+                              ) : (
+                                <Badge
+                                  variant={
+                                    person.present ? "default" : "destructive"
                                   }
-                                />
-                              </div>
-                            ) : (
-                              // READ-ONLY MODE: Show a status badge
-                              <Badge
-                                variant={
-                                  student.present ? "default" : "destructive"
-                                }
-                              >
-                                {student.present ? "Present" : "Absent"}
-                              </Badge>
-                            )}
+                                >
+                                  {person.present ? "Present" : "Absent"}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
                     <p className="text-center text-muted-foreground py-4">
-                      {studentsToMark.length > 0
-                        ? "No students match your search."
-                        : "No students in this class."}
+                      No results found.
                     </p>
                   )}
                 </CardContent>
-
-                {/* NEW: CardFooter with Update button, only shows in Edit Mode */}
                 {isEditingAttendance && (
                   <CardFooter className="flex justify-end">
-                    <Button
-                      onClick={async () => {
-                        await updateStudentAttendance();
-                        setIsEditingAttendance(false);
-                      }}
-                      disabled={isSaving}
-                    >
+                    <Button onClick={updateAttendance} disabled={isSaving}>
                       {isSaving ? "Updating..." : "Update Attendance"}
                     </Button>
                   </CardFooter>
                 )}
-              </Card>
-            )}
-            {attendanceType === "teacher" && (
-              <Card className="mt-6">
-                <CardHeader>
-                  <CardTitle>Mark Teacher Attendance</CardTitle>
-                  <CardDescription>
-                    All Teachers | {format(date, "PPP")}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {teachersToMark.length > 0 ? (
-                    teachersToMark.map((teacher) => (
-                      <div
-                        key={teacher.id}
-                        className="flex items-center justify-between p-2 border rounded-md mb-2"
-                      >
-                        <p className="font-medium">{teacher.full_name}</p>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`t-att-${teacher.id}`}
-                            checked={teacher.present}
-                            onCheckedChange={() =>
-                              toggleTeacherAttendance(teacher.id)
-                            }
-                          />
-                          <Label htmlFor={`t-att-${teacher.id}`}>
-                            {teacher.present ? "Present" : "Absent"}
-                          </Label>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-center text-muted-foreground py-4">
-                      No teachers found.
-                    </p>
-                  )}
-                </CardContent>
               </Card>
             )}
           </TabsContent>
@@ -1019,6 +953,7 @@ export default function AttendancePage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Time Period</Label>
+                    {/* The 'reportTimePeriod' state is now for 'monthly' or 'yearly' */}
                     <Select
                       value={reportTimePeriod}
                       onValueChange={(v) => setReportTimePeriod(v as any)}
@@ -1027,27 +962,33 @@ export default function AttendancePage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="week">Weekly</SelectItem>
-                        <SelectItem value="month">Monthly</SelectItem>
-                        <SelectItem value="term">Term-wise</SelectItem>
+                        <SelectItem value="month">Month</SelectItem>
+                        <SelectItem value="year">Year</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Month</Label>
-                    <Select value={reportMonth} onValueChange={setReportMonth}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select month" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {months.map((month, index) => (
-                          <SelectItem key={month} value={index.toString()}>
-                            {month}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {/* Conditionally show month dropdown only for monthly reports */}
+                  {reportTimePeriod === "month" && (
+                    <div className="space-y-2">
+                      <Label>Month</Label>
+                      <Select
+                        value={reportMonth}
+                        onValueChange={setReportMonth}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select month" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {months.map((month, index) => (
+                            <SelectItem key={month} value={index.toString()}>
+                              {month}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
                   {reportType === "student" && (
                     <div className="space-y-2">
                       <Label>Class</Label>
@@ -1126,13 +1067,13 @@ export default function AttendancePage() {
                                 { header: "Name", accessorKey: "name" },
                                 {
                                   header: "Roll No",
-                                  accessorKey: "rollNumber",
+                                  accessorKey: "roll_no",
                                 },
                                 {
                                   header: "Present Days",
                                   accessorKey: "daysPresent",
                                   cell: ({ row }: any) =>
-                                    `${row.daysPresent}/${reportSummary.totalSchoolDays}`,
+                                    `${row.daysPresent}/${reportSummary.totalWorkingDays}`,
                                 },
                                 {
                                   header: "Percentage",
@@ -1142,12 +1083,12 @@ export default function AttendancePage() {
                               ]
                             : [
                                 { header: "Name", accessorKey: "name" },
-                                { header: "Subject", accessorKey: "subject" },
+
                                 {
                                   header: "Present Days",
                                   accessorKey: "daysPresent",
                                   cell: ({ row }: any) =>
-                                    `${row.daysPresent}/${reportSummary.totalSchoolDays}`,
+                                    `${row.daysPresent}/${reportSummary.totalWorkingDays}`,
                                 },
                                 {
                                   header: "Percentage",

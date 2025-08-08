@@ -7,6 +7,7 @@ import {
   timestamp,
   doublePrecision,
   boolean,
+  unique,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -182,8 +183,9 @@ export const studentAttendance = pgTable("student_attendance", {
   class_id: integer("class_id")
     .notNull()
     .references(() => classes.id),
-  roll_no: integer("roll_no").references(() => students.roll_no),
+  roll_no: integer("roll_no"),
   date: date("date").notNull(),
+  day: text("day").notNull(),
   status: text("status").notNull(), // 'present', 'absent', 'late'
   entry_id: integer("entry_id")
     .notNull()
@@ -197,6 +199,7 @@ export const studentAttendanceApiSchema = z.object({
   student_id: z.number(),
   class_id: z.number(),
   date: z.string(),
+  day: z.string(),
   status: z.enum(["present", "absent", "late"]),
   notes: z.string().nullable().optional(),
 });
@@ -204,12 +207,81 @@ export const updateStudentAttendanceApiSchema = z.object({
   student_id: z.number(),
   class_id: z.number(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), // Validates 'YYYY-MM-DD' format
-  status: z.string(),
+  day: z.string(),
+  status: z.enum(["present", "absent", "late"]),
+});
+
+export const updateTeacherAttendanceApiSchema = z.object({
+  teacher_id: z.number(),
+  school_id: z.number(),
+  teacher_name: z.string(),
+
+  // FIX: Add this preprocess block to convert the string to a Date object
+  date: z.preprocess(
+    (val) =>
+      val instanceof Date || typeof val === "string"
+        ? new Date(val)
+        : undefined,
+    z.date()
+  ),
+
+  day: z.string(),
+  status: z.enum(["present", "absent", "leave"]),
+});
+
+// In your schema file (e.g., db/schema.ts)
+export const holidays = pgTable(
+  "holidays",
+  {
+    id: serial("id").primaryKey(),
+    school_id: integer("school_id")
+      .notNull()
+      .references(() => schools.id, { onDelete: "cascade" }),
+    date: date("date").notNull(),
+    name: text("name").notNull(), // e.g., "Diwali", "Summer Vacation", "Sunday"
+  },
+  (table) => {
+    return {
+      // Ensure a school can't have the same holiday date twice
+      unq: unique().on(table.school_id, table.date),
+    };
+  }
+);
+
+// Schema for adding a list of holidays
+export const addHolidaysSchema = z.object({
+  year: z.number().int().positive(),
+  // Expecting dates in "YYYY-MM-DD" format
+  holidays: z.array(
+    z.object({
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      name: z.string().min(1),
+    })
+  ),
+});
+
+// Schema for validating report generation query parameters
+export const generateReportQuerySchema = z.object({
+  reportType: z.enum(["student", "teacher"]),
+  periodType: z.enum(["month", "year"]),
+  year: z
+    .string()
+    .regex(/^\d{4}$/)
+    .transform(Number), // Convert year string to number
+  month: z
+    .string()
+    .optional()
+    .transform((v) => (v ? Number(v) : undefined)), // Optional month string to number
+  classId: z
+    .string()
+    .optional()
+    .transform((v) => (v ? Number(v) : undefined)), // Optional classId string to number
 });
 // schema for data received from frontend
 export const studentAttendanceInputSchema = z.object({
   student_id: z.number(),
   class_id: z.number(),
+  roll_no: z.number().optional(),
   date: z.preprocess(
     (val) =>
       typeof val === "string"
@@ -219,14 +291,15 @@ export const studentAttendanceInputSchema = z.object({
         : undefined,
     z.string()
   ),
+  day: z.string(),
   status: z.enum(["present", "absent", "late"]),
   notes: z.string().optional(),
 });
-// export const insertStudentAttendanceSchema =
-//   studentAttendanceInputSchema.extend({
-//     entry_id: z.number(),
-//     entry_name: z.string().min(1, "Entry name is required"),
-//   });
+export const insertStudentAttendanceSchema =
+  studentAttendanceInputSchema.extend({
+    entry_id: z.number(),
+    entry_name: z.string().min(1, "Entry name is required"),
+  });
 
 // Teacher attendance records
 export const teacherAttendance = pgTable("teacher_attendance", {
@@ -234,23 +307,30 @@ export const teacherAttendance = pgTable("teacher_attendance", {
   teacher_id: integer("teacher_id")
     .notNull()
     .references(() => teachers.id),
+  teacher_name: text("teacher_name").notNull(),
+
   school_id: integer("school_id")
     .notNull()
     .references(() => schools.id),
   date: date("date").notNull(),
+  day: text("day").notNull(),
   status: text("status").notNull(), // 'present', 'absent', 'leave'
 });
 
 export const insertTeacherAttendanceSchema = z.object({
   teacher_id: z.number(),
   school_id: z.number(),
+  teacher_name: z.string(),
+  // FIX: This preprocess block correctly handles incoming strings or Date objects
+  // and ensures the final parsed type is a Date object.
   date: z.preprocess(
     (val) =>
-      typeof val === "string" || val instanceof Date
+      val instanceof Date || typeof val === "string"
         ? new Date(val)
         : undefined,
     z.date()
   ),
+  day: z.string(),
   status: z.enum(["present", "absent", "leave"]),
 });
 
@@ -563,9 +643,9 @@ export type ClassSubject = typeof classSubjects.$inferSelect;
 export type InsertClassSubject = z.infer<typeof insertClassSubjectSchema>;
 
 export type StudentAttendance = typeof studentAttendance.$inferSelect;
-// export type InsertStudentAttendance = z.infer<
-//   typeof insertStudentAttendanceSchema
-// >;
+export type InsertStudentAttendance = z.infer<
+  typeof insertStudentAttendanceSchema
+>;
 
 export type TeacherAttendance = typeof teacherAttendance.$inferSelect;
 export type InsertTeacherAttendance = z.infer<

@@ -12,6 +12,7 @@ export type StudentItem = {
   admissionDate: Date;
   status: "Active" | "Inactive";
   address: string;
+  roll_no: number;
 };
 // export type ClassItem = {
 //   id: number;

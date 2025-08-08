@@ -143,7 +143,9 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({
               .replace(/\}$/, "")
               .replace(/"/g, "");
             const arr =
-              cleaned.length > 0 ? cleaned.split(",").map((s) => s.trim()) : [];
+              cleaned.length > 0
+                ? cleaned.split(",").map((s: any) => s.trim())
+                : [];
             return { ...teacher, subject_specialization: arr };
           }
           return teacher;
@@ -253,7 +255,9 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({
               .replace(/\}$/, "")
               .replace(/"/g, "");
             const arr =
-              cleaned.length > 0 ? cleaned.split(",").map((s) => s.trim()) : [];
+              cleaned.length > 0
+                ? cleaned.split(",").map((s: any) => s.trim())
+                : [];
             return { ...teacher, subject_specialization: arr };
           }
           return teacher;

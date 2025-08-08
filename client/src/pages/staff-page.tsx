@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { CalendarIcon, Edit, Trash, UserPlus } from "lucide-react";
+import { CalendarIcon, Edit, Search, Trash, UserPlus } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -107,7 +107,7 @@ export default function StaffPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [staffData, setStaffData] = useState<StaffItem[]>([]);
-
+  const [searchTerm, setSearchTerm] = useState("");
   const [editingStaff, setEditingStaff] = useState<StaffItem | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [staffToDelete, setStaffToDelete] = useState<number | null>(null);
@@ -183,6 +183,19 @@ export default function StaffPage() {
       throw error;
     }
   };
+
+  const filteredStaff = useMemo(() => {
+    if (!searchTerm) {
+      return staffData; // If search is empty, return all staff
+    }
+
+    return staffData.filter(
+      (staff) =>
+        // Check if the search term is in the name or email (case-insensitive)
+        staff.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        staff.email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [staffData, searchTerm]);
 
   //toggle staff status
   const toggleStaffStatus = async (staff: StaffItem) => {
@@ -760,13 +773,26 @@ export default function StaffPage() {
             </Dialog>
           </div>
 
+          {/* NEW: Search input connected to state */}
+          <div className="flex items-center py-4">
+            <div className="relative">
+              {/* 1. Position the icon inside the container */}
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+
+              {/* 2. Add left padding to the Input so text doesn't overlap the icon */}
+              <Input
+                placeholder="Search by name or email..."
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                className="max-w-sm pl-10" // Increased padding for the icon
+              />
+            </div>
+          </div>
+
           <DataTable
-            data={staffData}
+            data={filteredStaff} // <-- USE the filtered data here
             columns={columns}
-            searchPlaceholder="Search staff..."
-            onSearch={(query) => {
-              console.log("Search query:", query);
-            }}
+            searchPlaceholder="Search staff..." // This prop is now handled by the Input above
           />
         </div>
       </div>

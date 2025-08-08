@@ -30,6 +30,9 @@ import {
   studentAttendanceInputSchema,
   studentAttendanceApiSchema,
   updateStudentAttendanceApiSchema,
+  updateTeacherAttendanceApiSchema,
+  generateReportQuerySchema,
+  addHolidaysSchema,
 } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
@@ -432,7 +435,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         res.status(204).end();
       } catch (error) {
-        res.status(500).json({ message: "Failed to delete teacher", error });
+        if (error instanceof z.ZodError) {
+          console.error("Full zod error:", error);
+          return res.status(400).json({
+            message: "Validation failed",
+            errors: error.errors,
+          });
+        }
+
+        // Narrow error type safely
+        if (error instanceof Error) {
+          console.error("Full error:", error);
+          return res.status(500).json({
+            message: "Failed to delete teacher",
+            error: error.message,
+            stack: error.stack,
+          });
+        }
+
+        // fallback if it's not an instance of Error
+        return res.status(500).json({
+          message: "Unknown error occurred",
+          error: JSON.stringify(error),
+        });
       }
     }
   );
@@ -880,6 +905,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     requireRole(["school_admin", "staff"]),
     async (req, res) => {
       try {
+        console.log(
+          "incominig data for /api/bulk-student-attendance ::",
+          req.body
+        );
         const user = req.user as Express.User;
 
         // FIX: Parse the request body using the new, less strict schema.
@@ -917,13 +946,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
   );
+  //update student
+  app.put(
+    "/api/bulk-student-attendance",
+    requireRole(["school_admin", "staff"]),
+    async (req, res) => {
+      try {
+        const user = req.user as Express.User;
 
+        // FIX: Use the new, correct schema to validate the array from the request body.
+        const incomingData = z
+          .array(updateStudentAttendanceApiSchema)
+          .parse(req.body);
+
+        // Prepare the data for the database update operation by adding server-side metadata.
+        const attendanceToUpdate = incomingData.map((record) => ({
+          ...record,
+          entry_id: user.id,
+          entry_name: user.name || "Unknown",
+        }));
+
+        // Call the storage method to perform the bulk update.
+        const updatedAttendances = await storage.updateStudentAttendances(
+          attendanceToUpdate
+        );
+
+        res.status(200).json(updatedAttendances);
+      } catch (error) {
+        console.error("❌ Error in PUT /api/bulk-student-attendance:", error);
+        if (error instanceof z.ZodError) {
+          return res
+            .status(400)
+            .json({ message: "Validation failed", errors: error.errors });
+        }
+        res.status(500).json({ message: "Failed to update attendance" });
+      }
+    }
+  );
   // Mark teacher attendance in bulk
   app.post(
     "/api/bulk-teacher-attendance",
     requireRole(["school_admin"]),
     async (req, res) => {
       try {
+        console.log(
+          "incominig data for /api/bulk-teacher-attendance ::",
+          req.body
+        );
         const user = req.user as Express.User;
         if (user.role !== "school_admin") {
           return res.status(403).json({ message: "Forbidden" });
@@ -965,34 +1034,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
   );
-  //update student
+
+  // update teacher attendance
   app.put(
-    "/api/bulk-student-attendance",
-    requireRole(["school_admin", "staff"]),
+    "/api/bulk-teacher-attendance",
+    requireRole(["school_admin"]),
     async (req, res) => {
       try {
-        const user = req.user as Express.User;
+        const user = req.user as Express.User; // Get the authenticated user
 
-        // FIX: Use the new, correct schema to validate the array from the request body.
-        const incomingData = z
-          .array(updateStudentAttendanceApiSchema)
-          .parse(req.body);
-
-        // Prepare the data for the database update operation by adding server-side metadata.
-        const attendanceToUpdate = incomingData.map((record) => ({
+        // STEP 1: Map over the incoming request body to add the required fields
+        const processedData = req.body.map((record: any) => ({
           ...record,
-          entry_id: user.id,
-          entry_name: user.name || "Unknown",
+          school_id: user.school_id,
         }));
 
+        // STEP 2: Now, validate the processed data that includes school_id
+        const attendanceToUpdate = z
+          .array(updateTeacherAttendanceApiSchema)
+          .parse(processedData);
+
         // Call the storage method to perform the bulk update.
-        const updatedAttendances = await storage.updateStudentAttendances(
+        const updatedAttendances = await storage.updateTeacherAttendances(
           attendanceToUpdate
         );
 
         res.status(200).json(updatedAttendances);
       } catch (error) {
-        console.error("❌ Error in PUT /api/bulk-student-attendance:", error);
+        console.error("❌ Error in PUT /api/bulk-teacher-attendance:", error);
         if (error instanceof z.ZodError) {
           return res
             .status(400)
@@ -1002,6 +1071,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
   );
+
   // Get teacher attendance by school and date
   app.get(
     "/api/schools/:schoolId/teacher-attendance",
@@ -1399,7 +1469,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           records,
           type as string
         );
-
+        console.log("Headers:", headers);
+        console.log("Rows:", rows);
+        console.log("Summary:", summary);
         // Send the new, structured response
         res.json({
           summary,
@@ -1409,6 +1481,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (error) {
         console.error("❌ Error generating attendance report:", error);
         res.status(500).json({ message: "Internal Server Error" });
+      }
+    }
+  );
+
+  app.post("/api/holidays", requireRole(["school_admin"]), async (req, res) => {
+    try {
+      const user = req.user as Express.User;
+      const { year, holidays } = addHolidaysSchema.parse(req.body);
+      if (!user.school_id) {
+        return res
+          .status(400)
+          .json({ message: "User is not associated with a school." });
+      }
+      const savedHolidays = await storage.createOrUpdateHolidays(
+        user.school_id,
+        year,
+        holidays
+      );
+      res.status(201).json({
+        message: `${savedHolidays.length} holidays saved for ${year}.`,
+        data: savedHolidays,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error("Full zod error:", error);
+        return res.status(400).json({
+          message: "Validation failed",
+          errors: error.errors,
+        });
+      }
+
+      // Narrow error type safely
+      if (error instanceof Error) {
+        console.error("Full error:", error);
+        return res.status(500).json({
+          message: "Failed to add holidays ",
+          error: error.message,
+          stack: error.stack,
+        });
+      }
+
+      // fallback if it's not an instance of Error
+      return res.status(500).json({
+        message: "Unknown error occurred",
+        error: JSON.stringify(error),
+      });
+    }
+  });
+
+  // New, powerful endpoint for generating reports
+  app.get(
+    "/api/reports/attendance",
+    requireRole(["school_admin", "staff"]),
+    async (req, res) => {
+      try {
+        const user = req.user as Express.User;
+        // Validate query parameters
+        const queryParams = generateReportQuerySchema.parse(req.query);
+        if (user.school_id === null || user.school_id === undefined) {
+          return res
+            .status(400)
+            .json({ message: "User is not associated with a school." });
+        }
+        const report = await storage.generateAttendanceReport({
+          ...queryParams,
+          schoolId: user.school_id,
+        });
+        console.log("Report:", report);
+        res.status(200).json(report);
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          console.error("Full zod error:", error);
+          return res.status(400).json({
+            message: "Validation failed",
+            errors: error.errors,
+          });
+        }
+
+        // Narrow error type safely
+        if (error instanceof Error) {
+          console.error("Full error:", error);
+          return res.status(500).json({
+            message: "Failed to get holidays",
+            error: error.message,
+            stack: error.stack,
+          });
+        }
+
+        // fallback if it's not an instance of Error
+        return res.status(500).json({
+          message: "Unknown error occurred",
+          error: JSON.stringify(error),
+        });
       }
     }
   );

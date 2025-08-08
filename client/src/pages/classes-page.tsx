@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -39,10 +39,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Edit, FolderPlus, Trash } from "lucide-react";
+import { Edit, FolderPlus, Search, Trash } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { ClassItem, StaffItem } from "./type";
 import { useSchoolData } from "@/context/SchoolDataContext";
+import { Input } from "@/components/ui/input";
 
 // Class form schema
 const formSchema = z.object({
@@ -53,7 +54,8 @@ const formSchema = z.object({
 
 export default function ClassesPage() {
   const { user } = useAuth();
-  const { classes, loading, schoolData, refetchData, teachers } = useSchoolData();
+  const { classes, loading, schoolData, refetchData, teachers } =
+    useSchoolData();
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -64,6 +66,8 @@ export default function ClassesPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [classToDelete, setClassToDelete] = useState<number | null>(null);
 
+  // Inside the ClassesPage component, after other state declarations
+  const [searchTerm, setSearchTerm] = useState("");
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -72,6 +76,35 @@ export default function ClassesPage() {
       class_teacher_id: undefined,
     },
   });
+
+  // Inside the ClassesPage component
+
+  const filteredClasses = useMemo(() => {
+    // First, filter based on user role (staff sees only their classes)
+    const roleBasedClasses =
+      user?.role === "staff"
+        ? classes.filter((c) => c.class_teacher_id === user.id) // Assuming user.id corresponds to teacher.user_id
+        : classes;
+
+    // Then, apply the search term filter
+    if (!searchTerm) {
+      return roleBasedClasses; // Return all role-appropriate classes if search is empty
+    }
+
+    return roleBasedClasses.filter((cls) => {
+      const teacher = teachers?.find(
+        (staff) => staff.id === cls.class_teacher_id
+      );
+      const teacherName = teacher?.full_name || "";
+      const className = `Class ${cls.grade} ${cls.section}`;
+
+      // Check if search term is in the class name or teacher's name
+      return (
+        className.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        teacherName.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    });
+  }, [classes, searchTerm, user, teachers]); // Dependencies for the memo
 
   // Redirect if not school_admin or staff
   if (user?.role !== "school_admin" && user?.role !== "staff") {
@@ -454,16 +487,14 @@ export default function ClassesPage() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {teachers?.map(
-                                  (staff: StaffItem) => (
-                                    <SelectItem
-                                      key={staff.id}
-                                      value={staff.id.toString()}
-                                    >
-                                      {staff.full_name}
-                                    </SelectItem>
-                                  )
-                                )}
+                                {teachers?.map((staff: StaffItem) => (
+                                  <SelectItem
+                                    key={staff.id}
+                                    value={staff.id.toString()}
+                                  >
+                                    {staff.full_name}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -486,17 +517,22 @@ export default function ClassesPage() {
             </Dialog>
           </div>
 
+          <div className="flex items-center py-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search by class or teacher..."
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                className="max-w-sm pl-10"
+              />
+            </div>
+          </div>
+
           <DataTable
-            data={
-              user?.role === "staff"
-                ? classes.filter((c) => c.class_teacher_id === user.id)
-                : classes
-            }
+            data={filteredClasses} // <-- USE the new filtered list here
             columns={columns}
             searchPlaceholder="Search classes..."
-            onSearch={(query) => {
-              console.log("Search query:", query);
-            }}
           />
         </div>
       </div>
