@@ -1,15 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { toast, useToast } from "@/hooks/use-toast";
-import DashboardLayout from "@/layout/dashboard-layout";
+import { toast } from "@/hooks/use-toast";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
-
 import { Search } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
-
 import {
   Dialog,
   DialogContent,
@@ -41,54 +37,51 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { CalendarIcon, Edit, Trash, UserPlus } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useQuery } from "@tanstack/react-query";
 import { ClassItem, StudentItem } from "./type";
 import { useAuth } from "@/hooks/use-auth";
-import { error } from "console";
 
 type Props = {
   studentData: StudentItem[];
   classData: ClassItem[];
   fetchStudents: () => Promise<void>;
 };
-type StudentFormValues = z.infer<typeof studentFormSchema>;
+
 // Student form schema aligned with DB schema
-const studentFormSchema = z.object({
-  full_name: z.string().min(2, "Full name must be at least 2 characters"),
-  student_email: z.string().min(3, "email  must be at least 3 characters"),
-  status: z.enum(["Active", "Inactive"]),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  confirmPassword: z
-    .string()
-    .min(6, "Confirm password must be at least 6 characters"),
-  dob: z.date({
-    required_error: "Date of birth is required",
-  }),
-  gender: z.enum(["male", "female", "other"], {
-    required_error: "Please select a gender",
-  }),
-  class_id: z.number({
-    required_error: "Please select a class",
-  }),
-  parentId: z.string().optional(),
-  parent_contact: z.string().min(10, "Please enter a valid contact number"),
-  admissionDate: z.date({
-    required_error: "Admission date is required",
-  }),
-  parent_name: z.string().optional(), // Added to match API
-  address: z.string().optional(),
-});
+const studentFormSchema = z
+  .object({
+    full_name: z.string().min(2, "Full name must be at least 2 characters"),
+    student_email: z.string().email("Please enter a valid email address"),
+    status: z.enum(["Active", "Inactive"]),
+    password: z.string().min(6, "Password must be at least 6 characters"),
+    confirmPassword: z
+      .string()
+      .min(6, "Confirm password must be at least 6 characters"),
+    dob: z.date({
+      required_error: "Date of birth is required",
+    }),
+    gender: z.enum(["male", "female", "other"], {
+      required_error: "Please select a gender",
+    }),
+    class_id: z.number({
+      required_error: "Please select a class",
+    }),
+    parentId: z.string().optional(),
+    parent_contact: z.string().min(10, "Please enter a valid contact number"),
+    admissionDate: z.date({
+      required_error: "Admission date is required",
+    }),
+    parent_name: z.string().optional(),
+    address: z.string().optional(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+type StudentFormValues = z.infer<typeof studentFormSchema>;
 
 export const StudentManager = ({
   studentData,
@@ -104,10 +97,10 @@ export const StudentManager = ({
   const [selectedSection, setSelectedSection] = useState("");
 
   const { user } = useAuth();
-  const currentYear = new Date().getFullYear();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<number | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
   const form = useForm<StudentFormValues>({
     resolver: zodResolver(studentFormSchema),
     defaultValues: {
@@ -115,7 +108,7 @@ export const StudentManager = ({
       student_email: "",
       password: "",
       confirmPassword: "",
-      gender: "male",
+      gender: undefined, // Let placeholder show
       dob: undefined,
       class_id: undefined,
       parent_contact: "",
@@ -126,11 +119,8 @@ export const StudentManager = ({
     },
   });
 
-  //create student
   const createStudent = async (data: StudentFormValues) => {
     try {
-      // 1. First, create a user (needed to get user_id)
-      console.log("creating a student :: ", data);
       const userRes = await fetch("/api/register/user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -144,46 +134,44 @@ export const StudentManager = ({
       });
 
       if (!userRes.ok) {
-        // If not, read the error message from the response body
         const errorData = await userRes.json();
-        // Throw a new error with the message from the server
         throw new Error(errorData.message || "Failed to create user");
       }
       const newUser = await userRes.json();
       const userId = newUser.id;
 
-      // 2. Then create the student using user_id
       const studentRes = await fetch("/api/students", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
           user_id: userId,
-          school_id: 1, // hardcoded or dynamic
-          admission_date: "2024-06-01", // hardcoded or dynamic
+          school_id: user?.school_id,
+          admission_date: format(data.admissionDate, "yyyy-MM-dd"),
+          dob: format(data.dob, "yyyy-MM-dd"),
         }),
       });
 
       if (!studentRes.ok) throw new Error("Failed to create student");
-      await fetchStudents(); // refresh student list
+      await fetchStudents();
     } catch (error) {
       console.error("Error creating student:", error);
       throw error;
     }
   };
 
-  //fetch students
-
-  //onsubmit handle
   const onSubmit = async (data: StudentFormValues) => {
     setIsSubmitting(true);
     try {
       if (editingStudent) {
-        console.log("editing student ::", data);
         const res = await fetch(`/api/students/${editingStudent.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
+          body: JSON.stringify({
+            ...data,
+            dob: format(data.dob, "yyyy-MM-dd"),
+            admission_date: format(data.admissionDate, "yyyy-MM-dd"),
+          }),
         });
         if (!res.ok) throw new Error("Failed to update student");
       } else {
@@ -218,42 +206,36 @@ export const StudentManager = ({
 
   const openEditDialog = (student: StudentItem) => {
     setEditingStudent(student);
-    const classfind = classData.find((cls) => cls.id === student.class_id);
-
     form.reset({
       full_name: student.full_name,
       student_email: student.student_email,
       gender: student.gender as "male" | "female" | "other",
-      dob: student.dob,
-      class_id: student?.class_id || undefined,
+      dob: new Date(student.dob),
+      class_id: student.class_id,
       parent_contact: student.parent_contact,
-      admissionDate: student.admissionDate,
+      admissionDate: new Date(student.admissionDate),
       parent_name: student.parent_name,
       status: student.status,
-      password: "", // Or dummy password
+      password: "dummyPassword", // Set dummy passwords for validation
+      confirmPassword: "dummyPassword",
     });
     setIsDialogOpen(true);
   };
 
-  //handle student status
   const handleToggleStatus = async (student: StudentItem) => {
     const newStatus = student.status === "Active" ? "Inactive" : "Active";
-
     try {
       const res = await fetch(`/api/students/${student.id}/status`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
-
       if (!res.ok) throw new Error("Failed to update status");
-
       toast({
         title: "Success",
         description: `Status changed to ${newStatus}`,
       });
-
-      await fetchStudents(); // Refresh data
+      await fetchStudents();
     } catch (error) {
       toast({
         title: "Error",
@@ -263,46 +245,23 @@ export const StudentManager = ({
     }
   };
 
-  // Handle delete
   const handleDelete = (id: number) => {
     setStudentToDelete(id);
     setIsDeleteModalOpen(true);
   };
 
-  //confirm delete of student
   const confirmDelete = async () => {
     if (!studentToDelete) return;
-
     try {
       const response = await fetch(`/api/students/${studentToDelete}`, {
         method: "DELETE",
       });
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          toast({
-            title: "Error",
-            description: "Student not found",
-            variant: "destructive",
-          });
-        } else {
-          throw new Error("Failed to delete student");
-        }
-        return;
-      }
-
-      // ✅ Instead of setStudentData, simply refetch students from server
+      if (!response.ok) throw new Error("Failed to delete student");
       await fetchStudents();
-
-      toast({
-        title: "Success",
-        description: "Student removed successfully",
-      });
-
+      toast({ title: "Success", description: "Student removed successfully" });
       setIsDeleteModalOpen(false);
       setStudentToDelete(null);
     } catch (error) {
-      console.error("Delete failed:", error);
       toast({
         title: "Error",
         description: "An error occurred while deleting the student",
@@ -311,31 +270,19 @@ export const StudentManager = ({
     }
   };
 
-  // DataTable columns
   const columns: DataTableColumn<StudentItem>[] = [
-    {
-      header: "Roll No",
-      accessorKey: "roll_no",
-    },
-    {
-      header: "Name",
-      accessorKey: "full_name",
-    },
-    {
-      header: "student email",
-      accessorKey: "student_email",
-    },
+    { header: "Roll No", accessorKey: "roll_no" },
+    { header: "Name", accessorKey: "full_name" },
     {
       header: "Class",
-      accessorKey: "class_id", // just to satisfy the type requirement
+      accessorKey: "class_id",
       cell: (student: StudentItem) => {
         const classItem = classData.find((cls) => cls.id === student.class_id);
         return classItem
           ? `Class ${classItem.grade} ${classItem.section}`
-          : "Class not found";
+          : "N/A";
       },
     },
-
     {
       header: "Gender",
       accessorKey: "gender",
@@ -346,27 +293,22 @@ export const StudentManager = ({
     {
       header: "Date of Birth",
       accessorKey: "dob",
-
-      cell: (student: StudentItem) => {
-        const date = new Date(student.dob);
-        return isNaN(date.getTime()) ? "-" : format(date, "PPP");
-      },
+      cell: (student: StudentItem) => format(new Date(student.dob), "PPP"),
     },
-    {
-      header: "Parent Contact",
-      accessorKey: "parent_contact",
-    },
+    { header: "Parent Contact", accessorKey: "parent_contact" },
     {
       header: "Status",
       accessorKey: "status",
       cell: (student) => (
         <button
-          onClick={() => handleToggleStatus(student)} // define this function in your component
+          onClick={() => handleToggleStatus(student)}
           className={`text-sm px-2 py-1 rounded ${
-            student.status === "Active" ? "bg-green-200" : "bg-red-200"
+            student.status === "Active"
+              ? "bg-green-200 text-green-800"
+              : "bg-red-200 text-red-800"
           }`}
         >
-          {student.status === "Active" ? "Active" : "Inactive"}
+          {student.status}
         </button>
       ),
     },
@@ -394,62 +336,43 @@ export const StudentManager = ({
     },
   ];
 
-  const filteredStudents = studentData.filter((student) => {
-    const matchesSearchTerm = student.full_name
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
+  // FIX: Derive filter options from the complete 'classData' list, not the filtered students.
+  const { grades, sections } = useMemo(() => {
+    const uniqueGrades = [...new Set(classData.map((cls) => cls.grade))].sort(
+      (a: any, b: any) => a - b
+    );
+    const uniqueSections = [
+      ...new Set(classData.map((cls) => cls.section)),
+    ].sort();
+    return { grades: uniqueGrades, sections: uniqueSections };
+  }, [classData]);
 
-    const studentClass = classData.find((cls) => cls.id === student.class_id);
-
-    const matchesGrade = selectedGrade
-      ? studentClass?.grade.toString() === selectedGrade
-      : true;
-    const matchesSection = selectedSection
-      ? studentClass?.section.toLowerCase() === selectedSection.toLowerCase()
-      : true;
-
-    return matchesSearchTerm && matchesGrade && matchesSection;
-  });
-
-  const grades = Array.from(
-    new Set(
-      filteredStudents
-        .map((student) => {
-          const studentClass = classData.find(
-            (cls) => cls.id === student.class_id
-          );
-          return studentClass?.grade;
-        })
-        .filter(Boolean)
-    )
-  ).sort((a: any, b: any) => (a || 0) - (b || 0));
-  const sections = Array.from(
-    new Set(
-      filteredStudents
-        .map((student) => {
-          const studentClass = classData.find(
-            (cls) => cls.id === student.class_id
-          );
-          return studentClass?.section;
-        })
-        .filter(Boolean)
-    )
-  ).sort();
+  const filteredStudents = useMemo(() => {
+    return studentData.filter((student) => {
+      const studentClass = classData.find((cls) => cls.id === student.class_id);
+      const matchesSearchTerm =
+        student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.student_email?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesGrade =
+        !selectedGrade || studentClass?.grade.toString() === selectedGrade;
+      const matchesSection =
+        !selectedSection || studentClass?.section === selectedSection;
+      return matchesSearchTerm && matchesGrade && matchesSection;
+    });
+  }, [studentData, classData, searchTerm, selectedGrade, selectedSection]);
 
   return (
     <div className="bg-white p-6 rounded-lg shadow">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold">Student List</h2>
         <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
-          {user?.role == "school_admin" && (
+          {user?.role === "school_admin" && (
             <DialogTrigger asChild>
               <Button>
-                <UserPlus className="mr-2 h-4 w-4" />
-                Add Student
+                <UserPlus className="mr-2 h-4 w-4" /> Add Student
               </Button>
             </DialogTrigger>
           )}
-
           <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -478,47 +401,52 @@ export const StudentManager = ({
                         </FormItem>
                       )}
                     />
-
                     <FormField
                       control={form.control}
                       name="student_email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Student Email </FormLabel>
+                          <FormLabel>Student Email</FormLabel>
                           <FormControl>
-                            <Input placeholder="johndoe123" {...field} />
+                            <Input
+                              placeholder="john.doe@example.com"
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-
-                    <FormField
-                      control={form.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Password</FormLabel>
-                          <FormControl>
-                            <Input type="password" placeholder="" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="confirmPassword"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Confirm Password</FormLabel>
-                          <FormControl>
-                            <Input type="password" placeholder="" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    {!editingStudent && (
+                      <>
+                        <FormField
+                          control={form.control}
+                          name="password"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Password</FormLabel>
+                              <FormControl>
+                                <Input type="password" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="confirmPassword"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Confirm Password</FormLabel>
+                              <FormControl>
+                                <Input type="password" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </>
+                    )}
                     <FormField
                       control={form.control}
                       name="gender"
@@ -527,7 +455,7 @@ export const StudentManager = ({
                           <FormLabel>Gender</FormLabel>
                           <Select
                             onValueChange={field.onChange}
-                            defaultValue={field.value}
+                            value={field.value}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -544,7 +472,6 @@ export const StudentManager = ({
                         </FormItem>
                       )}
                     />
-
                     <FormField
                       control={form.control}
                       name="dob"
@@ -558,9 +485,8 @@ export const StudentManager = ({
                                   variant="outline"
                                   className="pl-3 text-left font-normal"
                                 >
-                                  {field.value &&
-                                  !isNaN(new Date(field.value).getTime()) ? (
-                                    format(new Date(field.value), "PP")
+                                  {field.value ? (
+                                    format(field.value, "PPP")
                                   ) : (
                                     <span>Pick a date</span>
                                   )}
@@ -569,29 +495,24 @@ export const StudentManager = ({
                               </FormControl>
                             </PopoverTrigger>
                             <PopoverContent
-                              className="w-auto p-0 bg-white rounded-lg shadow-lg border border-gray-200"
+                              className="w-auto p-0"
                               align="start"
                             >
-                              <div className="p-4">
-                                {" "}
-                                {/* Tailwind padding container */}
-                                <Calendar
-                                  mode="single"
-                                  selected={field.value}
-                                  onSelect={field.onChange}
-                                  captionLayout="dropdown-buttons" // Modified
-                                  fromYear={1950}
-                                  toYear={new Date().getFullYear()}
-                                  initialFocus
-                                />
-                              </div>
+                              <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                captionLayout="dropdown-buttons"
+                                fromYear={1950}
+                                toYear={new Date().getFullYear()}
+                                initialFocus
+                              />
                             </PopoverContent>
                           </Popover>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-
                     <FormField
                       control={form.control}
                       name="class_id"
@@ -601,8 +522,8 @@ export const StudentManager = ({
                           <Select
                             onValueChange={(value) =>
                               field.onChange(Number(value))
-                            } // 👈 convert string to number here
-                            value={field.value?.toString()} // 👈 show number as string for Select to understand
+                            }
+                            value={field.value?.toString()}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -624,13 +545,12 @@ export const StudentManager = ({
                         </FormItem>
                       )}
                     />
-
                     <FormField
                       control={form.control}
                       name="parent_name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Parent name</FormLabel>
+                          <FormLabel>Parent Name</FormLabel>
                           <FormControl>
                             <Input placeholder="Parent name" {...field} />
                           </FormControl>
@@ -654,7 +574,6 @@ export const StudentManager = ({
                         </FormItem>
                       )}
                     />
-
                     <FormField
                       control={form.control}
                       name="admissionDate"
@@ -668,9 +587,8 @@ export const StudentManager = ({
                                   variant={"outline"}
                                   className="pl-3 text-left font-normal"
                                 >
-                                  {field.value instanceof Date &&
-                                  !isNaN(field.value.getTime())
-                                    ? format(field.value, "PP")
+                                  {field.value
+                                    ? format(field.value, "PPP")
                                     : "Pick a date"}
                                   <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                 </Button>
@@ -696,7 +614,6 @@ export const StudentManager = ({
                         </FormItem>
                       )}
                     />
-
                     <FormField
                       control={form.control}
                       name="status"
@@ -739,18 +656,21 @@ export const StudentManager = ({
       </div>
       <div className="flex space-x-4 mb-4">
         <div className="relative">
-          {/* 1. Position the icon inside the container */}
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-
-          {/* 2. Add left padding to the Input so text doesn't overlap the icon */}
           <Input
             placeholder="Search by name or email..."
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
-            className="max-w-sm pl-10" // Increased padding for the icon
+            className="max-w-sm pl-10"
           />
         </div>
-        <Select onValueChange={setSelectedGrade} value={selectedGrade}>
+        {/* FIX: Use the corrected onValueChange handler */}
+        <Select
+          onValueChange={(value) =>
+            setSelectedGrade(value === "all" ? "" : value)
+          }
+          value={selectedGrade}
+        >
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Filter by Grade" />
           </SelectTrigger>
@@ -763,14 +683,18 @@ export const StudentManager = ({
             ))}
           </SelectContent>
         </Select>
-        <Select onValueChange={setSelectedSection} value={selectedSection}>
+        <Select
+          onValueChange={(value) =>
+            setSelectedSection(value === "all" ? "" : value)
+          }
+          value={selectedSection}
+        >
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Filter by Section" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Sections</SelectItem>
             {sections.map((section) =>
-              // FIX: Add a check to ensure 'section' is not undefined before rendering
               section ? (
                 <SelectItem key={section} value={section}>
                   Section {section}
@@ -780,10 +704,7 @@ export const StudentManager = ({
           </SelectContent>
         </Select>
       </div>
-
       <DataTable data={filteredStudents} columns={columns} />
-
-      {/* delete confirmation page */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent>
           <DialogHeader>

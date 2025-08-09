@@ -26,6 +26,10 @@ export type ClassItem = {
   section: string;
   class_teacher_id: number | null;
   studentCount: number;
+  subjects?: Array<{
+    subject_id: number;
+    teacher_id: number | null;
+  }>;
 };
 export type SchoolItem = {
   id: number;

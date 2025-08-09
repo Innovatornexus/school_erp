@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -32,9 +32,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Edit, PlusCircle, Search, Trash } from "lucide-react";
+import { BookOpen, Edit, PlusCircle, Trash } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { SubjectItem } from "./type";
+import { SubjectItem, StaffItem, ClassItem } from "./type";
 import { useSchoolData } from "@/context/SchoolDataContext";
 import { Redirect } from "wouter";
 
@@ -48,8 +48,8 @@ type SubjectFormValues = z.infer<typeof subjectFormSchema>;
 
 export default function SubjectsPage() {
   const { user } = useAuth();
-  const { subjects, loading, schoolData, refetchData } = useSchoolData();
-  // Inside the SubjectsPage component, with other useState hooks
+  const { subjects, teachers, classes, loading, schoolData, refetchData } =
+    useSchoolData();
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -67,18 +67,79 @@ export default function SubjectsPage() {
       subject_description: "",
     },
   });
-  // Inside the SubjectsPage component, before the columns definition
 
-  const filteredSubjects = useMemo(() => {
-    if (!searchTerm) {
-      return subjects; // Return all subjects if search is empty
+  const { subjectData, high, medium, low } = useMemo(() => {
+    // Return default data if the source arrays aren't ready yet
+    if (!subjects.length || !teachers.length || !classes.length) {
+      const data = subjects.map((s: SubjectItem) => ({
+        ...s,
+        teachers: 0,
+        classCount: 0,
+        classNames: [],
+      }));
+      return { subjectData: data, high: [], medium: [], low: data };
     }
 
-    return subjects.filter((subject) =>
+    // --- New, reliable calculation logic using class-subject mappings ---
+    const teacherIdsBySubjectId: Record<number, Set<number>> = {};
+    const classInfoBySubjectId: Record<
+      number,
+      { count: number; names: string[] }
+    > = {};
+
+    // Iterate through all classes and their subject mappings
+    classes.forEach((cls: ClassItem) => {
+      const className = `Class ${cls.grade} ${cls.section}`;
+      (cls.subjects || []).forEach(
+        (mapping: { subject_id: number; teacher_id: number | null }) => {
+          const { subject_id, teacher_id } = mapping;
+
+          // Aggregate unique teacher IDs for each subject
+          if (teacher_id) {
+            if (!teacherIdsBySubjectId[subject_id]) {
+              teacherIdsBySubjectId[subject_id] = new Set();
+            }
+            teacherIdsBySubjectId[subject_id].add(teacher_id);
+          }
+
+          // Aggregate class counts and names for each subject
+          if (!classInfoBySubjectId[subject_id]) {
+            classInfoBySubjectId[subject_id] = { count: 0, names: [] };
+          }
+          classInfoBySubjectId[subject_id].count += 1;
+          classInfoBySubjectId[subject_id].names.push(className);
+        }
+      );
+    });
+    // --- End of new logic ---
+
+    // Map the aggregated data to each subject
+    const data = subjects.map((subject) => ({
+      ...subject,
+      // Get the count of unique teachers from the Set size
+      teachers: teacherIdsBySubjectId[subject.id]?.size || 0,
+      classCount: classInfoBySubjectId[subject.id]?.count || 0,
+      classNames: classInfoBySubjectId[subject.id]?.names || [],
+    }));
+
+    // The rest of the logic remains the same
+    const high = data.filter((s) => s.teachers >= 5);
+    const medium = data.filter((s) => s.teachers >= 3 && s.teachers < 5);
+    const low = data.filter((s) => s.teachers < 3);
+
+    return { subjectData: data, high, medium, low };
+  }, [subjects, teachers, classes]); // Add 'classes' to the dependency array
+
+  const filteredData = useMemo(() => {
+    if (!searchTerm) {
+      return subjectData;
+    }
+    return subjectData.filter((subject) =>
       subject.subject_name.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [subjects, searchTerm]); // Dependencies for the memo
-  const openEditDialog = (subject?: SubjectItem) => {
+  }, [subjectData, searchTerm]);
+
+  const openEditDialog = (subject?: SubjectData) => {
     if (subject) {
       setEditingSubject(subject);
       form.reset({
@@ -102,7 +163,11 @@ export default function SubjectsPage() {
     }
     setIsDialogOpen(open);
   };
-
+  const openAddDialog = () => {
+    setEditingSubject(undefined); // Clear any previous editing state
+    form.reset({ subject_name: "", subject_description: "" }); // Reset the form to be blank
+    setIsDialogOpen(true); // Open the dialog
+  };
   const onSubmit = async (values: SubjectFormValues) => {
     try {
       setIsSubmitting(true);
@@ -179,6 +244,8 @@ export default function SubjectsPage() {
     }
   };
 
+  type SubjectData = (typeof subjectData)[0];
+
   const columns = [
     {
       header: "Subject Name",
@@ -187,23 +254,56 @@ export default function SubjectsPage() {
     {
       header: "Description",
       accessorKey: "subject_description",
+      cell: (subject: SubjectData) => (
+        <span className="text-sm text-gray-600">
+          {subject.subject_description || "N/A"}
+        </span>
+      ),
+    },
+    {
+      header: "Teachers",
+      accessorKey: "teachers",
+      cell: (subject: SubjectData) => (
+        <Badge variant="outline">{subject.teachers} teachers</Badge>
+      ),
+    },
+    {
+      header: "Classes",
+      accessorKey: "classCount",
+      cell: (subject: SubjectData) => (
+        <div className="flex items-center gap-2 max-w-xs">
+          {subject.classCount > 0 ? (
+            <>
+              <Badge>{subject.classCount} classes</Badge>
+              <span
+                className="text-xs text-gray-500 truncate"
+                title={subject.classNames.join(", ")}
+              >
+                {subject.classNames.join(", ")}
+              </span>
+            </>
+          ) : (
+            <span className="text-xs text-gray-500">Not assigned</span>
+          )}
+        </div>
+      ),
     },
     {
       header: "Actions",
       accessorKey: "id",
-      cell: (row: any) => (
+      cell: (subject: SubjectData) => (
         <div className="flex space-x-2">
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => openEditDialog(row)}
+            onClick={() => openEditDialog(subject)}
           >
             <Edit className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => handleDelete(row.id)}
+            onClick={() => handleDelete(subject.id)}
           >
             <Trash className="h-4 w-4" />
           </Button>
@@ -220,7 +320,6 @@ export default function SubjectsPage() {
     );
   }
 
-  // Redirect if not school_admin or staff
   if (user?.role !== "school_admin" && user?.role !== "staff") {
     toast({
       title: "Access Denied",
@@ -233,7 +332,6 @@ export default function SubjectsPage() {
   return (
     <DashboardLayout title="Subject Management">
       <div className="container py-6">
-        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <Card>
             <CardHeader className="pb-1">
@@ -244,22 +342,96 @@ export default function SubjectsPage() {
               <p className="text-3xl font-bold">{subjects.length}</p>
             </CardContent>
           </Card>
-          {/* ... (other stats cards) */}
+          <Card>
+            <CardHeader className="pb-1">
+              <CardTitle className="text-lg">Total Teachers</CardTitle>
+              <CardDescription>Across all subjects</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">
+                {subjectData.reduce(
+                  (sum: number, subject: { teachers: number }) =>
+                    sum + subject.teachers,
+                  0
+                )}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-1">
+              <CardTitle className="text-lg">Class Coverage</CardTitle>
+              <CardDescription>Subject-class mappings</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">
+                {subjectData.reduce(
+                  (sum: number, subject: { classCount: number }) =>
+                    sum + subject.classCount,
+                  0
+                )}
+              </p>
+            </CardContent>
+          </Card>
         </div>
-
-        {/* Subjects Table with Add Subject Button */}
+        <div className="bg-white p-6 rounded-lg shadow mb-6">
+          <h2 className="text-xl font-semibold mb-4">
+            Subject Distribution by Teacher Allocation
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="border rounded-lg p-4">
+              <div className="flex items-center mb-2">
+                <BookOpen className="h-5 w-5 text-green-500 mr-2" />
+                <h3 className="font-medium">Well Staffed (5+ teachers)</h3>
+              </div>
+              <p className="text-2xl font-bold text-green-500">
+                {high.length} subjects
+              </p>
+              <div className="mt-2 text-sm text-muted-foreground">
+                {high
+                  .map((s: { subject_name: string }) => s.subject_name)
+                  .join(", ")}
+              </div>
+            </div>
+            <div className="border rounded-lg p-4">
+              <div className="flex items-center mb-2">
+                <BookOpen className="h-5 w-5 text-amber-500 mr-2" />
+                <h3 className="font-medium">Adequate (3-4 teachers)</h3>
+              </div>
+              <p className="text-2xl font-bold text-amber-500">
+                {medium.length} subjects
+              </p>
+              <div className="mt-2 text-sm text-muted-foreground">
+                {medium
+                  .map((s: { subject_name: string }) => s.subject_name)
+                  .join(", ")}
+              </div>
+            </div>
+            <div className="border rounded-lg p-4">
+              <div className="flex items-center mb-2">
+                <BookOpen className="h-5 w-5 text-red-500 mr-2" />
+                <h3 className="font-medium">Understaffed ({"<"}3 teachers)</h3>
+              </div>
+              <p className="text-2xl font-bold text-red-500">
+                {low.length} subjects
+              </p>
+              <div className="mt-2 text-sm text-muted-foreground">
+                {low
+                  .map((s: { subject_name: string }) => s.subject_name)
+                  .join(", ")}
+              </div>
+            </div>
+          </div>
+        </div>
         <div className="bg-white p-6 rounded-lg shadow">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold">Subject List</h2>
             <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
-              {user?.role === "school_admin" && (
-                <DialogTrigger asChild>
-                  <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Add Subject
-                  </Button>
-                </DialogTrigger>
-              )}
+              <DialogTrigger asChild>
+                <Button onClick={openAddDialog}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Subject
+                </Button>
+              </DialogTrigger>
               <DialogContent className="sm:max-w-[500px]">
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -281,7 +453,10 @@ export default function SubjectsPage() {
                           <FormItem>
                             <FormLabel>Subject Name</FormLabel>
                             <FormControl>
-                              <Input placeholder="Mathematics" {...field} />
+                              <Input
+                                placeholder="Enter Subject name"
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -295,8 +470,9 @@ export default function SubjectsPage() {
                             <FormLabel>Description</FormLabel>
                             <FormControl>
                               <Input
-                                placeholder="e.g., Study of numbers, shapes, and patterns"
+                                placeholder="Brief description of the subject"
                                 {...field}
+                                value={field.value || ""}
                               />
                             </FormControl>
                             <FormMessage />
@@ -318,29 +494,14 @@ export default function SubjectsPage() {
               </DialogContent>
             </Dialog>
           </div>
-
-          {/* NEW: Add the Search Input field */}
-          <div className="flex items-center py-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search by subject name..."
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                className="max-w-sm pl-10"
-              />
-            </div>
-          </div>
-
           <DataTable
-            data={filteredSubjects} // <-- USE the new filtered list here
+            data={filteredData}
             columns={columns}
             searchPlaceholder="Search subjects..."
+            onSearch={setSearchTerm}
           />
         </div>
       </div>
-
-      {/* Delete Confirmation Modal */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent>
           <DialogHeader>

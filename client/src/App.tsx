@@ -32,6 +32,7 @@ import StaffSubjectsPage from "@/pages/staff-subjects-page";
 import StaffClassLogsPage from "@/pages/staff-class-logs-page";
 import TimetableUploadPage from "@/pages/timetable-upload-page";
 import { SchoolDataProvider } from "./context/SchoolDataContext";
+import AdminDashboardPage from "./pages/admin/admin-dashboard-page";
 
 function Router() {
   return (
@@ -44,11 +45,17 @@ function Router() {
         path="/"
         component={() => {
           const { user } = useAuth();
-          return user?.role === "student" ? (
-            <StudentDashboardPage />
-          ) : (
-            <TeacherDashboardPage />
-          );
+
+          if (user?.role === "student") {
+            return <StudentDashboardPage />;
+          } else if (user?.role === "staff") {
+            return <TeacherDashboardPage />;
+          } else if (user?.role === "school_admin") {
+            return <AdminDashboardPage />;
+          } else {
+            // Optional: Redirect or render "Not Authorized"
+            return <div>Unauthorized Access</div>;
+          }
         }}
       />
 
