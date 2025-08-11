@@ -398,6 +398,63 @@ export const insertAssignmentSubmissionSchema = createInsertSchema(
   id: true,
   submission_date: true,
 });
+// Learning materials shared by teachers
+export const materials = pgTable("materials", {
+  id: serial("id").primaryKey(),
+  teacher_id: integer("teacher_id")
+    .notNull()
+    .references(() => users.id),
+  class_id: integer("class_id")
+    .notNull()
+    .references(() => classes.id),
+  subject_id: integer("subject_id")
+    .notNull()
+    .references(() => subjects.id),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  material_type: text("material_type").notNull(), // 'notes', 'presentation', 'video', 'document', 'link'
+  file_url: text("file_url"),
+  content: text("content"),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertMaterialSchema = createInsertSchema(materials).omit({
+  id: true,
+  created_at: true,
+});
+
+// Tests and quizzes created by teachers
+export const tests = pgTable("tests", {
+  id: serial("id").primaryKey(),
+  teacher_id: integer("teacher_id")
+    .notNull()
+    .references(() => users.id),
+  class_id: integer("class_id")
+    .notNull()
+    .references(() => classes.id),
+  subject_id: integer("subject_id")
+    .notNull()
+    .references(() => subjects.id),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  test_date: date("test_date").notNull(),
+  duration: integer("duration").notNull(), // in minutes
+  max_marks: integer("max_marks").notNull(),
+  test_type: text("test_type").notNull(), // 'quiz', 'unit_test', 'class_test', 'mock_exam'
+  created_at: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertTestSchema = createInsertSchema(tests).omit({
+  id: true,
+  created_at: true,
+});
+
+// Type definitions for materials and tests
+export type Material = typeof materials.$inferSelect;
+export type InsertMaterial = z.infer<typeof insertMaterialSchema>;
+
+export type Test = typeof tests.$inferSelect;
+export type InsertTest = z.infer<typeof insertTestSchema>;
 
 // Exams information
 export const exams = pgTable("exams", {

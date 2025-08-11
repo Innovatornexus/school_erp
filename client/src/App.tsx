@@ -33,6 +33,12 @@ import StaffClassLogsPage from "@/pages/staff-class-logs-page";
 import TimetableUploadPage from "@/pages/timetable-upload-page";
 import { SchoolDataProvider } from "./context/SchoolDataContext";
 import AdminDashboardPage from "./pages/admin/admin-dashboard-page";
+import AssignmentsPage from "./pages/assignments-page";
+import MaterialsPage from "./pages/material-page";
+import TestsPage from "./pages/tests-page";
+import ExamsPage from "./pages/exams-page";
+
+// Router component
 
 function Router() {
   return (
@@ -83,7 +89,11 @@ function Router() {
         path="/timetables/upload"
         component={TimetableUploadPage}
       />
-
+      {/* Academic routes */}
+      <ProtectedRoute path="/assignments" component={AssignmentsPage} />
+      <ProtectedRoute path="/materials" component={MaterialsPage} />
+      <ProtectedRoute path="/exams" component={ExamsPage} />
+      <ProtectedRoute path="/tests" component={TestsPage} />
       {/* Student routes */}
       <ProtectedRoute path="/student/classes" component={StudentClassesPage} />
       <ProtectedRoute path="/student/fees" component={StudentFeesPage} />

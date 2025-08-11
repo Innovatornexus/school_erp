@@ -14,6 +14,9 @@ import {
   LogOut,
   Building,
   UserCog,
+  Award,
+  FolderOpen,
+  Target,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -67,7 +70,7 @@ export default function Sidebar({
     <div
       className={`${
         isMobile ? "fixed inset-y-0 left-0 z-30" : "flex"
-      } flex-col w-64 bg-gradient-to-b from-blue-800 to-blue-900 text-white shadow-lg`}
+      } flex-col w-64 bg-gradient-to-b from-blue-800 to-blue-900 text-white shadow-lg h-screen`}
     >
       {/* Logo & App Title */}
       <div className="p-4 flex items-center justify-center border-b border-blue-700/50">
@@ -197,6 +200,52 @@ export default function Sidebar({
                 <span>Subjects</span>
               </Link>
 
+              <div className="px-4 mt-6 mb-2 text-xs font-semibold text-blue-300 uppercase tracking-wider">
+                Academic
+              </div>
+
+              <Link
+                href="/assignments"
+                className={
+                  location === "/assignments"
+                    ? activeNavClass
+                    : inactiveNavClass
+                }
+              >
+                <FileText className="mr-3 h-4 w-4" />
+                <span>Assignments</span>
+              </Link>
+
+              <Link
+                href="/materials"
+                className={
+                  location === "/materials" ? activeNavClass : inactiveNavClass
+                }
+              >
+                <FolderOpen className="mr-3 h-4 w-4" />
+                <span>Materials</span>
+              </Link>
+
+              <Link
+                href="/tests"
+                className={
+                  location === "/tests" ? activeNavClass : inactiveNavClass
+                }
+              >
+                <Target className="mr-3 h-4 w-4" />
+                <span>Tests & Quizzes</span>
+              </Link>
+
+              <Link
+                href="/exams"
+                className={
+                  location === "/exams" ? activeNavClass : inactiveNavClass
+                }
+              >
+                <Award className="mr-3 h-4 w-4" />
+                <span>Examinations</span>
+              </Link>
+
               <Link href="/attendance">
                 <a
                   className={
@@ -270,7 +319,6 @@ export default function Sidebar({
                   <span>My Classes</span>
                 </a>
               </Link>
-              
 
               <Link href="/teacher/subjects">
                 <a

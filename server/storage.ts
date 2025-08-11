@@ -70,6 +70,12 @@ import {
   teacher_messages,
   holidays,
   InsertStudentAttendance,
+  InsertMaterial,
+  InsertTest,
+  Material,
+  Test,
+  materials,
+  tests,
 } from "@shared/schema";
 
 import { db, pool } from "./db";
@@ -1996,6 +2002,82 @@ export class DatabaseStorage {
       .leftJoin(receiver, eq(messages.receiver_id, receiver.id))
       .where(eq(messages.school_id, schoolId))
       .orderBy(desc(messages.created_at));
+  }
+
+  // Material operations
+  async getMaterials(): Promise<Material[]> {
+    return await db.select().from(materials);
+  }
+
+  async getMaterial(id: number): Promise<Material | undefined> {
+    const [material] = await db
+      .select()
+      .from(materials)
+      .where(eq(materials.id, id));
+    return material;
+  }
+
+  async createMaterial(insertMaterial: InsertMaterial): Promise<Material> {
+    const [material] = await db
+      .insert(materials)
+      .values(insertMaterial)
+      .returning();
+    return material;
+  }
+
+  async updateMaterial(
+    id: number,
+    data: Partial<InsertMaterial>
+  ): Promise<Material | undefined> {
+    const [updated] = await db
+      .update(materials)
+      .set(data)
+      .where(eq(materials.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteMaterial(id: number): Promise<boolean> {
+    const [deleted] = await db
+      .delete(materials)
+      .where(eq(materials.id, id))
+      .returning();
+    return !!deleted;
+  }
+
+  // Test operations
+  async getTests(): Promise<Test[]> {
+    return await db.select().from(tests);
+  }
+
+  async getTest(id: number): Promise<Test | undefined> {
+    const [test] = await db.select().from(tests).where(eq(tests.id, id));
+    return test;
+  }
+
+  async createTest(insertTest: InsertTest): Promise<Test> {
+    const [test] = await db.insert(tests).values(insertTest).returning();
+    return test;
+  }
+
+  async updateTest(
+    id: number,
+    data: Partial<InsertTest>
+  ): Promise<Test | undefined> {
+    const [updated] = await db
+      .update(tests)
+      .set(data)
+      .where(eq(tests.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteTest(id: number): Promise<boolean> {
+    const [deleted] = await db
+      .delete(tests)
+      .where(eq(tests.id, id))
+      .returning();
+    return !!deleted;
   }
 }
 

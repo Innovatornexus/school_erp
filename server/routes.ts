@@ -33,6 +33,8 @@ import {
   updateTeacherAttendanceApiSchema,
   generateReportQuerySchema,
   addHolidaysSchema,
+  insertMaterialSchema,
+  insertTestSchema,
 } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
@@ -1974,6 +1976,325 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (error) {
         console.error("Error fetching class messages:", error);
         res.status(500).json({ error: "Internal server error" });
+      }
+    }
+  );
+
+  // Get all materials
+  app.get(
+    "/api/materials",
+    requireRole(["super_admin", "school_admin", "staff", "student"]),
+    async (req, res) => {
+      try {
+        const materials = await storage.getMaterials();
+        res.json(materials);
+      } catch (error) {
+        res.status(500).json({ message: "Failed to fetch materials", error });
+      }
+    }
+  );
+
+  // Get a specific material
+  app.get(
+    "/api/materials/:id",
+    requireRole(["super_admin", "school_admin", "staff", "student"]),
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const material = await storage.getMaterial(id);
+
+        if (!material) {
+          return res.status(404).json({ message: "Material not found" });
+        }
+
+        res.json(material);
+      } catch (error) {
+        res.status(500).json({ message: "Failed to fetch material", error });
+      }
+    }
+  );
+
+  // Create a new material
+  app.post(
+    "/api/materials",
+    requireRole(["super_admin", "school_admin", "staff"]),
+    async (req, res) => {
+      try {
+        const materialData = insertMaterialSchema.parse(req.body);
+        const newMaterial = await storage.createMaterial(materialData);
+        res.status(201).json(newMaterial);
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          console.error("Full zod error:", error);
+          return res.status(400).json({
+            message: "Validation failed",
+            errors: error.errors,
+          });
+        }
+
+        // Narrow error type safely
+        if (error instanceof Error) {
+          console.error("Full error:", error);
+          return res.status(500).json({
+            message: "Failed to create material",
+            error: error.message,
+            stack: error.stack,
+          });
+        }
+
+        // fallback if it's not an instance of Error
+        return res.status(500).json({
+          message: "Unknown error occurred",
+          error: JSON.stringify(error),
+        });
+      }
+    }
+  );
+
+  // Update a material
+  app.put(
+    "/api/materials/:id",
+    requireRole(["super_admin", "school_admin", "staff"]),
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const materialData = insertMaterialSchema.partial().parse(req.body);
+
+        const updatedMaterial = await storage.updateMaterial(id, materialData);
+        if (!updatedMaterial) {
+          return res.status(404).json({ message: "Material not found" });
+        }
+
+        res.json(updatedMaterial);
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          return res
+            .status(400)
+            .json({ message: "Validation failed", errors: error.errors });
+        }
+        res.status(500).json({ message: "Failed to update material", error });
+      }
+    }
+  );
+
+  // Delete a material
+  app.delete(
+    "/api/materials/:id",
+    requireRole(["super_admin", "school_admin", "staff"]),
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const success = await storage.deleteMaterial(id);
+
+        if (!success) {
+          return res.status(404).json({ message: "Material not found" });
+        }
+
+        res.status(204).end();
+      } catch (error) {
+        res.status(500).json({ message: "Failed to delete material", error });
+      }
+    }
+  );
+
+  // ============ Tests Routes ============
+
+  // Get all tests
+  app.get(
+    "/api/tests",
+    requireRole(["super_admin", "school_admin", "staff", "student"]),
+    async (req, res) => {
+      try {
+        const tests = await storage.getTests();
+        res.json(tests);
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          console.error("Full zod error:", error);
+          return res.status(400).json({
+            message: "Validation failed",
+            errors: error.errors,
+          });
+        }
+
+        // Narrow error type safely
+        if (error instanceof Error) {
+          console.error("Full error:", error);
+          return res.status(500).json({
+            message: "Failed to fetch all test",
+            error: error.message,
+            stack: error.stack,
+          });
+        }
+
+        // fallback if it's not an instance of Error
+        return res.status(500).json({
+          message: "Unknown error occurred",
+          error: JSON.stringify(error),
+        });
+      }
+    }
+  );
+
+  // Get a specific test
+  app.get(
+    "/api/tests/:id",
+    requireRole(["super_admin", "school_admin", "staff", "student"]),
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const test = await storage.getTest(id);
+
+        if (!test) {
+          return res.status(404).json({ message: "Test not found" });
+        }
+
+        res.json(test);
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          console.error("Full zod error:", error);
+          return res.status(400).json({
+            message: "Validation failed",
+            errors: error.errors,
+          });
+        }
+
+        // Narrow error type safely
+        if (error instanceof Error) {
+          console.error("Full error:", error);
+          return res.status(500).json({
+            message: "Failed to fetch specific test",
+            error: error.message,
+            stack: error.stack,
+          });
+        }
+
+        // fallback if it's not an instance of Error
+        return res.status(500).json({
+          message: "Unknown error occurred",
+          error: JSON.stringify(error),
+        });
+      }
+    }
+  );
+
+  // Create a new test
+  app.post(
+    "/api/tests",
+    requireRole(["super_admin", "school_admin", "staff"]),
+    async (req, res) => {
+      try {
+        const testData = insertTestSchema.parse(req.body);
+        const newTest = await storage.createTest(testData);
+        res.status(201).json(newTest);
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          console.error("Full zod error:", error);
+          return res.status(400).json({
+            message: "Validation failed",
+            errors: error.errors,
+          });
+        }
+
+        // Narrow error type safely
+        if (error instanceof Error) {
+          console.error("Full error:", error);
+          return res.status(500).json({
+            message: "Failed to create a new test",
+            error: error.message,
+            stack: error.stack,
+          });
+        }
+
+        // fallback if it's not an instance of Error
+        return res.status(500).json({
+          message: "Unknown error occurred",
+          error: JSON.stringify(error),
+        });
+      }
+    }
+  );
+
+  // Update a test
+  app.put(
+    "/api/tests/:id",
+    requireRole(["super_admin", "school_admin", "staff"]),
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const testData = insertTestSchema.partial().parse(req.body);
+
+        const updatedTest = await storage.updateTest(id, testData);
+        if (!updatedTest) {
+          return res.status(404).json({ message: "Test not found" });
+        }
+
+        res.json(updatedTest);
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          console.error("Full zod error:", error);
+          return res.status(400).json({
+            message: "Validation failed",
+            errors: error.errors,
+          });
+        }
+
+        // Narrow error type safely
+        if (error instanceof Error) {
+          console.error("Full error:", error);
+          return res.status(500).json({
+            message: "Failed to update test",
+            error: error.message,
+            stack: error.stack,
+          });
+        }
+
+        // fallback if it's not an instance of Error
+        return res.status(500).json({
+          message: "Unknown error occurred",
+          error: JSON.stringify(error),
+        });
+      }
+    }
+  );
+
+  // Delete a test
+  app.delete(
+    "/api/tests/:id",
+    requireRole(["super_admin", "school_admin", "staff"]),
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const success = await storage.deleteTest(id);
+
+        if (!success) {
+          return res.status(404).json({ message: "Test not found" });
+        }
+
+        res.status(204).end();
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          console.error("Full zod error:", error);
+          return res.status(400).json({
+            message: "Validation failed",
+            errors: error.errors,
+          });
+        }
+
+        // Narrow error type safely
+        if (error instanceof Error) {
+          console.error("Full error:", error);
+          return res.status(500).json({
+            message: "Failed to delete test",
+            error: error.message,
+            stack: error.stack,
+          });
+        }
+
+        // fallback if it's not an instance of Error
+        return res.status(500).json({
+          message: "Unknown error occurred",
+          error: JSON.stringify(error),
+        });
       }
     }
   );
