@@ -20,8 +20,6 @@ import {
   insertBillSchema,
   insertClassLogSchema,
   insertLessonPlanSchema,
-  insertAssignmentSchema,
-  insertAssignmentSubmissionSchema,
   insertExamSubjectSchema,
   insertMarkSchema,
   insertTimetableSchema,
@@ -35,6 +33,7 @@ import {
   addHolidaysSchema,
   insertMaterialSchema,
   insertTestSchema,
+  insertHomeworkSchema,
 } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
@@ -2299,5 +2298,144 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
 
+  // ============ Homework Routes ============
+
+  // Get all homework
+  app.get(
+    "/api/homework",
+    requireRole(["super_admin", "school_admin", "staff", "student"]),
+    async (req, res) => {
+      try {
+        const homework = await storage.getHomeworkList();
+        res.json(homework);
+      } catch (error) {
+        res.status(500).json({ message: "Failed to fetch homework", error });
+      }
+    }
+  );
+
+  // Get a specific homework
+  app.get(
+    "/api/homework/:id",
+    requireRole(["super_admin", "school_admin", "staff", "student"]),
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const homework = await storage.getHomework(id);
+
+        if (!homework) {
+          return res.status(404).json({ message: "Homework not found" });
+        }
+
+        res.json(homework);
+      } catch (error) {
+        res.status(500).json({ message: "Failed to fetch homework", error });
+      }
+    }
+  );
+
+  // Create a new homework
+  app.post(
+    "/api/homework",
+    requireRole(["super_admin", "school_admin", "staff"]),
+    async (req, res) => {
+      try {
+        const homeworkData = insertHomeworkSchema.parse(req.body);
+        const newHomework = await storage.createHomework(homeworkData);
+        res.status(201).json(newHomework);
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          return res
+            .status(400)
+            .json({ message: "Validation failed", errors: error.errors });
+        }
+        res.status(500).json({ message: "Failed to create homework", error });
+      }
+    }
+  );
+
+  // Update a homework
+  app.put(
+    "/api/homework/:id",
+    requireRole(["super_admin", "school_admin", "staff"]),
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const homeworkData = insertHomeworkSchema.partial().parse(req.body);
+
+        const updatedHomework = await storage.updateHomework(id, homeworkData);
+        if (!updatedHomework) {
+          return res.status(404).json({ message: "Homework not found" });
+        }
+
+        res.json(updatedHomework);
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          return res
+            .status(400)
+            .json({ message: "Validation failed", errors: error.errors });
+        }
+        res.status(500).json({ message: "Failed to update homework", error });
+      }
+    }
+  );
+
+  // Delete a homework
+  app.delete(
+    "/api/homework/:id",
+    requireRole(["super_admin", "school_admin", "staff"]),
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const success = await storage.deleteHomework(id);
+
+        if (!success) {
+          return res.status(404).json({ message: "Homework not found" });
+        }
+
+        res.status(204).end();
+      } catch (error) {
+        res.status(500).json({ message: "Failed to delete homework", error });
+      }
+    }
+  );
+
+  // Get teacher's classes with subjects (for filtering)
+  app.get("/api/teacher-classes", requireRole(["staff"]), async (req, res) => {
+    try {
+      const user = req.user as Express.User;
+      if (!user || user.role !== "staff") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const teacherClassSubjects = await storage.getClassSubjectsByTeacherId(
+        user.id
+      );
+      res.json(teacherClassSubjects);
+    } catch (error) {
+      res
+        .status(500)
+        .json({ message: "Failed to fetch teacher classes", error });
+    }
+  });
+
+  // Get current teacher data
+  app.get("/api/teachers/current", requireRole(["staff"]), async (req, res) => {
+    try {
+      const user = req.user as Express.User;
+      if (!user || user.role !== "staff") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const teacher = await storage.getTeacherByUserId(user.id);
+      if (!teacher) {
+        return res.status(404).json({ message: "Teacher not found" });
+      }
+
+      res.json(teacher);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch teacher data", error });
+    }
+  });
   return createServer(app);
 }

@@ -13,7 +13,7 @@ import StudentsPage from "@/pages/students-page";
 import ClassesPage from "@/pages/classes-page";
 import ClassDetailPage from "@/pages/class-detail-page";
 import SubjectsPage from "@/pages/subjects-page";
-import AttendancePage from "@/pages/attendance-page";
+import FlightAgentApp from "@/pages/attendance-page";
 import FeesPage from "@/pages/fees-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import BillsPage from "@/pages/bills-page";
@@ -37,6 +37,8 @@ import AssignmentsPage from "./pages/assignments-page";
 import MaterialsPage from "./pages/material-page";
 import TestsPage from "./pages/tests-page";
 import ExamsPage from "./pages/exams-page";
+import HomeworkPage from "./pages/homework-page";
+import AttendancePage from "@/pages/attendance-page";
 
 // Router component
 
@@ -90,10 +92,10 @@ function Router() {
         component={TimetableUploadPage}
       />
       {/* Academic routes */}
-      <ProtectedRoute path="/assignments" component={AssignmentsPage} />
       <ProtectedRoute path="/materials" component={MaterialsPage} />
       <ProtectedRoute path="/exams" component={ExamsPage} />
       <ProtectedRoute path="/tests" component={TestsPage} />
+      <ProtectedRoute path="/homework" component={HomeworkPage} />
       {/* Student routes */}
       <ProtectedRoute path="/student/classes" component={StudentClassesPage} />
       <ProtectedRoute path="/student/fees" component={StudentFeesPage} />

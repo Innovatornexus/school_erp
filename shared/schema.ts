@@ -141,7 +141,7 @@ export const insertSubjectSchema = createInsertSchema(subjects).omit({
   id: true,
 });
 
-// Class-Subject mapping for teacher assignment
+// Class-Subject mapping for teacher
 export const classSubjects = pgTable("class_subjects", {
   id: serial("id").primaryKey(),
   class_id: integer("class_id")
@@ -355,49 +355,6 @@ export const insertLessonPlanSchema = createInsertSchema(lessonPlans).omit({
   id: true,
 });
 
-// Assignments created by teachers
-export const assignments = pgTable("assignments", {
-  id: serial("id").primaryKey(),
-  teacher_id: integer("teacher_id")
-    .notNull()
-    .references(() => teachers.id),
-  class_id: integer("class_id")
-    .notNull()
-    .references(() => classes.id),
-  subject_id: integer("subject_id")
-    .notNull()
-    .references(() => subjects.id),
-  title: text("title").notNull(),
-  description: text("description").notNull(),
-  due_date: date("due_date").notNull(),
-  attachment_url: text("attachment_url"),
-});
-
-export const insertAssignmentSchema = createInsertSchema(assignments).omit({
-  id: true,
-});
-
-// Assignment submissions by students
-export const assignmentSubmissions = pgTable("assignment_submissions", {
-  id: serial("id").primaryKey(),
-  assignment_id: integer("assignment_id")
-    .notNull()
-    .references(() => assignments.id),
-  student_id: integer("student_id")
-    .notNull()
-    .references(() => students.id),
-  submission_date: timestamp("submission_date").defaultNow().notNull(),
-  content: text("content").notNull(),
-  grade: text("grade"),
-  feedback: text("feedback"),
-});
-
-export const insertAssignmentSubmissionSchema = createInsertSchema(
-  assignmentSubmissions
-).omit({
-  id: true,
-  submission_date: true,
-});
 // Learning materials shared by teachers
 export const materials = pgTable("materials", {
   id: serial("id").primaryKey(),
@@ -648,6 +605,58 @@ export const insertClassLogSchema = createInsertSchema(classLogs).omit({
   created_at: true,
 });
 
+// Homework - daily homework assigned by teachers
+export const homework = pgTable("homework", {
+  id: serial("id").primaryKey(),
+  teacher_id: integer("teacher_id")
+    .notNull()
+    .references(() => teachers.id),
+  school_id: integer("school_id")
+    .notNull()
+    .references(() => schools.id),
+  class_id: integer("class_id")
+    .notNull()
+    .references(() => classes.id),
+  subject_id: integer("subject_id")
+    .notNull()
+    .references(() => subjects.id),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  assigned_date: date("assigned_date").notNull(),
+  due_date: date("due_date").notNull(),
+  instructions: text("instructions"),
+  attachment_url: text("attachment_url"),
+  status: text("status").default("active"), // 'active', 'completed', 'cancelled'
+  created_at: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertHomeworkSchema = createInsertSchema(homework).omit({
+  id: true,
+  created_at: true,
+});
+
+// Homework submissions by students
+export const homeworkSubmissions = pgTable("homework_submissions", {
+  id: serial("id").primaryKey(),
+  homework_id: integer("homework_id")
+    .notNull()
+    .references(() => homework.id),
+  student_id: integer("student_id")
+    .notNull()
+    .references(() => students.id),
+  submission_date: timestamp("submission_date").defaultNow().notNull(),
+  content: text("content").notNull(),
+  grade: text("grade"),
+  feedback: text("feedback"),
+  status: text("status").default("submitted"), // 'submitted', 'graded', 'late'
+});
+
+export const insertHomeworkSubmissionSchema = createInsertSchema(
+  homeworkSubmissions
+).omit({
+  id: true,
+  submission_date: true,
+});
 // Timetable management
 export const timetables = pgTable("timetables", {
   id: serial("id").primaryKey(),
@@ -712,12 +721,12 @@ export type InsertTeacherAttendance = z.infer<
 export type LessonPlan = typeof lessonPlans.$inferSelect;
 export type InsertLessonPlan = z.infer<typeof insertLessonPlanSchema>;
 
-export type Assignment = typeof assignments.$inferSelect;
-export type InsertAssignment = z.infer<typeof insertAssignmentSchema>;
+export type Homework = typeof homework.$inferSelect;
+export type InsertHomework = z.infer<typeof insertHomeworkSchema>;
 
-export type AssignmentSubmission = typeof assignmentSubmissions.$inferSelect;
-export type InsertAssignmentSubmission = z.infer<
-  typeof insertAssignmentSubmissionSchema
+export type HomeworkSubmission = typeof homeworkSubmissions.$inferSelect;
+export type InsertHomeworkSubmission = z.infer<
+  typeof insertHomeworkSubmissionSchema
 >;
 
 export type Exam = typeof exams.$inferSelect;

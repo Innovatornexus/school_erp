@@ -157,17 +157,30 @@ export default function Sidebar({
               <div className="px-4 mt-6 mb-2 text-xs font-semibold text-blue-300 uppercase tracking-wider">
                 School Management
               </div>
-
+              {/* only school_admin */}
               {user?.role === "school_admin" && (
-                <Link
-                  href="/staff"
-                  className={
-                    location === "/staff" ? activeNavClass : inactiveNavClass
-                  }
-                >
-                  <Users className="mr-3 h-4 w-4" />
-                  <span>Staff</span>
-                </Link>
+                <>
+                  <Link
+                    href="/staff"
+                    className={
+                      location === "/staff" ? activeNavClass : inactiveNavClass
+                    }
+                  >
+                    <Users className="mr-3 h-4 w-4" />
+                    <span>Staff</span>
+                  </Link>
+                  <Link
+                    href="/subjects"
+                    className={
+                      location === "/subjects"
+                        ? activeNavClass
+                        : inactiveNavClass
+                    }
+                  >
+                    <BookOpen className="mr-3 h-4 w-4" />
+                    <span>Subjects</span>
+                  </Link>
+                </>
               )}
 
               <Link
@@ -180,40 +193,18 @@ export default function Sidebar({
                 <span>Students</span>
               </Link>
 
-              <Link
-                href="/classes"
-                className={
-                  location === "/classes" ? activeNavClass : inactiveNavClass
-                }
-              >
-                <BookOpen className="mr-3 h-4 w-4" />
-                <span>Classes</span>
-              </Link>
-
-              <Link
-                href="/subjects"
-                className={
-                  location === "/subjects" ? activeNavClass : inactiveNavClass
-                }
-              >
-                <BookOpen className="mr-3 h-4 w-4" />
-                <span>Subjects</span>
-              </Link>
-
               <div className="px-4 mt-6 mb-2 text-xs font-semibold text-blue-300 uppercase tracking-wider">
                 Academic
               </div>
 
               <Link
-                href="/assignments"
+                href="/homework"
                 className={
-                  location === "/assignments"
-                    ? activeNavClass
-                    : inactiveNavClass
+                  location === "/homework" ? activeNavClass : inactiveNavClass
                 }
               >
                 <FileText className="mr-3 h-4 w-4" />
-                <span>Assignments</span>
+                <span>Homework</span>
               </Link>
 
               <Link

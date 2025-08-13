@@ -14,6 +14,12 @@ import {
   students,
   Student,
   InsertStudent,
+  homework,
+  Homework,
+  InsertHomework,
+  homeworkSubmissions,
+  HomeworkSubmission,
+  InsertHomeworkSubmission,
   classes,
   Class,
   InsertClass,
@@ -31,12 +37,6 @@ import {
   lessonPlans,
   LessonPlan,
   InsertLessonPlan,
-  assignments,
-  Assignment,
-  InsertAssignment,
-  assignmentSubmissions,
-  AssignmentSubmission,
-  InsertAssignmentSubmission,
   exams,
   Exam,
   InsertExam,
@@ -558,14 +558,25 @@ export class DatabaseStorage {
 
   async getClassesByTeacherId(teacherId: number) {
     return await db
-      .selectDistinct({
+      .select({
         id: classes.id,
         grade: classes.grade,
         section: classes.section,
+        studentCount: sql<number>`COUNT(${students.id})`.mapWith(Number),
+        class_teacher_id: classes.class_teacher_id,
+        class_teacher_name: classes.class_teacher_name,
       })
       .from(classSubjects)
       .innerJoin(classes, eq(classSubjects.class_id, classes.id))
-      .where(eq(classSubjects.teacher_id, teacherId));
+      .leftJoin(students, eq(classes.id, students.class_id))
+      .where(eq(classSubjects.teacher_id, teacherId))
+      .groupBy(
+        classes.id,
+        classes.grade,
+        classes.section,
+        classes.class_teacher_id,
+        classes.class_teacher_name
+      );
   }
 
   //fetching classes that staff assigned as classteacher
@@ -1315,118 +1326,113 @@ export class DatabaseStorage {
     return !!deleted;
   }
 
-  // Assignment operations
-  async getAssignment(id: number): Promise<Assignment | undefined> {
-    const [assignment] = await db
-      .select()
-      .from(assignments)
-      .where(eq(assignments.id, id));
-    return assignment;
+  // Homework operations
+  async getHomework(id: number): Promise<Homework | undefined> {
+    const [hw] = await db.select().from(homework).where(eq(homework.id, id));
+    return hw;
   }
 
-  async getAssignmentsByTeacherId(teacherId: number): Promise<Assignment[]> {
+  async getHomeworkByTeacherId(teacherId: number): Promise<Homework[]> {
     return await db
       .select()
-      .from(assignments)
-      .where(eq(assignments.teacher_id, teacherId));
+      .from(homework)
+      .where(eq(homework.teacher_id, teacherId));
   }
 
-  async getAssignmentsByClassId(classId: number): Promise<Assignment[]> {
+  async getHomeworkByClassId(classId: number): Promise<Homework[]> {
     return await db
       .select()
-      .from(assignments)
-      .where(eq(assignments.class_id, classId));
+      .from(homework)
+      .where(eq(homework.class_id, classId));
   }
 
-  async createAssignment(
-    insertAssignment: InsertAssignment
-  ): Promise<Assignment> {
-    const [assignment] = await db
-      .insert(assignments)
-      .values(insertAssignment)
-      .returning();
-    return assignment;
+  async getHomeworkList(): Promise<Homework[]> {
+    return await db.select().from(homework);
   }
 
-  async updateAssignment(
+  async createHomework(insertHomework: InsertHomework): Promise<Homework> {
+    const [hw] = await db.insert(homework).values(insertHomework).returning();
+    return hw;
+  }
+
+  async updateHomework(
     id: number,
-    data: Partial<InsertAssignment>
-  ): Promise<Assignment | undefined> {
+    data: Partial<InsertHomework>
+  ): Promise<Homework | undefined> {
     const [updated] = await db
-      .update(assignments)
+      .update(homework)
       .set(data)
-      .where(eq(assignments.id, id))
+      .where(eq(homework.id, id))
       .returning();
     return updated;
   }
 
-  async deleteAssignment(id: number): Promise<boolean> {
+  async deleteHomework(id: number): Promise<boolean> {
     const [deleted] = await db
-      .delete(assignments)
-      .where(eq(assignments.id, id))
+      .delete(homework)
+      .where(eq(homework.id, id))
       .returning();
     return !!deleted;
   }
 
-  // AssignmentSubmission operations
-  async getAssignmentSubmission(
+  // HomeworkSubmission operations
+  async getHomeworkSubmission(
     id: number
-  ): Promise<AssignmentSubmission | undefined> {
+  ): Promise<HomeworkSubmission | undefined> {
     const [submission] = await db
       .select()
-      .from(assignmentSubmissions)
-      .where(eq(assignmentSubmissions.id, id));
+      .from(homeworkSubmissions)
+      .where(eq(homeworkSubmissions.id, id));
     return submission;
   }
 
-  async getAssignmentSubmissionsByAssignmentId(
-    assignmentId: number
-  ): Promise<AssignmentSubmission[]> {
+  async getHomeworkSubmissionsByHomeworkId(
+    homeworkId: number
+  ): Promise<HomeworkSubmission[]> {
     return await db
       .select()
-      .from(assignmentSubmissions)
-      .where(eq(assignmentSubmissions.assignment_id, assignmentId));
+      .from(homeworkSubmissions)
+      .where(eq(homeworkSubmissions.homework_id, homeworkId));
   }
 
-  async getAssignmentSubmissionsByStudentId(
+  async getHomeworkSubmissionsByStudentId(
     studentId: number
-  ): Promise<AssignmentSubmission[]> {
+  ): Promise<HomeworkSubmission[]> {
     return await db
       .select()
-      .from(assignmentSubmissions)
-      .where(eq(assignmentSubmissions.student_id, studentId));
+      .from(homeworkSubmissions)
+      .where(eq(homeworkSubmissions.student_id, studentId));
   }
 
-  async createAssignmentSubmission(
-    insertSubmission: InsertAssignmentSubmission
-  ): Promise<AssignmentSubmission> {
+  async createHomeworkSubmission(
+    insertSubmission: InsertHomeworkSubmission
+  ): Promise<HomeworkSubmission> {
     const [submission] = await db
-      .insert(assignmentSubmissions)
+      .insert(homeworkSubmissions)
       .values(insertSubmission)
       .returning();
     return submission;
   }
 
-  async updateAssignmentSubmission(
+  async updateHomeworkSubmission(
     id: number,
-    data: Partial<InsertAssignmentSubmission>
-  ): Promise<AssignmentSubmission | undefined> {
+    data: Partial<InsertHomeworkSubmission>
+  ): Promise<HomeworkSubmission | undefined> {
     const [updated] = await db
-      .update(assignmentSubmissions)
+      .update(homeworkSubmissions)
       .set(data)
-      .where(eq(assignmentSubmissions.id, id))
+      .where(eq(homeworkSubmissions.id, id))
       .returning();
     return updated;
   }
 
-  async deleteAssignmentSubmission(id: number): Promise<boolean> {
+  async deleteHomeworkSubmission(id: number): Promise<boolean> {
     const [deleted] = await db
-      .delete(assignmentSubmissions)
-      .where(eq(assignmentSubmissions.id, id))
+      .delete(homeworkSubmissions)
+      .where(eq(homeworkSubmissions.id, id))
       .returning();
     return !!deleted;
   }
-
   // Exam operations
   async getExam(id: number): Promise<Exam | undefined> {
     const [exam] = await db.select().from(exams).where(eq(exams.id, id));

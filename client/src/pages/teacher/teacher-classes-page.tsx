@@ -3,59 +3,111 @@ import DashboardLayout from "@/layout/dashboard-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Book, Users, Calendar } from "lucide-react";
+import { useEffect, useState } from "react";
+
+interface ClassData {
+  id: number;
+  grade: string;
+  section: string;
+  studentCount: number;
+  class_teacher_id: number;
+  class_teacher_name: string;
+}
 
 export default function TeacherClassesPage() {
   const { user } = useAuth();
+  const [classes, setClasses] = useState<ClassData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Sample data - in a real app this would come from an API
-  const myClasses = [
-    {
-      name: "Mathematics - Class 8A",
-      students: 42,
-      schedule: "Monday, Wednesday 9:00 AM",
-      upcoming: "Chapter 5 - Algebra",
-      attendance: "95%",
-    },
-    {
-      name: "Mathematics - Class 8B",
-      students: 38,
-      schedule: "Tuesday, Thursday 10:00 AM",
-      upcoming: "Quiz on Geometry",
-      attendance: "92%",
-    },
-  ];
+  useEffect(() => {
+    const fetchClasses = async () => {
+      if (!user?.id) return;
+
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/teachers/${user.id}/classes`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch classes");
+        }
+        const data = await response.json();
+        setClasses(data);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch classes"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchClasses();
+  }, [user?.id]);
+  console.log("classes by teacher , ", classes);
+  if (loading) {
+    return (
+      <DashboardLayout title="My Classes">
+        <div className="container py-6">
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout title="My Classes">
+        <div className="container py-6">
+          <div className="text-center text-red-500">{error}</div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout title="My Classes">
       <div className="container py-6">
         <div className="grid gap-6">
-          {myClasses.map((cls, index) => (
-            <Card key={index}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xl font-bold">{cls.name}</CardTitle>
-                <Badge variant="outline" className="text-lg">
-                  {cls.attendance}
-                </Badge>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex items-center text-sm">
-                    <Users className="mr-2 h-4 w-4" />
-                    <span>Students: {cls.students}</span>
-                  </div>
-                  <div className="flex items-center text-sm">
-                    <Calendar className="mr-2 h-4 w-4" />
-                    <span>Schedule: {cls.schedule}</span>
-                  </div>
-                  <div className="mt-4 bg-muted p-3 rounded-md">
-                    <p className="text-sm font-medium">
-                      Upcoming: {cls.upcoming}
-                    </p>
-                  </div>
-                </div>
+          {classes.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-center text-muted-foreground">
+                  No classes assigned to you yet.
+                </p>
               </CardContent>
             </Card>
-          ))}
+          ) : (
+            classes.map((cls) => (
+              <Card key={cls.id}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-xl font-bold">
+                    {cls.grade} {cls.section}
+                  </CardTitle>
+                  <Badge variant="outline" className="text-lg">
+                    {cls.studentCount} students
+                  </Badge>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex items-center text-sm">
+                      <Users className="mr-2 h-4 w-4" />
+                      <span>Class Teacher: {cls.class_teacher_name}</span>
+                    </div>
+                    <div className="flex items-center text-sm">
+                      <Book className="mr-2 h-4 w-4" />
+                      <span>Grade: {cls.grade}</span>
+                    </div>
+                    <div className="flex items-center text-sm">
+                      <Calendar className="mr-2 h-4 w-4" />
+                      <span>Section: {cls.section}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
       </div>
     </DashboardLayout>
