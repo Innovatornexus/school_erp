@@ -616,7 +616,7 @@ export const homework = pgTable("homework", {
   id: serial("id").primaryKey(),
   teacher_id: integer("teacher_id")
     .notNull()
-    .references(() => teachers.id),
+    .references(() => users.id),
   teacher_name: text("teacher_name"),
   school_id: integer("school_id")
     .notNull()

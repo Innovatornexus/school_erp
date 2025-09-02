@@ -2350,7 +2350,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .status(400)
             .json({ message: "Validation failed", errors: error.errors });
         }
-        res.status(500).json({ message: "Failed to create homework", error });
+
+        // Narrow error type safely
+        if (error instanceof Error) {
+          console.error("Full error:", error);
+          return res.status(500).json({
+            message: "Failed to delete teacher",
+            error: error.message,
+            stack: error.stack,
+          });
+        }
+
+        return res.status(500).json({
+          message: "Unknown error occurred on homework",
+          error: JSON.stringify(error),
+        });
       }
     }
   );
@@ -2376,6 +2390,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .status(400)
             .json({ message: "Validation failed", errors: error.errors });
         }
+
+        // Narrow error type safely
+        if (error instanceof Error) {
+          console.error("Full error:", error);
+          return res.status(500).json({
+            message: "Failed to update teacher",
+            error: error.message,
+            stack: error.stack,
+          });
+        }
+
         res.status(500).json({ message: "Failed to update homework", error });
       }
     }

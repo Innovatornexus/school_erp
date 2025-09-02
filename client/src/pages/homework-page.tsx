@@ -246,14 +246,26 @@ export default function HomeworkPage() {
     // Find the teacher record to get the staff ID
     const teacher = teachers.find((t) => t.user_id === user?.id);
 
-    const homeworkData: InsertHomework = {
-      ...data,
-      // Use the teacher's staff ID, not the user ID
-      teacher_id: teacher?.id || 0,
-      school_id: schoolData?.id || 0,
-      status: "active",
-    };
+    let homeworkData: InsertHomework;
+
+    if (user?.role === "school_admin") {
+      homeworkData = {
+        ...data,
+        teacher_id: user?.id || 0, // school admin assigns directly
+        school_id: schoolData?.id || 0,
+        status: "active",
+      };
+    } else {
+      homeworkData = {
+        ...data,
+        teacher_id: teacher?.id || 0, // teacher’s staff ID
+        school_id: schoolData?.id || 0,
+        status: "active",
+      };
+    }
+
     console.log("checking homework", homeworkData);
+
     if (editingHomework) {
       updateMutation.mutate({ id: editingHomework.id, data: homeworkData });
     } else {
@@ -659,9 +671,7 @@ export default function HomeworkPage() {
                       </div>
                       <div className="flex items-center">
                         <User className="mr-2 h-4 w-4" />
-                        Assigned By:{" "}
-                        {teachers.find((t) => t.id === hw.teacher_id)
-                          ?.full_name || "N/A"}
+                        Assigned By: {hw.teacher_name || "N/A"}
                       </div>
                       {hw.attachment_url && (
                         <div className="flex items-center">
