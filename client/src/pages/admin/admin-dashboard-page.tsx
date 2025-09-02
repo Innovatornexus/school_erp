@@ -357,7 +357,7 @@ export default function AdminDashboardPage() {
                     <BarChart
                       data={metrics.studentAttendanceByClass}
                       layout="vertical"
-                      margin={{ top: 15, right: 20, left: 20, bottom: 5 }}
+                      margin={{ top: 15, right: 10, left: 5, bottom: 5 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis type="number" fontSize={12} />

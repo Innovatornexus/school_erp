@@ -11,7 +11,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { format } from "date-fns";
+import { format, sub } from "date-fns";
 
 // Core user entity with authentication info
 export const users = pgTable("users", {
@@ -361,12 +361,15 @@ export const materials = pgTable("materials", {
   teacher_id: integer("teacher_id")
     .notNull()
     .references(() => users.id),
+  teacher_name: text("teacher_name"),
   class_id: integer("class_id")
     .notNull()
     .references(() => classes.id),
+  class_name: text("class_name"),
   subject_id: integer("subject_id")
     .notNull()
     .references(() => subjects.id),
+  subject_name: text("subject_name"),
   title: text("title").notNull(),
   description: text("description").notNull(),
   material_type: text("material_type").notNull(), // 'notes', 'presentation', 'video', 'document', 'link'
@@ -386,12 +389,15 @@ export const tests = pgTable("tests", {
   teacher_id: integer("teacher_id")
     .notNull()
     .references(() => users.id),
+  teacher_name: text("teacher_name"),
   class_id: integer("class_id")
     .notNull()
     .references(() => classes.id),
+  class_name: text("class_name"),
   subject_id: integer("subject_id")
     .notNull()
     .references(() => subjects.id),
+  subject_name: text("subject_name"),
   title: text("title").notNull(),
   description: text("description").notNull(),
   test_date: date("test_date").notNull(),
@@ -611,15 +617,19 @@ export const homework = pgTable("homework", {
   teacher_id: integer("teacher_id")
     .notNull()
     .references(() => teachers.id),
+  teacher_name: text("teacher_name"),
   school_id: integer("school_id")
     .notNull()
     .references(() => schools.id),
+
   class_id: integer("class_id")
     .notNull()
     .references(() => classes.id),
+  class_name: text("class_name"),
   subject_id: integer("subject_id")
     .notNull()
     .references(() => subjects.id),
+  subject_name: text("subject_name"),
   title: text("title").notNull(),
   description: text("description").notNull(),
   assigned_date: date("assigned_date").notNull(),

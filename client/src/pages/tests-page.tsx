@@ -21,6 +21,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -49,6 +50,7 @@ import {
   Clock,
   Target,
   CheckCircle,
+  Trash,
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
@@ -76,7 +78,8 @@ export default function TestsPage() {
     loading: schoolDataLoading,
   } = useSchoolData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-
+  const [testToDelete, settestToDelete] = useState<number | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const form = useForm<z.infer<typeof testFormSchema>>({
     resolver: zodResolver(testFormSchema),
     defaultValues: {
@@ -111,13 +114,24 @@ export default function TestsPage() {
       if (!schoolData?.id || !user?.id) {
         throw new Error("User or School information is missing.");
       }
+      // ✅ find selected class and subject
+      const selectedClass = (classes as any[]).find(
+        (cls) => cls.id === data.class_id
+      );
+      const selectedSubject = (subjects as any[]).find(
+        (sub) => sub.id === data.subject_id
+      );
       const response = await fetch("/api/tests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
           teacher_id: user.id,
+          teacher_name: user.name,
           school_id: schoolData.id,
+          // ✅ build names properly
+          class_name: `${selectedClass.grade} - ${selectedClass.section}`,
+          subject_name: selectedSubject.subject_name,
         }),
       });
       if (!response.ok) {
@@ -161,7 +175,32 @@ export default function TestsPage() {
   const handleSubmit = (data: z.infer<typeof testFormSchema>) => {
     createTestMutation.mutate(data);
   };
+  const handleDelete = (id: number) => {
+    settestToDelete(id);
+    setIsDeleteModalOpen(true);
+  };
+  const confirmDelete = async () => {
+    if (!testToDelete) return;
+    try {
+      const response = await fetch(`/api/tests/${testToDelete}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Failed to delete student");
 
+      toast({ title: "Success", description: "Test removed successfully" });
+      queryClient.invalidateQueries({
+        queryKey: ["tests", schoolData?.id],
+      });
+      setIsDeleteModalOpen(false);
+      settestToDelete(null);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An error occurred while deleting the Test",
+        variant: "destructive",
+      });
+    }
+  };
   const isLoading = testsLoading || schoolDataLoading;
 
   // Helper functions for formatting and UI elements
@@ -492,16 +531,29 @@ export default function TestsPage() {
               <Card key={test.id} className="hover:shadow-md transition-shadow">
                 <CardHeader className="pb-3">
                   <div className="flex justify-between items-start">
+                    {/* Left side: Title */}
                     <CardTitle className="text-lg">{test.title}</CardTitle>
-                    <div className="flex gap-2">
+
+                    {/* Right side: Badge + Trash aligned properly */}
+                    <div className="flex items-center space-x-2">
                       {getTestTypeBadge(test.test_type)}
                       {getTestStatusBadge(test.test_date)}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground hover:text-destructive"
+                        onClick={() => handleDelete(test.id)}
+                      >
+                        <Trash className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
+
                   <CardDescription className="line-clamp-2">
                     {test.description}
                   </CardDescription>
                 </CardHeader>
+
                 <CardContent>
                   <div className="space-y-2 text-sm text-muted-foreground">
                     <div className="flex items-center">
@@ -562,6 +614,28 @@ export default function TestsPage() {
             </CardContent>
           </Card>
         )}
+        <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirm Deletion</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to remove this student? This action cannot
+                be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setIsDeleteModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={confirmDelete}>
+                Delete
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

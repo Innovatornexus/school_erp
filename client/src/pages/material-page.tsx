@@ -21,6 +21,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -48,6 +49,7 @@ import {
   Users,
   Upload,
   Eye,
+  Trash,
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
@@ -73,7 +75,8 @@ export default function MaterialsPage() {
     loading: schoolDataLoading,
   } = useSchoolData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-
+  const [materialToDelete, setMaterialToDelete] = useState<number | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   console.log("subject data ", subjects);
   const form = useForm<z.infer<typeof materialFormSchema>>({
     resolver: zodResolver(materialFormSchema),
@@ -103,23 +106,41 @@ export default function MaterialsPage() {
       if (!schoolData?.id || !user?.id) {
         throw new Error("User or School information is missing.");
       }
+
+      // ✅ find selected class and subject
+      const selectedClass = (classes as any[]).find(
+        (cls) => cls.id === data.class_id
+      );
+      const selectedSubject = (subjects as any[]).find(
+        (sub) => sub.id === data.subject_id
+      );
+
+      if (!selectedClass || !selectedSubject) {
+        throw new Error("Invalid class or subject selection.");
+      }
+
       const response = await fetch("/api/materials", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
           teacher_id: user.id,
+          teacher_name: user.name,
           school_id: schoolData.id,
+          // ✅ build names properly
+          class_name: `${selectedClass.grade} - ${selectedClass.section}`,
+          subject_name: selectedSubject.subject_name,
         }),
       });
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || "Failed to create material");
       }
+
       return response.json();
     },
     onSuccess: () => {
-      // -> Correct: Use toast with object syntax
       toast({
         title: "Success!",
         description: "The new learning material has been added.",
@@ -131,7 +152,6 @@ export default function MaterialsPage() {
       form.reset();
     },
     onError: (error: Error) => {
-      // -> Correct: Use toast with object syntax for errors
       toast({
         title: "Operation Failed",
         description: error.message || "An unexpected error occurred.",
@@ -157,7 +177,32 @@ export default function MaterialsPage() {
   const handleSubmit = (data: z.infer<typeof materialFormSchema>) => {
     createMaterialMutation.mutate(data);
   };
+  const handleDelete = (id: number) => {
+    setMaterialToDelete(id);
+    setIsDeleteModalOpen(true);
+  };
+  const confirmDelete = async () => {
+    if (!materialToDelete) return;
+    try {
+      const response = await fetch(`/api/materials/${materialToDelete}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Failed to delete student");
 
+      toast({ title: "Success", description: "Material removed successfully" });
+      queryClient.invalidateQueries({
+        queryKey: ["materials", schoolData?.id],
+      });
+      setIsDeleteModalOpen(false);
+      setMaterialToDelete(null);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An error occurred while deleting the Material",
+        variant: "destructive",
+      });
+    }
+  };
   const isLoading = materialsLoading || schoolDataLoading;
 
   const getMaterialTypeIcon = (type: string) => {
@@ -446,13 +491,28 @@ export default function MaterialsPage() {
               >
                 <CardHeader className="pb-3">
                   <div className="flex justify-between items-start">
+                    {/* Left side: Title */}
                     <CardTitle className="text-lg">{material.title}</CardTitle>
-                    {getMaterialTypeBadge(material.material_type)}
+
+                    {/* Right side: Badge + Trash aligned properly */}
+                    <div className="flex items-center space-x-2">
+                      {getMaterialTypeBadge(material.material_type)}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground hover:text-destructive"
+                        onClick={() => handleDelete(material.id)}
+                      >
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
+
                   <CardDescription className="line-clamp-2">
                     {material.description}
                   </CardDescription>
                 </CardHeader>
+
                 <CardContent>
                   <div className="space-y-2 text-sm text-muted-foreground">
                     <div className="flex items-center">
@@ -527,6 +587,28 @@ export default function MaterialsPage() {
             </CardContent>
           </Card>
         )}
+        <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirm Deletion</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to remove this student? This action cannot
+                be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setIsDeleteModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={confirmDelete}>
+                Delete
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

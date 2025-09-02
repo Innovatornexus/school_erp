@@ -9,6 +9,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -43,10 +44,14 @@ import { Separator } from "@/components/ui/separator";
 import {
   Plus,
   CalendarIcon,
-  Edit2,
-  Trash2,
+  Users,
   BookOpen,
   User,
+  ClipboardList,
+  Eye,
+  Paperclip,
+  Trash,
+  Edit,
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
@@ -124,10 +129,28 @@ export default function HomeworkPage() {
   // Create homework mutation
   const createMutation = useMutation({
     mutationFn: async (data: InsertHomework) => {
+      if (!schoolData?.id || !user?.id) {
+        throw new Error("User or School information is missing.");
+      }
+      // ✅ find selected class and subject
+      const selectedClass = (classes as any[]).find(
+        (cls) => cls.id === data.class_id
+      );
+      const selectedSubject = (subjects as any[]).find(
+        (sub) => sub.id === data.subject_id
+      );
       const response = await fetch("/api/homework", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          ...data,
+          teacher_id: user.id,
+          teacher_name: user.name,
+          school_id: schoolData.id,
+          // ✅ build names properly
+          class_name: `${selectedClass.grade} - ${selectedClass.section}`,
+          subject_name: selectedSubject.subject_name,
+        }),
       });
       if (!response.ok) {
         const errorData = await response.json();
@@ -403,29 +426,27 @@ export default function HomeworkPage() {
                       />
                       <FormField
                         control={form.control}
-                        name="class_id"
+                        name="subject_id"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Class</FormLabel>
+                            <FormLabel>Subject</FormLabel>
                             <Select
-                              onValueChange={(value) => {
-                                field.onChange(value);
-                                form.setValue("subject_id", 0); // Reset subject
-                              }}
-                              defaultValue={field.value?.toString()}
+                              onValueChange={(value) =>
+                                field.onChange(Number(value))
+                              }
                             >
                               <FormControl>
                                 <SelectTrigger>
-                                  <SelectValue placeholder="Select a class" />
+                                  <SelectValue placeholder="Select subject" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {availableClasses.map((cls) => (
+                                {(subjects as any[]).map((subject: any) => (
                                   <SelectItem
-                                    key={cls.id}
-                                    value={cls.id.toString()}
+                                    key={subject.id}
+                                    value={subject.id.toString()}
                                   >
-                                    {cls.grade} {cls.section}
+                                    {subject.subject_name}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -434,32 +455,30 @@ export default function HomeworkPage() {
                           </FormItem>
                         )}
                       />
+
                       <FormField
                         control={form.control}
-                        name="subject_id"
+                        name="class_id"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Subject</FormLabel>
+                            <FormLabel>Class</FormLabel>
                             <Select
-                              onValueChange={field.onChange}
-                              value={field.value?.toString()}
-                              disabled={
-                                !form.watch("class_id") ||
-                                availableSubjects.length === 0
+                              onValueChange={(value) =>
+                                field.onChange(Number(value))
                               }
                             >
                               <FormControl>
                                 <SelectTrigger>
-                                  <SelectValue placeholder="Select a subject" />
+                                  <SelectValue placeholder="Select class" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {availableSubjects.map((sub) => (
+                                {(classes as any[]).map((cls: any) => (
                                   <SelectItem
-                                    key={sub.id}
-                                    value={sub.id.toString()}
+                                    key={cls.id}
+                                    value={cls.id.toString()}
                                   >
-                                    {sub.subject_name}
+                                    {cls.grade} - {cls.section}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -558,109 +577,147 @@ export default function HomeworkPage() {
           )}
         </div>
 
-        {/* Homework Cards */}
-        <div className="grid gap-6">
-          {filteredHomework.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">
-                  No Homework Found
-                </h3>
-                <p className="text-muted-foreground text-center">
-                  {canCreateHomework
-                    ? "Get started by creating your first homework assignment."
-                    : "No homework has been assigned for your class yet."}
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            filteredHomework.map((hw) => {
-              const className = classes.find((c) => c.id === hw.class_id);
-              const subjectName = subjects.find(
-                (s) => s.id === hw.subject_id
-              )?.name;
-              return (
-                <Card key={hw.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-xl">{hw.title}</CardTitle>
-                        <CardDescription className="mt-1">
-                          {className
-                            ? `${className.grade} ${className.section}`
-                            : `Class ${hw.class_id}`}{" "}
-                          | {subjectName || `Subject ${hw.subject_id}`}
+        {/* Main container with conditional rendering for loading state */}
+        {isLoading ? (
+          // Skeleton loader shown while data is fetching
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {[...Array(6)].map((_, i) => (
+              <Card key={i} className="animate-pulse">
+                <CardHeader>
+                  <div className="h-5 bg-gray-200 rounded w-3/4 mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="h-3 bg-gray-200 rounded"></div>
+                    <div className="h-3 bg-gray-200 rounded w-5/6"></div>
+                    <div className="flex justify-between items-center pt-4">
+                      <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                      <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          // Main content grid when data is loaded
+          <>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {(homework as any[]).map((hw: any) => (
+                <Card
+                  key={hw.id}
+                  className="hover:shadow-lg transition-shadow flex flex-col"
+                >
+                  <CardHeader className="pb-3">
+                    <div className="flex justify-between items-start">
+                      {/* Left side: Title and Description */}
+                      <div className="flex-grow pr-2">
+                        <CardTitle className="text-lg">{hw.title}</CardTitle>
+                        <CardDescription className="pt-1">
+                          {hw.description}
                         </CardDescription>
                       </div>
-                      {/* FIX: Correctly check if the logged-in teacher is the author */}
-                      {canCreateHomework &&
-                        hw.teacher_id === currentTeacher?.id && (
-                          <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => openEditDialog(hw)}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => deleteMutation.mutate(hw.id)}
-                              disabled={deleteMutation.isPending}
-                            >
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </div>
-                        )}
+
+                      {/* Right side: Edit/Delete Actions */}
+
+                      <div className="flex flex-shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEditDialog(hw)}
+                          className="h-8 w-8"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => deleteMutation.mutate(hw.id)}
+                          disabled={deleteMutation.isPending}
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground mb-4">
-                      {hw.description}
-                    </p>
-                    {hw.instructions && (
-                      <div className="mb-4 p-3 bg-secondary rounded-md">
-                        <h4 className="font-semibold text-sm mb-1">
-                          Instructions:
-                        </h4>
-                        <p className="text-sm text-secondary-foreground">
-                          {hw.instructions}
-                        </p>
+
+                  <CardContent className="flex-grow">
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <div className="flex items-center">
+                        <BookOpen className="mr-2 h-4 w-4" />
+                        Subject: {hw.subject_name || "N/A"}
                       </div>
-                    )}
-                    <Separator className="my-4" />
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <div className="flex items-center gap-4">
-                        <span className="flex items-center gap-1.5">
-                          <CalendarIcon className="h-4 w-4" /> Due:{" "}
-                          {new Date(hw.due_date).toLocaleDateString()}
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <User className="h-4 w-4" /> By:{" "}
-                          {teachers.find((t) => t.id === hw.teacher_id)
-                            ?.full_name || "N/A"}
-                        </span>
+                      <div className="flex items-center">
+                        <Users className="mr-2 h-4 w-4" />
+                        Class: {hw.class_name || "N/A"}
+                      </div>
+                      <div className="flex items-center">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        Due Date: {new Date(hw.due_date).toLocaleDateString()}
+                      </div>
+                      <div className="flex items-center">
+                        <User className="mr-2 h-4 w-4" />
+                        Assigned By:{" "}
+                        {teachers.find((t) => t.id === hw.teacher_id)
+                          ?.full_name || "N/A"}
                       </div>
                       {hw.attachment_url && (
-                        <Button variant="link" asChild>
+                        <div className="flex items-center">
+                          <Paperclip className="mr-2 h-4 w-4" />
                           <a
                             href={hw.attachment_url}
                             target="_blank"
                             rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline truncate"
                           >
                             View Attachment
                           </a>
-                        </Button>
+                        </div>
                       )}
                     </div>
                   </CardContent>
+
+                  <CardFooter className="pt-4 flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">
+                      Assigned on{" "}
+                      {new Date(
+                        hw.created_at || Date.now()
+                      ).toLocaleDateString()}
+                    </span>
+                    <Button variant="outline" size="sm">
+                      <Eye className="h-4 w-4 mr-1" />
+                      View Details
+                    </Button>
+                  </CardFooter>
                 </Card>
-              );
-            })
-          )}
-        </div>
+              ))}
+            </div>
+
+            {/* Empty state card when no homework is found */}
+            {!isLoading && (homework as any[]).length === 0 && (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                  <ClipboardList className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">
+                    No Homework Found
+                  </h3>
+                  <p className="text-muted-foreground mb-6 max-w-sm">
+                    It looks like there's no homework assigned yet. If you're a
+                    teacher, you can assign some now.
+                  </p>
+                  {canCreateHomework && (
+                    <Button onClick={() => setIsDialogOpen(true)}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Assign Homework
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </>
+        )}
       </div>
     </DashboardLayout>
   );

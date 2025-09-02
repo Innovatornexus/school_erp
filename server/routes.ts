@@ -2019,6 +2019,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     requireRole(["super_admin", "school_admin", "staff"]),
     async (req, res) => {
       try {
+        console.log("material data :: ", req.body);
         const materialData = insertMaterialSchema.parse(req.body);
         const newMaterial = await storage.createMaterial(materialData);
         res.status(201).json(newMaterial);
