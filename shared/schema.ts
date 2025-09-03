@@ -8,10 +8,29 @@ import {
   doublePrecision,
   boolean,
   unique,
+  pgEnum,
+  varchar,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { format, sub } from "date-fns";
+
+// Material type enum
+export const materialTypeEnum = pgEnum("material_type", [
+  "notes",
+  "presentation",
+  "video",
+  "document",
+  "link",
+]);
+
+// Test type enum
+export const testTypeEnum = pgEnum("test_type", [
+  "quiz",
+  "unit_test",
+  "class_test",
+  "mock_exam",
+]);
 
 // Core user entity with authentication info
 export const users = pgTable("users", {
@@ -372,7 +391,7 @@ export const materials = pgTable("materials", {
   subject_name: text("subject_name"),
   title: text("title").notNull(),
   description: text("description").notNull(),
-  material_type: text("material_type").notNull(), // 'notes', 'presentation', 'video', 'document', 'link'
+  material_type: materialTypeEnum("material_type").notNull(),
   file_url: text("file_url"),
   content: text("content"),
   created_at: timestamp("created_at").defaultNow().notNull(),
@@ -403,7 +422,7 @@ export const tests = pgTable("tests", {
   test_date: date("test_date").notNull(),
   duration: integer("duration").notNull(), // in minutes
   max_marks: integer("max_marks").notNull(),
-  test_type: text("test_type").notNull(), // 'quiz', 'unit_test', 'class_test', 'mock_exam'
+  test_type: testTypeEnum("test_type").notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -420,18 +439,37 @@ export type Test = typeof tests.$inferSelect;
 export type InsertTest = z.infer<typeof insertTestSchema>;
 
 // Exams information
+
 export const exams = pgTable("exams", {
   id: serial("id").primaryKey(),
+
   school_id: integer("school_id")
     .notNull()
     .references(() => schools.id),
+
   title: text("title").notNull(),
+
+  // overall exam date range
   start_date: date("start_date").notNull(),
   end_date: date("end_date").notNull(),
+
   term: text("term").notNull(),
+
   class_id: integer("class_id")
     .notNull()
     .references(() => classes.id),
+
+  // NEW FIELDS: arrays for subject schedules
+  subject_ids: integer("subject_ids").array().notNull(),
+  subject_names: text("subject_names").array().notNull(),
+
+  subject_exam_dates: date("subject_exam_dates").array().notNull(),
+  subject_exam_start_times: varchar("subject_exam_start_times", { length: 10 })
+    .array()
+    .notNull(),
+  subject_exam_end_times: varchar("subject_exam_end_times", { length: 10 })
+    .array()
+    .notNull(),
 });
 
 export const insertExamSchema = createInsertSchema(exams).omit({

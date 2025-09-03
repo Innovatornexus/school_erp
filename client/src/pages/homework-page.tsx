@@ -619,88 +619,99 @@ export default function HomeworkPage() {
               {(homework as any[]).map((hw: any) => (
                 <Card
                   key={hw.id}
-                  className="hover:shadow-lg transition-shadow flex flex-col"
+                  className="rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 border border-gray-200 bg-gradient-to-br from-white to-gray-50 flex flex-col"
                 >
-                  <CardHeader className="pb-3">
-                    <div className="flex justify-between items-start">
-                      {/* Left side: Title and Description */}
-                      <div className="flex-grow pr-2">
-                        <CardTitle className="text-lg">{hw.title}</CardTitle>
-                        <CardDescription className="pt-1">
-                          {hw.description}
-                        </CardDescription>
-                      </div>
+                  <CardHeader className="pb-4">
+                    {/* Header with Title */}
+                    <div className="flex justify-between items-center rounded-lg border border-gray-300 bg-blue-700 px-3 py-2">
+                      <CardTitle className="text-lg font-semibold text-white tracking-tight">
+                        {hw.title}
+                      </CardTitle>
+                    </div>
 
-                      {/* Right side: Edit/Delete Actions */}
-
-                      <div className="flex flex-shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditDialog(hw)}
-                          className="h-8 w-8"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => deleteMutation.mutate(hw.id)}
-                          disabled={deleteMutation.isPending}
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash className="h-4 w-4" />
-                        </Button>
-                      </div>
+                    {/* Description inside outlined box */}
+                    <div className="mt-2 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2">
+                      <CardDescription className="text-gray-700 text-sm">
+                        {hw.description}
+                      </CardDescription>
                     </div>
                   </CardHeader>
 
-                  <CardContent className="flex-grow">
-                    <div className="space-y-2 text-sm text-muted-foreground">
+                  {/* Content Section */}
+                  <CardContent className="space-y-2 text-sm text-gray-700">
+                    <div className="flex items-center">
+                      <BookOpen className="mr-2 h-4 w-4 text-indigo-500" />
+                      <span>
+                        <strong>Subject:</strong> {hw.subject_name || "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex items-center">
+                      <Users className="mr-2 h-4 w-4 text-indigo-500" />
+                      <span>
+                        <strong>Class:</strong> {hw.class_name || "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex items-center">
+                      <CalendarIcon className="mr-2 h-4 w-4 text-indigo-500" />
+                      <span>
+                        <strong>Due Date:</strong>{" "}
+                        {new Date(hw.due_date).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center">
+                      <User className="mr-2 h-4 w-4 text-indigo-500" />
+                      <span>
+                        <strong>Assigned By:</strong> {hw.teacher_name || "N/A"}
+                      </span>
+                    </div>
+
+                    {hw.attachment_url && (
                       <div className="flex items-center">
-                        <BookOpen className="mr-2 h-4 w-4" />
-                        Subject: {hw.subject_name || "N/A"}
+                        <Paperclip className="mr-2 h-4 w-4 text-indigo-500" />
+                        <a
+                          href={hw.attachment_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline truncate"
+                        >
+                          View Attachment
+                        </a>
                       </div>
-                      <div className="flex items-center">
-                        <Users className="mr-2 h-4 w-4" />
-                        Class: {hw.class_name || "N/A"}
-                      </div>
-                      <div className="flex items-center">
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        Due Date: {new Date(hw.due_date).toLocaleDateString()}
-                      </div>
-                      <div className="flex items-center">
-                        <User className="mr-2 h-4 w-4" />
-                        Assigned By: {hw.teacher_name || "N/A"}
-                      </div>
-                      {hw.attachment_url && (
-                        <div className="flex items-center">
-                          <Paperclip className="mr-2 h-4 w-4" />
-                          <a
-                            href={hw.attachment_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline truncate"
+                    )}
+
+                    <div className="mt-4 flex justify-between items-center text-sm text-gray-500">
+                      <span>
+                        Assigned on{" "}
+                        {new Date(
+                          hw.created_at || Date.now()
+                        ).toLocaleDateString()}
+                      </span>
+
+                      {/* Action buttons */}
+                      {(user?.role === "school_admin" ||
+                        user?.id === hw.teacher_id) && (
+                        <div className="mt-4 flex justify-end gap-3">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-1 border-blue-500 text-blue-600 hover:bg-blue-50"
+                            onClick={() => openEditDialog(hw)}
                           >
-                            View Attachment
-                          </a>
+                            <Edit className="h-4 w-4" /> Edit
+                          </Button>
+
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="flex items-center gap-1"
+                            onClick={() => deleteMutation.mutate(hw.id)}
+                          >
+                            <Trash className="h-4 w-4" /> Delete
+                          </Button>
                         </div>
                       )}
                     </div>
                   </CardContent>
-
-                  <CardFooter className="pt-4 flex justify-between items-center">
-                    <span className="text-xs text-muted-foreground">
-                      Assigned on{" "}
-                      {new Date(
-                        hw.created_at || Date.now()
-                      ).toLocaleDateString()}
-                    </span>
-                    <Button variant="outline" size="sm">
-                      <Eye className="h-4 w-4 mr-1" />
-                      View Details
-                    </Button>
-                  </CardFooter>
                 </Card>
               ))}
             </div>

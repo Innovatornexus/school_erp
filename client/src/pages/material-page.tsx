@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useToast } from "@/hooks/use-toast"; // -> Correct: Import the useToast hook
+import { useToast } from "@/hooks/use-toast";
 import { Redirect } from "wouter";
 import DashboardLayout from "@/layout/dashboard-layout";
 import {
@@ -47,38 +47,44 @@ import {
   FileText,
   BookOpen,
   Users,
-  Upload,
   Eye,
   Trash,
+  Edit,
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
-import { useSchoolData } from "@/context/SchoolDataContext"; // -> Use context for shared data
+import { useSchoolData } from "@/context/SchoolDataContext";
+import type { Material, InsertMaterial } from "@shared/schema";
 
+// Zod schema for the material form
 const materialFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().min(1, "Description is required"),
   subject_id: z.coerce.number().min(1, "Subject is required"),
   class_id: z.coerce.number().min(1, "Class is required"),
   material_type: z.enum(["notes", "presentation", "video", "document", "link"]),
-  file_url: z.string().optional(),
+  file_url: z.string().url().optional().or(z.literal("")),
   content: z.string().optional(),
 });
 
+type MaterialFormData = z.infer<typeof materialFormSchema>;
+
 export default function MaterialsPage() {
   const { user } = useAuth();
-  const { toast } = useToast(); // -> Correct: Initialize the toast hook
+  const { toast } = useToast();
   const {
     classes,
     subjects,
     schoolData,
     loading: schoolDataLoading,
   } = useSchoolData();
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [materialToDelete, setMaterialToDelete] = useState<number | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  console.log("subject data ", subjects);
-  const form = useForm<z.infer<typeof materialFormSchema>>({
+  const [materialToDelete, setMaterialToDelete] = useState<number | null>(null);
+  const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
+
+  const form = useForm<MaterialFormData>({
     resolver: zodResolver(materialFormSchema),
     defaultValues: {
       title: "",
@@ -86,38 +92,36 @@ export default function MaterialsPage() {
       subject_id: 0,
       class_id: 0,
       material_type: "notes",
+      file_url: "",
+      content: "",
     },
   });
 
   // Fetch materials specific to the school
-  const { data: materials = [], isLoading: materialsLoading } = useQuery({
+  const { data: materials = [], isLoading: materialsLoading } = useQuery<
+    Material[]
+  >({
     queryKey: ["materials", schoolData?.id],
     queryFn: async () => {
-      const response = await fetch(`/api/materials`); // This endpoint fetches all materials
+      const response = await fetch(`/api/materials`);
       if (!response.ok) throw new Error("Failed to fetch materials");
       return response.json();
     },
     enabled: !!user && !!schoolData?.id,
   });
 
-  // Create material mutation with updated toast notifications
-  const createMaterialMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof materialFormSchema>) => {
+  // Create material mutation
+  const createMutation = useMutation({
+    mutationFn: async (data: InsertMaterial) => {
       if (!schoolData?.id || !user?.id) {
         throw new Error("User or School information is missing.");
       }
-
-      // ✅ find selected class and subject
       const selectedClass = (classes as any[]).find(
         (cls) => cls.id === data.class_id
       );
       const selectedSubject = (subjects as any[]).find(
         (sub) => sub.id === data.subject_id
       );
-
-      if (!selectedClass || !selectedSubject) {
-        throw new Error("Invalid class or subject selection.");
-      }
 
       const response = await fetch("/api/materials", {
         method: "POST",
@@ -127,7 +131,6 @@ export default function MaterialsPage() {
           teacher_id: user.id,
           teacher_name: user.name,
           school_id: schoolData.id,
-          // ✅ build names properly
           class_name: `${selectedClass.grade} - ${selectedClass.section}`,
           subject_name: selectedSubject.subject_name,
         }),
@@ -137,28 +140,140 @@ export default function MaterialsPage() {
         const errorData = await response.json();
         throw new Error(errorData.message || "Failed to create material");
       }
-
       return response.json();
     },
     onSuccess: () => {
-      toast({
-        title: "Success!",
-        description: "The new learning material has been added.",
-      });
       queryClient.invalidateQueries({
         queryKey: ["materials", schoolData?.id],
       });
       setIsDialogOpen(false);
-      form.reset();
+      toast({
+        title: "Success!",
+        description: "The new learning material has been added.",
+      });
     },
     onError: (error: Error) => {
       toast({
         title: "Operation Failed",
-        description: error.message || "An unexpected error occurred.",
+        description: error.message,
         variant: "destructive",
       });
     },
   });
+
+  // Update material mutation
+  const updateMutation = useMutation({
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: Partial<InsertMaterial>;
+    }) => {
+      const response = await fetch(`/api/materials/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to update material");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["materials", schoolData?.id],
+      });
+      setIsDialogOpen(false);
+      toast({
+        title: "Success",
+        description: "Material updated successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete material mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await fetch(`/api/materials/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to delete material");
+      }
+      return true;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["materials", schoolData?.id],
+      });
+      setIsDeleteModalOpen(false);
+      toast({
+        title: "Success",
+        description: "Material removed successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Unified form submission handler
+  const onSubmit = (data: MaterialFormData) => {
+    if (editingMaterial) {
+      updateMutation.mutate({ id: editingMaterial.id, data });
+    } else {
+      createMutation.mutate(data as InsertMaterial);
+    }
+  };
+
+  const openEditDialog = (material: Material) => {
+    setEditingMaterial(material);
+    form.reset({
+      ...material,
+      file_url: material.file_url || "",
+      content: material.content || "",
+    });
+    setIsDialogOpen(true);
+  };
+
+  const openCreateDialog = () => {
+    setEditingMaterial(null);
+    form.reset({
+      title: "",
+      description: "",
+      subject_id: 0,
+      class_id: 0,
+      material_type: "notes",
+      file_url: "",
+      content: "",
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleDelete = (id: number) => {
+    setMaterialToDelete(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (materialToDelete) {
+      deleteMutation.mutate(materialToDelete);
+    }
+  };
 
   // Redirect if user role is not permitted
   if (
@@ -166,46 +281,14 @@ export default function MaterialsPage() {
     user?.role !== "staff" &&
     user?.role !== "student"
   ) {
-    toast({
-      title: "Access Denied",
-      description: "You do not have permission to view this page.",
-      variant: "destructive",
-    });
     return <Redirect to="/dashboard" />;
   }
 
-  const handleSubmit = (data: z.infer<typeof materialFormSchema>) => {
-    createMaterialMutation.mutate(data);
-  };
-  const handleDelete = (id: number) => {
-    setMaterialToDelete(id);
-    setIsDeleteModalOpen(true);
-  };
-  const confirmDelete = async () => {
-    if (!materialToDelete) return;
-    try {
-      const response = await fetch(`/api/materials/${materialToDelete}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error("Failed to delete student");
-
-      toast({ title: "Success", description: "Material removed successfully" });
-      queryClient.invalidateQueries({
-        queryKey: ["materials", schoolData?.id],
-      });
-      setIsDeleteModalOpen(false);
-      setMaterialToDelete(null);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "An error occurred while deleting the Material",
-        variant: "destructive",
-      });
-    }
-  };
   const isLoading = materialsLoading || schoolDataLoading;
+  const isEditing = !!editingMaterial;
 
   const getMaterialTypeIcon = (type: string) => {
+    // ... icon logic remains the same
     switch (type) {
       case "notes":
         return <FileText className="h-4 w-4" />;
@@ -223,6 +306,7 @@ export default function MaterialsPage() {
   };
 
   const getMaterialTypeBadge = (type: string) => {
+    // ... badge logic remains the same
     const variants: Record<
       string,
       "default" | "secondary" | "destructive" | "outline"
@@ -256,25 +340,41 @@ export default function MaterialsPage() {
           </div>
 
           {(user?.role === "school_admin" || user?.role === "staff") && (
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <Dialog
+              open={isDialogOpen}
+              onOpenChange={(isOpen) => {
+                setIsDialogOpen(isOpen);
+                if (!isOpen) {
+                  setEditingMaterial(null);
+                  form.reset();
+                }
+              }}
+            >
               <DialogTrigger asChild>
-                <Button>
+                <Button onClick={openCreateDialog}>
                   <Plus className="mr-2 h-4 w-4" />
                   Add Material
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                  <DialogTitle>Add Learning Material</DialogTitle>
+                  <DialogTitle>
+                    {isEditing
+                      ? "Edit Learning Material"
+                      : "Add Learning Material"}
+                  </DialogTitle>
                   <DialogDescription>
-                    Share educational resources with your students.
+                    {isEditing
+                      ? "Update the details of this educational resource."
+                      : "Share a new educational resource with your students."}
                   </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
                   <form
-                    onSubmit={form.handleSubmit(handleSubmit)}
+                    onSubmit={form.handleSubmit(onSubmit)}
                     className="space-y-4"
                   >
+                    {/* ... Your FormFields go here (they are correct) ... */}
                     <FormField
                       control={form.control}
                       name="title"
@@ -352,6 +452,7 @@ export default function MaterialsPage() {
                               onValueChange={(value) =>
                                 field.onChange(Number(value))
                               }
+                              value={String(field.value)}
                             >
                               <FormControl>
                                 <SelectTrigger>
@@ -362,7 +463,7 @@ export default function MaterialsPage() {
                                 {(subjects as any[]).map((subject: any) => (
                                   <SelectItem
                                     key={subject.id}
-                                    value={subject.id.toString()}
+                                    value={String(subject.id)}
                                   >
                                     {subject.subject_name}
                                   </SelectItem>
@@ -384,6 +485,7 @@ export default function MaterialsPage() {
                               onValueChange={(value) =>
                                 field.onChange(Number(value))
                               }
+                              value={String(field.value)}
                             >
                               <FormControl>
                                 <SelectTrigger>
@@ -394,7 +496,7 @@ export default function MaterialsPage() {
                                 {(classes as any[]).map((cls: any) => (
                                   <SelectItem
                                     key={cls.id}
-                                    value={cls.id.toString()}
+                                    value={String(cls.id)}
                                   >
                                     {cls.grade} - {cls.section}
                                   </SelectItem>
@@ -415,7 +517,7 @@ export default function MaterialsPage() {
                           <FormLabel>File URL or Link</FormLabel>
                           <FormControl>
                             <Input
-                              placeholder="Enter file URL or external link"
+                              placeholder="https://example.com/file.pdf"
                               {...field}
                             />
                           </FormControl>
@@ -440,8 +542,7 @@ export default function MaterialsPage() {
                         </FormItem>
                       )}
                     />
-
-                    <div className="flex justify-end space-x-2">
+                    <DialogFooter>
                       <Button
                         type="button"
                         variant="outline"
@@ -451,13 +552,13 @@ export default function MaterialsPage() {
                       </Button>
                       <Button
                         type="submit"
-                        disabled={createMaterialMutation.isPending}
+                        disabled={
+                          createMutation.isPending || updateMutation.isPending
+                        }
                       >
-                        {createMaterialMutation.isPending
-                          ? "Adding..."
-                          : "Add Material"}
+                        {isEditing ? "Save Changes" : "Add Material"}
                       </Button>
-                    </div>
+                    </DialogFooter>
                   </form>
                 </Form>
               </DialogContent>
@@ -484,84 +585,92 @@ export default function MaterialsPage() {
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {(materials as any[]).map((material: any) => (
-              <Card
-                key={material.id}
-                className="hover:shadow-md transition-shadow"
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex justify-between items-start">
-                    {/* Left side: Title */}
-                    <CardTitle className="text-lg">{material.title}</CardTitle>
-
-                    {/* Right side: Badge + Trash aligned properly */}
-                    <div className="flex items-center space-x-2">
-                      {getMaterialTypeBadge(material.material_type)}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-muted-foreground hover:text-destructive"
-                        onClick={() => handleDelete(material.id)}
-                      >
-                        <Trash className="h-4 w-4" />
-                      </Button>
-                    </div>
+            {materials.map((material) => (
+              <Card className="rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 border border-gray-200 bg-gradient-to-br from-white to-gray-50">
+                <CardHeader className="pb-4">
+                  <div className="flex justify-between  items-center rounded-lg border border-gray-300 bg-blue-700 px-3 py-2">
+                    {/* Title */}
+                    <CardTitle className="text-l font-semibold text-gray-800 tracking-tight text-white">
+                      {material.title}
+                    </CardTitle>
                   </div>
 
-                  <CardDescription className="line-clamp-2">
-                    {material.description}
-                  </CardDescription>
+                  {/* Description inside outlined box */}
+                  <div className="mt-2 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2">
+                    <CardDescription className="text-gray-700 text-sm">
+                      {material.description}
+                    </CardDescription>
+                  </div>
                 </CardHeader>
 
-                <CardContent>
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    <div className="flex items-center">
-                      <BookOpen className="mr-2 h-4 w-4" />
-                      Subject: {material.subject_name || "N/A"}
-                    </div>
-                    <div className="flex items-center">
-                      <Users className="mr-2 h-4 w-4" />
-                      Class: {material.class_name || "N/A"}
-                    </div>
-                    {material.file_url && (
-                      <div className="flex items-center">
-                        <Upload className="mr-2 h-4 w-4" />
-                        <a
-                          href={material.file_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline truncate"
-                        >
-                          View Resource
-                        </a>
-                      </div>
-                    )}
+                <CardContent className="space-y-3">
+                  {/* Badge */}
+                  <div className="flex-shrink-0 ">
+                    {getMaterialTypeBadge(material.material_type)}
                   </div>
-                  <div className="mt-4 flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">
+                  {/* Subject */}
+                  <div className="flex items-center text-gray-700 text-sm">
+                    <BookOpen className="mr-2 h-4 w-4 text-indigo-500" />
+                    <span>
+                      <strong>Subject:</strong> {material.subject_name || "N/A"}
+                    </span>
+                  </div>
+
+                  {/* Class */}
+                  <div className="flex items-center text-gray-700 text-sm">
+                    <Users className="mr-2 h-4 w-4 text-indigo-500" />
+                    <span>
+                      <strong>Class:</strong> {material.class_name || "N/A"}
+                    </span>
+                  </div>
+
+                  {/* View Button inside list */}
+                  {material.file_url && (
+                    <div className="flex items-center">
+                      <Eye className="mr-2 h-4 w-4 text-indigo-500" />
+                      <a
+                        href={material.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline truncate"
+                      >
+                        View Resource
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Footer row */}
+
+                  <div className="mt-4 flex justify-between items-center text-sm text-gray-500">
+                    <span>
                       Added{" "}
                       {new Date(
                         material.created_at || Date.now()
                       ).toLocaleDateString()}
                     </span>
-                    <div className="space-x-2">
-                      {material.file_url && (
-                        <Button variant="outline" size="sm" asChild>
-                          <a
-                            href={material.file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <Download className="h-4 w-4 mr-1" />
-                            Access
-                          </a>
+                    {/* Action buttons */}
+                    {(user?.role === "school_admin" ||
+                      user?.id === material.teacher_id) && (
+                      <div className="mt-4 flex justify-end gap-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-1 border-blue-500 text-blue-600 hover:bg-blue-50"
+                          onClick={() => openEditDialog(material)}
+                        >
+                          <Edit className="h-4 w-4" /> Edit
                         </Button>
-                      )}
-                      <Button variant="outline" size="sm">
-                        <Eye className="h-4 w-4 mr-1" />
-                        View
-                      </Button>
-                    </div>
+
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="flex items-center gap-1"
+                          onClick={() => handleDelete(material.id)}
+                        >
+                          <Trash className="h-4 w-4" /> Delete
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -569,7 +678,8 @@ export default function MaterialsPage() {
           </div>
         )}
 
-        {!isLoading && (materials as any[]).length === 0 && (
+        {!isLoading && materials.length === 0 && (
+          // ... Empty State Card ...
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
@@ -579,7 +689,7 @@ export default function MaterialsPage() {
                 material.
               </p>
               {(user?.role === "school_admin" || user?.role === "staff") && (
-                <Button onClick={() => setIsDialogOpen(true)}>
+                <Button onClick={openCreateDialog}>
                   <Plus className="mr-2 h-4 w-4" />
                   Add First Material
                 </Button>
@@ -587,13 +697,15 @@ export default function MaterialsPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Delete Confirmation Dialog */}
         <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Confirm Deletion</DialogTitle>
               <DialogDescription>
-                Are you sure you want to remove this student? This action cannot
-                be undone.
+                Are you sure you want to remove this material? This action
+                cannot be undone.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -603,8 +715,12 @@ export default function MaterialsPage() {
               >
                 Cancel
               </Button>
-              <Button variant="destructive" onClick={confirmDelete}>
-                Delete
+              <Button
+                variant="destructive"
+                onClick={confirmDelete}
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? "Deleting..." : "Delete"}
               </Button>
             </DialogFooter>
           </DialogContent>

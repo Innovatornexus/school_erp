@@ -51,10 +51,13 @@ import {
   Target,
   CheckCircle,
   Trash,
+  Edit,
+  Eye,
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useSchoolData } from "@/context/SchoolDataContext";
+import type { Test, InsertTest } from "@shared/schema";
 
 // Zod schema for the test creation form
 const testFormSchema = z.object({
@@ -68,6 +71,8 @@ const testFormSchema = z.object({
   test_type: z.enum(["quiz", "unit_test", "class_test", "mock_exam"]),
 });
 
+type TestFormData = z.infer<typeof testFormSchema>;
+
 export default function TestsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -77,10 +82,13 @@ export default function TestsPage() {
     schoolData,
     loading: schoolDataLoading,
   } = useSchoolData();
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [testToDelete, settestToDelete] = useState<number | null>(null);
+  const [editingTest, setEditingTest] = useState<Test | null>(null);
+  const [testToDelete, setTestToDelete] = useState<number | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const form = useForm<z.infer<typeof testFormSchema>>({
+
+  const form = useForm<TestFormData>({
     resolver: zodResolver(testFormSchema),
     defaultValues: {
       title: "",
@@ -95,32 +103,29 @@ export default function TestsPage() {
   });
 
   // Fetch tests for the current school
-  const { data: tests = [], isLoading: testsLoading } = useQuery({
+  const { data: tests = [], isLoading: testsLoading } = useQuery<Test[]>({
     queryKey: ["tests", schoolData?.id],
     queryFn: async () => {
-      // This endpoint should ideally filter tests by the user's school on the backend
       const response = await fetch("/api/tests");
-      if (!response.ok) {
-        throw new Error("Failed to fetch tests");
-      }
+      if (!response.ok) throw new Error("Failed to fetch tests");
       return response.json();
     },
     enabled: !!user && !!schoolData?.id,
   });
 
-  // Mutation to create a new test with toast feedback
-  const createTestMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof testFormSchema>) => {
+  // Mutation to create a new test
+  const createMutation = useMutation({
+    mutationFn: async (data: InsertTest) => {
       if (!schoolData?.id || !user?.id) {
         throw new Error("User or School information is missing.");
       }
-      // ✅ find selected class and subject
       const selectedClass = (classes as any[]).find(
         (cls) => cls.id === data.class_id
       );
       const selectedSubject = (subjects as any[]).find(
         (sub) => sub.id === data.subject_id
       );
+
       const response = await fetch("/api/tests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -129,7 +134,6 @@ export default function TestsPage() {
           teacher_id: user.id,
           teacher_name: user.name,
           school_id: schoolData.id,
-          // ✅ build names properly
           class_name: `${selectedClass.grade} - ${selectedClass.section}`,
           subject_name: selectedSubject.subject_name,
         }),
@@ -141,89 +145,158 @@ export default function TestsPage() {
       return response.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tests", schoolData?.id] });
+      setIsDialogOpen(false);
       toast({
         title: "Test Created!",
         description: "The new test has been scheduled successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: ["tests", schoolData?.id] });
-      setIsDialogOpen(false);
-      form.reset();
     },
     onError: (error: Error) => {
       toast({
         title: "Creation Failed",
-        description: error.message || "An unexpected error occurred.",
+        description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  // Redirect users who do not have permission to view the page
+  // Mutation to update an existing test
+  const updateMutation = useMutation({
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: Partial<InsertTest>;
+    }) => {
+      const response = await fetch(`/api/tests/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to update test");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tests", schoolData?.id] });
+      setIsDialogOpen(false);
+      toast({
+        title: "Success",
+        description: "Test updated successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation to delete a test
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await fetch(`/api/tests/${id}`, { method: "DELETE" });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to delete test");
+      }
+      return true;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tests", schoolData?.id] });
+      setIsDeleteModalOpen(false);
+      toast({
+        title: "Success",
+        description: "Test removed successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Redirect users who do not have permission
   if (
     user?.role !== "school_admin" &&
     user?.role !== "staff" &&
     user?.role !== "student"
   ) {
-    toast({
-      title: "Access Denied",
-      description: "You do not have permission to view this page.",
-      variant: "destructive",
-    });
     return <Redirect to="/dashboard" />;
   }
 
-  const handleSubmit = (data: z.infer<typeof testFormSchema>) => {
-    createTestMutation.mutate(data);
-  };
-  const handleDelete = (id: number) => {
-    settestToDelete(id);
-    setIsDeleteModalOpen(true);
-  };
-  const confirmDelete = async () => {
-    if (!testToDelete) return;
-    try {
-      const response = await fetch(`/api/tests/${testToDelete}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error("Failed to delete student");
-
-      toast({ title: "Success", description: "Test removed successfully" });
-      queryClient.invalidateQueries({
-        queryKey: ["tests", schoolData?.id],
-      });
-      setIsDeleteModalOpen(false);
-      settestToDelete(null);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "An error occurred while deleting the Test",
-        variant: "destructive",
-      });
+  // Unified form submission handler for create and update
+  const onSubmit = (data: TestFormData) => {
+    if (editingTest) {
+      updateMutation.mutate({ id: editingTest.id, data });
+    } else {
+      createMutation.mutate(data as InsertTest);
     }
   };
-  const isLoading = testsLoading || schoolDataLoading;
 
-  // Helper functions for formatting and UI elements
+  const openCreateDialog = () => {
+    setEditingTest(null);
+    form.reset({
+      title: "",
+      description: "",
+      subject_id: 0,
+      class_id: 0,
+      test_date: "",
+      duration: 60,
+      max_marks: 100,
+      test_type: "quiz",
+    });
+    setIsDialogOpen(true);
+  };
+
+  const openEditDialog = (test: Test) => {
+    setEditingTest(test);
+    form.reset({
+      ...test,
+      // Ensure date is in 'YYYY-MM-DD' format for the input
+      test_date: new Date(test.test_date).toISOString().split("T")[0],
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleDelete = (id: number) => {
+    setTestToDelete(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (testToDelete) {
+      deleteMutation.mutate(testToDelete);
+    }
+  };
+
+  const isLoading = testsLoading || schoolDataLoading;
+  const isEditing = !!editingTest;
+
+  // ... Helper functions (formatDate, getTestStatusBadge, etc.) remain the same ...
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString();
-  const formatTime = (dateString: string) =>
-    new Date(dateString).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+
   const getTestStatusBadge = (testDate: string) => {
     const today = new Date();
     const test = new Date(testDate);
-    const diffDays = Math.ceil(
-      (test.getTime() - today.getTime()) / (1000 * 3600 * 24)
-    );
+    // Reset time part for accurate day comparison
+    today.setHours(0, 0, 0, 0);
+    test.setHours(0, 0, 0, 0);
 
-    if (diffDays < 0) {
+    if (test < today) {
       return <Badge variant="outline">Completed</Badge>;
-    } else if (diffDays === 0) {
+    } else if (test.getTime() === today.getTime()) {
       return <Badge variant="default">Today</Badge>;
-    } else if (diffDays <= 3) {
-      return <Badge variant="destructive">Upcoming</Badge>;
     } else {
       return <Badge variant="secondary">Scheduled</Badge>;
     }
@@ -254,7 +327,6 @@ export default function TestsPage() {
       class_test: "outline",
       mock_exam: "destructive",
     };
-
     return (
       <Badge variant={variants[type] || "default"}>
         {getTestTypeIcon(type)}
@@ -275,27 +347,40 @@ export default function TestsPage() {
               Create and manage class tests, quizzes, and assessments
             </p>
           </div>
-
           {(user?.role === "school_admin" || user?.role === "staff") && (
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <Dialog
+              open={isDialogOpen}
+              onOpenChange={(isOpen) => {
+                setIsDialogOpen(isOpen);
+                if (!isOpen) {
+                  setEditingTest(null);
+                  form.reset();
+                }
+              }}
+            >
               <DialogTrigger asChild>
-                <Button>
+                <Button onClick={openCreateDialog}>
                   <Plus className="mr-2 h-4 w-4" />
                   Create Test
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                  <DialogTitle>Create New Test</DialogTitle>
+                  <DialogTitle>
+                    {isEditing ? "Edit Test" : "Create New Test"}
+                  </DialogTitle>
                   <DialogDescription>
-                    Schedule a test or quiz for your students.
+                    {isEditing
+                      ? "Update the details for this test or quiz."
+                      : "Schedule a new test or quiz for your students."}
                   </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
                   <form
-                    onSubmit={form.handleSubmit(handleSubmit)}
+                    onSubmit={form.handleSubmit(onSubmit)}
                     className="space-y-4"
                   >
+                    {/* Form fields remain the same */}
                     <FormField
                       control={form.control}
                       name="title"
@@ -303,13 +388,15 @@ export default function TestsPage() {
                         <FormItem>
                           <FormLabel>Test Title</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter test title" {...field} />
+                            <Input
+                              placeholder="e.g., Chapter 3 Quiz"
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-
                     <FormField
                       control={form.control}
                       name="description"
@@ -326,7 +413,6 @@ export default function TestsPage() {
                         </FormItem>
                       )}
                     />
-
                     <FormField
                       control={form.control}
                       name="test_type"
@@ -335,7 +421,7 @@ export default function TestsPage() {
                           <FormLabel>Test Type</FormLabel>
                           <Select
                             onValueChange={field.onChange}
-                            defaultValue={field.value}
+                            value={field.value}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -359,7 +445,6 @@ export default function TestsPage() {
                         </FormItem>
                       )}
                     />
-
                     <div className="grid grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
@@ -371,6 +456,7 @@ export default function TestsPage() {
                               onValueChange={(value) =>
                                 field.onChange(Number(value))
                               }
+                              value={String(field.value)}
                             >
                               <FormControl>
                                 <SelectTrigger>
@@ -381,7 +467,7 @@ export default function TestsPage() {
                                 {(subjects as any[]).map((subject: any) => (
                                   <SelectItem
                                     key={subject.id}
-                                    value={subject.id.toString()}
+                                    value={String(subject.id)}
                                   >
                                     {subject.subject_name}
                                   </SelectItem>
@@ -392,7 +478,6 @@ export default function TestsPage() {
                           </FormItem>
                         )}
                       />
-
                       <FormField
                         control={form.control}
                         name="class_id"
@@ -403,6 +488,7 @@ export default function TestsPage() {
                               onValueChange={(value) =>
                                 field.onChange(Number(value))
                               }
+                              value={String(field.value)}
                             >
                               <FormControl>
                                 <SelectTrigger>
@@ -413,7 +499,7 @@ export default function TestsPage() {
                                 {(classes as any[]).map((cls: any) => (
                                   <SelectItem
                                     key={cls.id}
-                                    value={cls.id.toString()}
+                                    value={String(cls.id)}
                                   >
                                     {cls.grade} - {cls.section}
                                   </SelectItem>
@@ -425,7 +511,6 @@ export default function TestsPage() {
                         )}
                       />
                     </div>
-
                     <div className="grid grid-cols-3 gap-4">
                       <FormField
                         control={form.control}
@@ -440,7 +525,6 @@ export default function TestsPage() {
                           </FormItem>
                         )}
                       />
-
                       <FormField
                         control={form.control}
                         name="duration"
@@ -452,16 +536,12 @@ export default function TestsPage() {
                                 type="number"
                                 placeholder="60"
                                 {...field}
-                                onChange={(e) =>
-                                  field.onChange(Number(e.target.value))
-                                }
                               />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-
                       <FormField
                         control={form.control}
                         name="max_marks"
@@ -473,9 +553,6 @@ export default function TestsPage() {
                                 type="number"
                                 placeholder="100"
                                 {...field}
-                                onChange={(e) =>
-                                  field.onChange(Number(e.target.value))
-                                }
                               />
                             </FormControl>
                             <FormMessage />
@@ -483,8 +560,7 @@ export default function TestsPage() {
                         )}
                       />
                     </div>
-
-                    <div className="flex justify-end space-x-2">
+                    <DialogFooter>
                       <Button
                         type="button"
                         variant="outline"
@@ -494,13 +570,13 @@ export default function TestsPage() {
                       </Button>
                       <Button
                         type="submit"
-                        disabled={createTestMutation.isPending}
+                        disabled={
+                          createMutation.isPending || updateMutation.isPending
+                        }
                       >
-                        {createTestMutation.isPending
-                          ? "Creating..."
-                          : "Create Test"}
+                        {isEditing ? "Save Changes" : "Create Test"}
                       </Button>
-                    </div>
+                    </DialogFooter>
                   </form>
                 </Form>
               </DialogContent>
@@ -514,7 +590,7 @@ export default function TestsPage() {
               <Card key={i} className="animate-pulse">
                 <CardHeader>
                   <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2 mt-2"></div>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
@@ -527,69 +603,112 @@ export default function TestsPage() {
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {(tests as any[]).map((test: any) => (
-              <Card key={test.id} className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex justify-between items-start">
-                    {/* Left side: Title */}
-                    <CardTitle className="text-lg">{test.title}</CardTitle>
-
-                    {/* Right side: Badge + Trash aligned properly */}
-                    <div className="flex items-center space-x-2">
-                      {getTestTypeBadge(test.test_type)}
-                      {getTestStatusBadge(test.test_date)}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-muted-foreground hover:text-destructive"
-                        onClick={() => handleDelete(test.id)}
-                      >
-                        <Trash className="h-4 w-4" />
-                      </Button>
-                    </div>
+            {tests.map((test) => (
+              <Card
+                key={test.id}
+                className="rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 border border-gray-200 bg-gradient-to-br from-white to-gray-50"
+              >
+                <CardHeader className="pb-4">
+                  {/* Title */}
+                  <div className="flex justify-between items-center rounded-lg border border-gray-300 bg-blue-700 px-3 py-2">
+                    <CardTitle className="text-l font-semibold tracking-tight text-white">
+                      {test.title}
+                    </CardTitle>
                   </div>
 
-                  <CardDescription className="line-clamp-2">
-                    {test.description}
-                  </CardDescription>
+                  {/* Description inside outlined box */}
+                  <div className="mt-2 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2">
+                    <CardDescription className="text-gray-700 text-sm">
+                      {test.description}
+                    </CardDescription>
+                  </div>
                 </CardHeader>
 
-                <CardContent>
-                  <div className="space-y-2 text-sm text-muted-foreground">
+                <CardContent className="space-y-3">
+                  {/* Badges row */}
+                  <div className="flex justify-between items-center mb-3">
+                    {getTestTypeBadge(test.test_type)}
+                    {getTestStatusBadge(test.test_date)}
+                  </div>
+
+                  {/* Test details */}
+                  <div className="space-y-2 text-sm text-gray-700">
                     <div className="flex items-center">
-                      <Calendar className="mr-2 h-4 w-4" />
-                      {formatDate(test.test_date)} at{" "}
-                      {formatTime(test.test_date)}
+                      <Calendar className="mr-2 h-4 w-4 text-indigo-500" />
+                      <span>
+                        <strong>Date:</strong> {formatDate(test.test_date)}
+                      </span>
                     </div>
+
                     <div className="flex items-center">
-                      <BookOpen className="mr-2 h-4 w-4" />
-                      Subject: {test.subject_name || "N/A"}
+                      <BookOpen className="mr-2 h-4 w-4 text-indigo-500" />
+                      <span>
+                        <strong>Subject:</strong> {test.subject_name || "N/A"}
+                      </span>
                     </div>
+
                     <div className="flex items-center">
-                      <Users className="mr-2 h-4 w-4" />
-                      Class: {test.class_name || "N/A"}
+                      <Users className="mr-2 h-4 w-4 text-indigo-500" />
+                      <span>
+                        <strong>Class:</strong> {test.class_name || "N/A"}
+                      </span>
                     </div>
+
                     <div className="flex items-center">
-                      <Clock className="mr-2 h-4 w-4" />
-                      Duration: {test.duration} minutes
+                      <Clock className="mr-2 h-4 w-4 text-indigo-500" />
+                      <span>
+                        <strong>Duration:</strong> {test.duration} minutes
+                      </span>
                     </div>
+
                     <div className="flex items-center">
-                      <Target className="mr-2 h-4 w-4" />
-                      Max Marks: {test.max_marks}
+                      <Target className="mr-2 h-4 w-4 text-indigo-500" />
+                      <span>
+                        <strong>Max Marks:</strong> {test.max_marks}
+                      </span>
                     </div>
                   </div>
-                  <div className="mt-4 flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">
-                      {test.attempts_count || 0} attempts
+                  <div className="flex items-center">
+                    <Eye className="mr-2 h-4 w-4 text-indigo-500" />
+                    <a
+                      href="#"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline truncate"
+                    >
+                      View Result
+                    </a>
+                  </div>
+                  {/* Footer row (Date + Action buttons) */}
+                  <div className="mt-4 flex justify-between items-center text-sm text-gray-500">
+                    <span>
+                      Added{" "}
+                      {new Date(
+                        test.created_at || Date.now()
+                      ).toLocaleDateString()}
                     </span>
-                    <div className="space-x-2">
-                      <Button variant="outline" size="sm">
-                        Results
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        Edit
-                      </Button>
-                    </div>
+
+                    {(user?.role === "school_admin" ||
+                      user?.id === test.teacher_id) && (
+                      <div className="flex gap-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-1 border-blue-500 text-blue-600 hover:bg-blue-50"
+                          onClick={() => openEditDialog(test)}
+                        >
+                          <Edit className="h-4 w-4" /> Edit
+                        </Button>
+
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="flex items-center gap-1"
+                          onClick={() => handleDelete(test.id)}
+                        >
+                          <Trash className="h-4 w-4" /> Delete
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -597,7 +716,7 @@ export default function TestsPage() {
           </div>
         )}
 
-        {!isLoading && (tests as any[]).length === 0 && (
+        {!isLoading && tests.length === 0 && (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Target className="h-12 w-12 text-muted-foreground mb-4" />
@@ -606,7 +725,7 @@ export default function TestsPage() {
                 Create your first test or quiz to assess student knowledge.
               </p>
               {(user?.role === "school_admin" || user?.role === "staff") && (
-                <Button onClick={() => setIsDialogOpen(true)}>
+                <Button onClick={openCreateDialog}>
                   <Plus className="mr-2 h-4 w-4" />
                   Create First Test
                 </Button>
@@ -614,13 +733,14 @@ export default function TestsPage() {
             </CardContent>
           </Card>
         )}
+
         <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Confirm Deletion</DialogTitle>
               <DialogDescription>
-                Are you sure you want to remove this student? This action cannot
-                be undone.
+                Are you sure you want to remove this test? This action cannot be
+                undone.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -630,8 +750,12 @@ export default function TestsPage() {
               >
                 Cancel
               </Button>
-              <Button variant="destructive" onClick={confirmDelete}>
-                Delete
+              <Button
+                variant="destructive"
+                onClick={confirmDelete}
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? "Deleting..." : "Delete"}
               </Button>
             </DialogFooter>
           </DialogContent>
