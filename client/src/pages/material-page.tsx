@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -75,6 +75,7 @@ export default function MaterialsPage() {
   const {
     classes,
     subjects,
+    teachers,
     schoolData,
     loading: schoolDataLoading,
   } = useSchoolData();
@@ -326,6 +327,80 @@ export default function MaterialsPage() {
     );
   };
 
+  // Get current teacher for staff role
+  const currentTeacher = useMemo(
+    () => teachers.find((t) => t.user_id === user?.id),
+    [teachers, user]
+  );
+
+  // Filter materials based on user role
+  const filteredMaterials = useMemo(() => {
+    if (user?.role === "staff" && currentTeacher) {
+      // Staff should see materials they created OR materials for classes they teach
+      return materials.filter((material) => {
+        // Show if teacher created this material
+        if (material.teacher_id === currentTeacher.id) {
+          return true;
+        }
+        // Show if teacher teaches this class and subject
+        const materialClass = classes.find(c => c.id === material.class_id);
+        if (materialClass && materialClass.subjects) {
+          return materialClass.subjects.some(
+            (mapping: any) => 
+              mapping.teacher_id === currentTeacher.id && 
+              mapping.subject_id === material.subject_id
+          );
+        }
+        return false;
+      });
+    }
+    return materials; // Admins and students see all (students might need separate filtering)
+  }, [materials, user, currentTeacher, classes]);
+
+  // Available classes for staff (only classes they teach)
+  const availableClasses = useMemo(() => {
+    if (user?.role === "school_admin") {
+      return classes;
+    }
+    if (user?.role === "staff" && currentTeacher) {
+      const assignedClassIds = new Set();
+      classes.forEach((cls) => {
+        if (cls.subjects?.some((mapping: any) => mapping.teacher_id === currentTeacher.id)) {
+          assignedClassIds.add(cls.id);
+        }
+      });
+      return classes.filter((cls) => assignedClassIds.has(cls.id));
+    }
+    return [];
+  }, [classes, currentTeacher, user]);
+
+  // Available subjects for staff (only subjects they teach in selected class)
+  const availableSubjects = useMemo(() => {
+    const selectedClassId = form.watch("class_id");
+    if (!selectedClassId) return [];
+
+    const selectedClass = classes.find((c) => c.id === Number(selectedClassId));
+    if (!selectedClass?.subjects) return [];
+
+    if (user?.role === "school_admin") {
+      const subjectIdsInClass = new Set(
+        selectedClass.subjects.map((m: any) => m.subject_id)
+      );
+      return subjects.filter((s) => subjectIdsInClass.has(s.id));
+    }
+
+    if (user?.role === "staff" && currentTeacher) {
+      const taughtSubjectIds = new Set(
+        selectedClass.subjects
+          .filter((mapping: any) => mapping.teacher_id === currentTeacher.id)
+          .map((mapping: any) => mapping.subject_id)
+      );
+      return subjects.filter((s) => taughtSubjectIds.has(s.id));
+    }
+
+    return [];
+  }, [form.watch("class_id"), classes, subjects, currentTeacher, user]);
+
   return (
     <DashboardLayout title="Materials">
       <div className="space-y-6">
@@ -460,7 +535,7 @@ export default function MaterialsPage() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {(subjects as any[]).map((subject: any) => (
+                                {availableSubjects.map((subject: any) => (
                                   <SelectItem
                                     key={subject.id}
                                     value={String(subject.id)}
@@ -493,7 +568,7 @@ export default function MaterialsPage() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {(classes as any[]).map((cls: any) => (
+                                {availableClasses.map((cls: any) => (
                                   <SelectItem
                                     key={cls.id}
                                     value={String(cls.id)}
@@ -585,7 +660,7 @@ export default function MaterialsPage() {
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {materials.map((material) => (
+            {filteredMaterials.map((material) => (
               <Card className="rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 border border-gray-200 bg-gradient-to-br from-white to-gray-50">
                 <CardHeader className="pb-4">
                   <div className="flex justify-between  items-center rounded-lg border border-gray-300 bg-blue-700 px-3 py-2">

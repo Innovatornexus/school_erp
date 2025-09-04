@@ -1,9 +1,10 @@
 import { useAuth } from "@/hooks/use-auth";
+import { useSchoolData } from "@/context/SchoolDataContext";
 import DashboardLayout from "@/layout/dashboard-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Book, Users, Calendar } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 interface ClassData {
   id: number;
@@ -16,17 +17,24 @@ interface ClassData {
 
 export default function TeacherClassesPage() {
   const { user } = useAuth();
+  const { teachers, loading: schoolDataLoading } = useSchoolData();
   const [classes, setClasses] = useState<ClassData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Find the teacher record for the current user
+  const currentTeacher = useMemo(() => 
+    teachers.find((t) => t.user_id === user?.id),
+    [teachers, user?.id]
+  );
+
   useEffect(() => {
     const fetchClasses = async () => {
-      if (!user?.id) return;
+      if (!currentTeacher?.id) return;
 
       try {
         setLoading(true);
-        const response = await fetch(`/api/teachers/${user.id}/classes`);
+        const response = await fetch(`/api/teachers/${currentTeacher.id}/classes`);
         if (!response.ok) {
           throw new Error("Failed to fetch classes");
         }
@@ -42,9 +50,10 @@ export default function TeacherClassesPage() {
     };
 
     fetchClasses();
-  }, [user?.id]);
+  }, [currentTeacher?.id]);
   console.log("classes by teacher , ", classes);
-  if (loading) {
+  
+  if (schoolDataLoading || loading) {
     return (
       <DashboardLayout title="My Classes">
         <div className="container py-6">
