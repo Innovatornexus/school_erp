@@ -681,13 +681,22 @@ export default function ExamsPage() {
                     </div>
                   </div>
                   <div className="flex items-center justify-between pt-2 border-t">
-                    <Button
-                      variant="link"
-                      className="p-0 h-auto"
-                      onClick={() => setLocation(`/exam-results/${exam.id}`)}
-                    >
-                      <Eye className="mr-2 h-4 w-4" /> View Results
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto"
+                        onClick={() => setLocation(`/exam-schedule/${exam.id}`)}
+                      >
+                        <Calendar className="mr-2 h-4 w-4" /> View Details
+                      </Button>
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto"
+                        onClick={() => setLocation(`/exam-results/${exam.id}`)}
+                      >
+                        <Eye className="mr-2 h-4 w-4" /> View Results
+                      </Button>
+                    </div>
                     {(user?.role === "school_admin" ||
                       user?.role === "staff") && (
                       <div className="flex gap-2">

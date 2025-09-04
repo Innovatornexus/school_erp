@@ -38,6 +38,7 @@ import MaterialsPage from "./pages/material-page";
 import TestsPage from "./pages/tests-page";
 import ExamsPage from "./pages/exams-page";
 import ExamResultsPage from "./pages/exam-results-page";
+import ExamSchedulePage from "./pages/exam-schedule-page";
 import HomeworkPage from "./pages/homework-page";
 import AttendancePage from "@/pages/attendance-page";
 
@@ -98,6 +99,10 @@ function Router() {
       <ProtectedRoute
         path="/exam-results/:examId"
         component={ExamResultsPage}
+      />
+      <ProtectedRoute
+        path="/exam-schedule/:id"
+        component={ExamSchedulePage}
       />
       <ProtectedRoute path="/tests" component={TestsPage} />
       <ProtectedRoute path="/homework" component={HomeworkPage} />
