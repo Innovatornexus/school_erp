@@ -76,7 +76,7 @@ import {
   Test,
   materials,
   tests,
-} from "@shared/schema";
+} from "../shared/schema";
 
 import { db, pool } from "./db";
 import {
@@ -91,7 +91,7 @@ import {
 
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { and, eq, gte, lte, sql, desc } from "drizzle-orm"; // Make sure gte and lte are imported
+import { and, eq, gte, lte, sql, desc, inArray } from "drizzle-orm"; // Make sure gte and lte are imported
 ``;
 import type { ClassItemWithCount } from "../client/src/pages/type";
 import { alias } from "drizzle-orm/pg-core";
@@ -1476,30 +1476,43 @@ export class DatabaseStorage {
       }>;
     }
   ): Promise<Exam> {
-    // Extract subjects data before creating exam
-    const subjectsData = insertExam.subjects || [];
+    return await db.transaction(async (tx) => {
+      // Extract subjects data before creating exam
+      const subjectsData = insertExam.subjects || [];
 
-    // Remove subjects from exam data as it's not part of the schema
-    const { subjects, ...examData } = insertExam;
+      // Remove subjects from exam data as it's not part of the schema
+      const { subjects, ...examData } = insertExam;
 
-    const [exam] = await db.insert(exams).values(examData).returning();
+      // Calculate start_date and end_date from subjects if they exist and dates not provided
+      if (subjectsData.length > 0) {
+        const examDates = subjectsData.map(s => s.exam_date).sort();
+        if (!examData.start_date) {
+          examData.start_date = examDates[0];
+        }
+        if (!examData.end_date) {
+          examData.end_date = examDates[examDates.length - 1];
+        }
+      }
 
-    // Create exam_subjects records for each subject in the exam
-    if (subjectsData.length > 0) {
-      const examSubjectsData = subjectsData.map((subject) => ({
-        exam_id: exam.id,
-        subject_id: subject.subject_id,
-        subject_name: subject.subject_name,
-        exam_date: subject.exam_date,
-        start_time: subject.start_time,
-        end_time: subject.end_time,
-        max_marks: subject.max_marks || 100,
-      }));
+      const [exam] = await tx.insert(exams).values(examData).returning();
 
-      await db.insert(examSubjects).values(examSubjectsData);
-    }
+      // Create exam_subjects records for each subject in the exam
+      if (subjectsData.length > 0) {
+        const examSubjectsData = subjectsData.map((subject) => ({
+          exam_id: exam.id,
+          subject_id: subject.subject_id,
+          subject_name: subject.subject_name,
+          exam_date: subject.exam_date,
+          start_time: subject.start_time,
+          end_time: subject.end_time,
+          max_marks: subject.max_marks || 100,
+        }));
 
-    return exam;
+        await tx.insert(examSubjects).values(examSubjectsData);
+      }
+
+      return exam;
+    });
   }
 
   async updateExam(
@@ -1521,6 +1534,17 @@ export class DatabaseStorage {
       const subjectsData = data.subjects || [];
       const { subjects, ...examData } = data;
 
+      // Calculate start_date and end_date from subjects if they exist and dates not provided
+      if (subjectsData.length > 0) {
+        const examDates = subjectsData.map(s => s.exam_date).sort();
+        if (!examData.start_date) {
+          examData.start_date = examDates[0];
+        }
+        if (!examData.end_date) {
+          examData.end_date = examDates[examDates.length - 1];
+        }
+      }
+
       // 2. Update the main exam record in the 'exams' table
       const [updated] = await tx
         .update(exams)
@@ -1533,7 +1557,7 @@ export class DatabaseStorage {
         throw new Error("Exam not found for update.");
       }
 
-      // 3. Delete all existing subjects associated with this exam
+      // 3. Delete all existing subjects associated with this exam (marks will be cascade deleted)
       await tx.delete(examSubjects).where(eq(examSubjects.exam_id, id));
 
       // 4. If new subjects are provided, insert them into the 'exam_subjects' table
@@ -1560,7 +1584,22 @@ export class DatabaseStorage {
 
   async deleteExam(id: number): Promise<boolean> {
     const result = await db.transaction(async (tx) => {
+      // First, get all exam subjects for this exam to handle any manual mark deletions if needed
+      const examSubjectsToDelete = await tx
+        .select({ id: examSubjects.id })
+        .from(examSubjects)
+        .where(eq(examSubjects.exam_id, id));
+
+      // Delete all marks for these exam subjects (if not already handled by cascade)
+      if (examSubjectsToDelete.length > 0) {
+        const examSubjectIds = examSubjectsToDelete.map(es => es.id);
+        await tx.delete(marks).where(inArray(marks.exam_subject_id, examSubjectIds));
+      }
+
+      // Delete all exam subjects for this exam
       await tx.delete(examSubjects).where(eq(examSubjects.exam_id, id));
+      
+      // Finally, delete the exam itself
       const [deleted] = await tx.delete(exams).where(eq(exams.id, id)).returning();
       return !!deleted;
     });

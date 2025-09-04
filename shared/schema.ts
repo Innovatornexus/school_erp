@@ -470,7 +470,7 @@ export const examSubjects = pgTable("exam_subjects", {
   id: serial("id").primaryKey(),
   exam_id: integer("exam_id")
     .notNull()
-    .references(() => exams.id),
+    .references(() => exams.id, { onDelete: "cascade" }),
   subject_id: integer("subject_id")
     .notNull()
     .references(() => subjects.id),

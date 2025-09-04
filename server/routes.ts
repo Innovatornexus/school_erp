@@ -34,7 +34,7 @@ import {
   insertMaterialSchema,
   insertTestSchema,
   insertHomeworkSchema,
-} from "@shared/schema";
+} from "../shared/schema";
 
 // Custom schema for exam creation that includes subjects
 const createExamSchema = insertExamSchema.extend({
