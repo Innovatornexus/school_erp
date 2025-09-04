@@ -1766,7 +1766,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!updatedExam) {
           return res.status(404).json({ message: "Exam not found" });
         }
-
         res.json(updatedExam);
       } catch (error) {
         if (error instanceof z.ZodError) {

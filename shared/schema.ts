@@ -463,6 +463,15 @@ export const exams = pgTable("exams", {
 
 export const insertExamSchema = createInsertSchema(exams).omit({
   id: true,
+}).extend({
+  subjects: z.array(z.object({
+    subject_id: z.number(),
+    subject_name: z.string().optional(),
+    exam_date: z.string(),
+    start_time: z.string().optional(),
+    end_time: z.string().optional(),
+    max_marks: z.number().optional(),
+  })).optional(),
 });
 
 // Exam subjects details
