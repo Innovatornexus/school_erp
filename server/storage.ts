@@ -1145,8 +1145,6 @@ export class DatabaseStorage {
       );
   }
 
-  // In server/storage.ts, inside the DatabaseStorage class
-
   // Method to get student attendance within a date range
   async getStudentAttendanceByDateRange(filters: {
     school_id: number;
@@ -1598,7 +1596,7 @@ export class DatabaseStorage {
 
       // Delete all exam subjects for this exam
       await tx.delete(examSubjects).where(eq(examSubjects.exam_id, id));
-      
+
       // Finally, delete the exam itself
       const [deleted] = await tx.delete(exams).where(eq(exams.id, id)).returning();
       return !!deleted;
