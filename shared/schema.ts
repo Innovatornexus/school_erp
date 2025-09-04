@@ -458,6 +458,7 @@ export const exams = pgTable("exams", {
   class_id: integer("class_id")
     .notNull()
     .references(() => classes.id),
+  class_name: text("class_name"),
 
   // NEW FIELDS: arrays for subject schedules
   subject_ids: integer("subject_ids").array().notNull(),

@@ -1592,9 +1592,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(201).json(newExam);
       } catch (error) {
         if (error instanceof z.ZodError) {
+          console.error("Full zod error:", error);
           return res
             .status(400)
             .json({ message: "Validation failed", errors: error.errors });
+        }
+        // Narrow error type safely
+        if (error instanceof Error) {
+          console.error("Full error:", error);
+          return res.status(500).json({
+            message: "Failed to create material",
+            error: error.message,
+            stack: error.stack,
+          });
         }
         res.status(500).json({ message: "Failed to create exam", error });
       }
@@ -1639,6 +1649,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json(exams);
       } catch (error) {
         res.status(500).json({ message: "Failed to fetch class exams", error });
+      }
+    }
+  );
+
+  // Update an exam
+  app.put(
+    "/api/exams/:id",
+    requireRole(["super_admin", "school_admin"]),
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const examData = insertExamSchema.partial().parse(req.body);
+
+        const updatedExam = await storage.updateExam(id, examData);
+        if (!updatedExam) {
+          return res.status(404).json({ message: "Exam not found" });
+        }
+
+        res.json(updatedExam);
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          console.error("Full zod error:", error);
+          return res.status(400).json({
+            message: "Validation failed",
+            errors: error.errors,
+          });
+        }
+
+        // Narrow error type safely
+        if (error instanceof Error) {
+          console.error("Full error:", error);
+          return res.status(500).json({
+            message: "Failed to update exam",
+            error: error.message,
+            stack: error.stack,
+          });
+        }
+
+        res.status(500).json({ message: "Failed to update exam", error });
+      }
+    }
+  );
+
+  // Delete an exam
+  app.delete(
+    "/api/exams/:id",
+    requireRole(["super_admin", "school_admin"]),
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const success = await storage.deleteExam(id);
+
+        if (!success) {
+          return res.status(404).json({ message: "Exam not found" });
+        }
+
+        res.status(204).end();
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          console.error("Full zod error:", error);
+          return res.status(400).json({
+            message: "Validation failed",
+            errors: error.errors,
+          });
+        }
+
+        // Narrow error type safely
+        if (error instanceof Error) {
+          console.error("Full error:", error);
+          return res.status(500).json({
+            message: "Failed to delete exam",
+            error: error.message,
+            stack: error.stack,
+          });
+        }
+
+        res.status(500).json({ message: "Failed to delete exam", error });
       }
     }
   );
