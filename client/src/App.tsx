@@ -37,6 +37,7 @@ import AssignmentsPage from "./pages/assignments-page";
 import MaterialsPage from "./pages/material-page";
 import TestsPage from "./pages/tests-page";
 import ExamsPage from "./pages/exams-page";
+import ExamResultsPage from "./pages/exam-results-page";
 import HomeworkPage from "./pages/homework-page";
 import AttendancePage from "@/pages/attendance-page";
 
@@ -94,6 +95,10 @@ function Router() {
       {/* Academic routes */}
       <ProtectedRoute path="/materials" component={MaterialsPage} />
       <ProtectedRoute path="/exams" component={ExamsPage} />
+      <ProtectedRoute
+        path="/exam-results/:examId"
+        component={ExamResultsPage}
+      />
       <ProtectedRoute path="/tests" component={TestsPage} />
       <ProtectedRoute path="/homework" component={HomeworkPage} />
       {/* Student routes */}

@@ -35,6 +35,22 @@ import {
   insertTestSchema,
   insertHomeworkSchema,
 } from "@shared/schema";
+
+// Custom schema for exam creation that includes subjects
+const createExamSchema = insertExamSchema.extend({
+  subjects: z
+    .array(
+      z.object({
+        subject_id: z.number(),
+        subject_name: z.string().optional(),
+        exam_date: z.string(),
+        start_time: z.string().optional(),
+        end_time: z.string().optional(),
+        max_marks: z.number().optional(),
+      })
+    )
+    .optional(),
+});
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 
@@ -1581,13 +1597,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ============ Exam Routes ============
 
+  // Get exam results with default 0 marks for missing entries
+  app.get(
+    "/api/exams/:examId/results",
+    requireRole([
+      "super_admin",
+      "school_admin",
+      "teacher",
+      "student",
+      "parent",
+    ]),
+    async (req, res) => {
+      try {
+        const examId = parseInt(req.params.examId);
+        if (isNaN(examId) || examId <= 0) {
+          return res.status(400).json({ message: "Invalid exam ID" });
+        }
+        // Call the new updateExamMarks API if marks are provided in the request body
+        if (req.method === "PUT") {
+          const marks = req.body.marks;
+          if (!Array.isArray(marks)) {
+            return res.status(400).json({ message: "Invalid marks data" });
+          }
+          await storage.updateExamMarks(parseInt(req.params.examId), marks);
+          return res.json({ success: true });
+        }
+        const results = await storage.getExamResults(examId);
+        res.json(results);
+      } catch (error) {
+        console.error("Failed to fetch exam results:", error);
+        res.status(500).json({ message: "Failed to fetch exam results" });
+      }
+    }
+  );
+
+  // Add a new route to update exam marks for a subject
+  app.put(
+    "/api/exam-subjects/:subjectId/marks",
+    requireRole(["super_admin", "school_admin", "teacher"]),
+    async (req, res) => {
+      try {
+        const subjectId = parseInt(req.params.subjectId);
+        const marks = req.body.marks;
+        if (!Array.isArray(marks)) {
+          return res.status(400).json({ message: "Invalid marks data" });
+        }
+        await storage.updateExamMarks(subjectId, marks);
+        res.json({ success: true });
+      } catch (error) {
+        console.error("Failed to update exam marks:", error);
+        res.status(500).json({ message: "Failed to update exam marks" });
+      }
+    }
+  );
+
   // Create an exam
   app.post(
     "/api/exams",
     requireRole(["super_admin", "school_admin"]),
     async (req, res) => {
       try {
-        const examData = insertExamSchema.parse(req.body);
+        const examData = createExamSchema.parse(req.body);
         const newExam = await storage.createExam(examData);
         res.status(201).json(newExam);
       } catch (error) {
@@ -1601,7 +1671,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (error instanceof Error) {
           console.error("Full error:", error);
           return res.status(500).json({
-            message: "Failed to create material",
+            message: "Failed to create exam",
             error: error.message,
             stack: error.stack,
           });
@@ -1649,6 +1719,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json(exams);
       } catch (error) {
         res.status(500).json({ message: "Failed to fetch class exams", error });
+      }
+    }
+  );
+
+  // Get a specific exam by ID
+  app.get(
+    "/api/exams/:id",
+    requireRole([
+      "super_admin",
+      "school_admin",
+      "teacher",
+      "student",
+      "parent",
+    ]),
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        if (isNaN(id) || id <= 0) {
+          return res.status(400).json({ message: "Invalid exam ID" });
+        }
+
+        const exam = await storage.getExam(id);
+        if (!exam) {
+          return res.status(404).json({ message: "Exam not found" });
+        }
+
+        res.json(exam);
+      } catch (error) {
+        console.error("Error fetching exam by ID:", error);
+        res.status(500).json({ message: "Failed to fetch exam", error });
       }
     }
   );
@@ -1726,6 +1826,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         res.status(500).json({ message: "Failed to delete exam", error });
+      }
+    }
+  );
+
+  // Get exam subjects for editing
+  app.get(
+    "/api/exams/:id/subjects",
+    requireRole(["super_admin", "school_admin"]),
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        if (isNaN(id) || id <= 0) {
+          return res.status(400).json({ message: "Invalid exam ID" });
+        }
+
+        const examSubjects = await storage.getExamSubjects(id);
+        res.json(examSubjects);
+      } catch (error) {
+        console.error("Error fetching exam subjects:", error);
+        res
+          .status(500)
+          .json({ message: "Failed to fetch exam subjects", error });
       }
     }
   );

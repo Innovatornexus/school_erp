@@ -459,18 +459,6 @@ export const exams = pgTable("exams", {
     .notNull()
     .references(() => classes.id),
   class_name: text("class_name"),
-
-  // NEW FIELDS: arrays for subject schedules
-  subject_ids: integer("subject_ids").array().notNull(),
-  subject_names: text("subject_names").array().notNull(),
-
-  subject_exam_dates: date("subject_exam_dates").array().notNull(),
-  subject_exam_start_times: varchar("subject_exam_start_times", { length: 10 })
-    .array()
-    .notNull(),
-  subject_exam_end_times: varchar("subject_exam_end_times", { length: 10 })
-    .array()
-    .notNull(),
 });
 
 export const insertExamSchema = createInsertSchema(exams).omit({
@@ -486,7 +474,10 @@ export const examSubjects = pgTable("exam_subjects", {
   subject_id: integer("subject_id")
     .notNull()
     .references(() => subjects.id),
+  subject_name: text("subject_name"),
   exam_date: date("exam_date").notNull(),
+  start_time: varchar("start_time", { length: 10 }),
+  end_time: varchar("end_time", { length: 10 }),
   max_marks: integer("max_marks").notNull(),
 });
 
@@ -502,7 +493,7 @@ export const marks = pgTable("marks", {
     .references(() => students.id),
   exam_subject_id: integer("exam_subject_id")
     .notNull()
-    .references(() => examSubjects.id),
+    .references(() => examSubjects.id, { onDelete: "cascade" }),
   marks_obtained: doublePrecision("marks_obtained").notNull(),
 });
 

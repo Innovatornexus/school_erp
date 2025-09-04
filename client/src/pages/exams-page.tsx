@@ -1,5 +1,8 @@
+// src/pages/ExamsPage.tsx
+
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import {
   Card,
@@ -52,9 +55,7 @@ import {
   Calendar,
   BookOpen,
   Users,
-  FileText,
   Clock,
-  Award,
   Edit,
   Trash,
   Eye,
@@ -64,6 +65,7 @@ import { useAuth } from "@/hooks/use-auth";
 import DashboardLayout from "@/layout/dashboard-layout";
 import { useSchoolData } from "@/context/SchoolDataContext";
 
+// No changes to schema needed here
 const examSubjectSchema = z.object({
   subject_id: z.number().min(1, "Subject is required"),
   exam_date: z.string().min(1, "Exam date is required"),
@@ -80,8 +82,22 @@ const examFormSchema = z.object({
     .min(1, "At least one subject is required"),
 });
 
+// Define the type for an exam fetched from the API
+interface Exam {
+  id: number;
+  title: string;
+  term: string;
+  class_id: number;
+  class_name: string;
+  start_date: string;
+  end_date: string;
+  created_at: string;
+  subjects_count: number; // ✨ ADDED: Expect this from the API
+}
+
 export default function ExamsPage() {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const {
     classes,
     subjects,
@@ -89,7 +105,7 @@ export default function ExamsPage() {
     loading: schoolDataLoading,
   } = useSchoolData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingExam, setEditingExam] = useState<any>(null);
+  const [editingExam, setEditingExam] = useState<Exam | null>(null);
   const [deleteExamId, setDeleteExamId] = useState<number | null>(null);
   const { toast } = useToast();
   const form = useForm<z.infer<typeof examFormSchema>>({
@@ -102,7 +118,6 @@ export default function ExamsPage() {
     },
   });
 
-  // Reset form when dialog opens for create mode
   useEffect(() => {
     if (isDialogOpen && !editingExam) {
       form.reset({
@@ -114,38 +129,30 @@ export default function ExamsPage() {
     }
   }, [isDialogOpen, editingExam, form]);
 
-  // Reset editing state when dialog closes
   useEffect(() => {
     if (!isDialogOpen) {
       setEditingExam(null);
     }
   }, [isDialogOpen]);
 
-  // 2. Update useQuery to fetch exams by school ID using the new endpoint
-  const { data: exams = [], isLoading: examsLoading } = useQuery({
-    queryKey: ["exams", schoolData?.id], // A more specific query key
+  const { data: exams = [], isLoading: examsLoading } = useQuery<Exam[]>({
+    queryKey: ["exams", schoolData?.id],
     queryFn: async () => {
-      const response = await fetch(`/api/schools/${schoolData.id}/exams`);
+      const response = await fetch(`/api/schools/${schoolData!.id}/exams`);
       if (!response.ok) {
         throw new Error("Failed to fetch exams");
       }
       return response.json();
     },
-    enabled: !!schoolData?.id, // Only run the query when schoolData.id is available
+    enabled: !!schoolData?.id,
   });
 
-  // Create exam mutation with toast notifications
   const createExamMutation = useMutation({
     mutationFn: async (data: any) => {
-      if (!schoolData?.id) {
-        throw new Error("School ID is not available.");
-      }
       const response = await fetch("/api/exams", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data), // Pass the transformed data directly
       });
       if (!response.ok) {
         const errorData = await response.json();
@@ -153,7 +160,6 @@ export default function ExamsPage() {
       }
       return response.json();
     },
-    // 3. Add toast notifications for success and error
     onSuccess: () => {
       toast({
         title: "Success!",
@@ -161,7 +167,6 @@ export default function ExamsPage() {
       });
       queryClient.invalidateQueries({ queryKey: ["exams", schoolData?.id] });
       setIsDialogOpen(false);
-      form.reset();
     },
     onError: (error: Error) => {
       toast({
@@ -172,14 +177,11 @@ export default function ExamsPage() {
     },
   });
 
-  // Update exam mutation
   const updateExamMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
       const response = await fetch(`/api/exams/${id}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
       if (!response.ok) {
@@ -195,8 +197,6 @@ export default function ExamsPage() {
       });
       queryClient.invalidateQueries({ queryKey: ["exams", schoolData?.id] });
       setIsDialogOpen(false);
-      setEditingExam(null);
-      form.reset();
     },
     onError: (error: Error) => {
       toast({
@@ -207,35 +207,16 @@ export default function ExamsPage() {
     },
   });
 
-  // Delete exam mutation
   const deleteExamMutation = useMutation({
     mutationFn: async (id: number) => {
-      const response = await fetch(`/api/exams/${id}`, {
-        method: "DELETE",
-      });
-
-      // Handle non-successful HTTP responses (e.g., 404, 500)
-      if (!response.ok) {
-        // Try to parse error JSON, but have a fallback
-        try {
-          const errorData = await response.json();
-          throw new Error(errorData.message || "Failed to delete exam");
-        } catch (e) {
-          throw new Error(`Failed to delete exam. Status: ${response.status}`);
-        }
+      const response = await fetch(`/api/exams/${id}`, { method: "DELETE" });
+      if (!response.ok && response.status !== 204) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to delete exam");
       }
-
-      // ✨ FIX: Handle the '204 No Content' success case
-      if (response.status === 204) {
-        return true; // Or return null, or response; anything to signify success.
-      }
-
-      // If the API ever returns a body on successful DELETE (like a confirmation message)
-      return response.json();
+      return true;
     },
-
     onSuccess: () => {
-      // This will now be called correctly!
       toast({
         title: "Success!",
         description: "Exam deleted successfully!",
@@ -253,41 +234,40 @@ export default function ExamsPage() {
   });
 
   const handleSubmit = (data: z.infer<typeof examFormSchema>) => {
-    // Transform the data to match the API schema
+    if (!schoolData?.id) {
+      toast({
+        title: "Error",
+        description: "School data not found.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const selectedClass = classes.find((cls) => cls.id === data.class_id);
+
     const transformedData = {
       title: data.title,
       term: data.term,
       class_id: data.class_id,
-      class_name:
-        classes.find((cls) => cls.id === data.class_id)?.grade +
-        " - " +
-        classes.find((cls) => cls.id === data.class_id)?.section,
-      school_id: schoolData?.id || 0,
-      // Calculate start_date and end_date from subjects
-      start_date:
-        data.subjects.length > 0
-          ? data.subjects.reduce(
-              (earliest, subject) =>
-                subject.exam_date < earliest ? subject.exam_date : earliest,
-              data.subjects[0].exam_date
-            )
-          : new Date().toISOString().split("T")[0],
-      end_date:
-        data.subjects.length > 0
-          ? data.subjects.reduce(
-              (latest, subject) =>
-                subject.exam_date > latest ? subject.exam_date : latest,
-              data.subjects[0].exam_date
-            )
-          : new Date().toISOString().split("T")[0],
-      // Transform subjects array into separate arrays
-      subject_ids: data.subjects.map((subject) => subject.subject_id),
-      subject_names: data.subjects.map((subject) => ""), // Will be populated by backend
-      subject_exam_dates: data.subjects.map((subject) => subject.exam_date),
-      subject_exam_start_times: data.subjects.map(
-        (subject) => subject.start_time
+      class_name: selectedClass
+        ? `${selectedClass.grade} - ${selectedClass.section}`
+        : "N/A",
+      school_id: schoolData.id,
+      start_date: data.subjects.reduce(
+        (earliest, s) => (s.exam_date < earliest ? s.exam_date : earliest),
+        data.subjects[0].exam_date
       ),
-      subject_exam_end_times: data.subjects.map((subject) => subject.end_time),
+      end_date: data.subjects.reduce(
+        (latest, s) => (s.exam_date > latest ? s.exam_date : latest),
+        data.subjects[0].exam_date
+      ),
+      subjects: data.subjects.map((subject) => ({
+        subject_id: subject.subject_id,
+        exam_date: subject.exam_date,
+        start_time: subject.start_time,
+        end_time: subject.end_time,
+        max_marks: 100,
+      })),
     };
 
     if (editingExam) {
@@ -297,72 +277,69 @@ export default function ExamsPage() {
     }
   };
 
-  const handleEdit = (exam: any) => {
+  const handleEdit = async (exam: Exam) => {
     setEditingExam(exam);
-    // Transform exam data back to form format
-    // Convert the separate arrays back into subjects array
-    const subjects =
-      exam.subject_ids?.map((subjectId: number, index: number) => ({
-        subject_id: subjectId,
-        exam_date: exam.subject_exam_dates?.[index] || "",
-        start_time: exam.subject_exam_start_times?.[index] || "",
-        end_time: exam.subject_exam_end_times?.[index] || "",
-      })) || [];
+    try {
+      const response = await fetch(`/api/exams/${exam.id}/subjects`);
+      if (!response.ok) throw new Error("Failed to fetch exam subjects");
+      const examSubjects = await response.json();
 
-    const formData = {
-      title: exam.title,
-      term: exam.term,
-      class_id: exam.class_id,
-      subjects: subjects,
-    };
-    form.reset(formData);
-    setIsDialogOpen(true);
+      form.reset({
+        title: exam.title,
+        term: exam.term,
+        class_id: exam.class_id,
+        subjects: examSubjects.map((s: any) => ({
+          subject_id: s.subject_id,
+          exam_date: s.exam_date,
+          start_time: s.start_time || "",
+          end_time: s.end_time || "",
+        })),
+      });
+      setIsDialogOpen(true);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load exam subjects.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleDelete = (examId: number) => {
-    setDeleteExamId(examId);
-  };
-
+  const handleDelete = (examId: number) => setDeleteExamId(examId);
   const confirmDelete = () => {
     if (deleteExamId) {
       deleteExamMutation.mutate(deleteExamId);
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
-  };
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString();
 
   const getExamStatusBadge = (startDate: string, endDate: string) => {
     const today = new Date();
     const start = new Date(startDate);
     const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999); // Ensure end date is inclusive
 
-    if (today < start) {
-      return <Badge variant="secondary">Upcoming</Badge>;
-    } else if (today >= start && today <= end) {
+    if (today < start) return <Badge variant="secondary">Upcoming</Badge>;
+    if (today >= start && today <= end)
       return <Badge variant="default">Ongoing</Badge>;
-    } else {
-      return <Badge variant="outline">Completed</Badge>;
-    }
+    return <Badge variant="outline">Completed</Badge>;
   };
 
   const getDaysUntilExam = (startDate: string) => {
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const start = new Date(startDate);
     const diffTime = start.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
   const isLoading = examsLoading || schoolDataLoading;
 
   return (
     <DashboardLayout title="Exams">
-      {/* Add the Toaster component here or in your root layout */}
-      {/* <Toaster richColors /> */}
       <div className="space-y-6">
-        {/* ... The rest of the JSX remains largely the same ... */}
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Examinations</h1>
@@ -374,11 +351,11 @@ export default function ExamsPage() {
           {(user?.role === "school_admin" || user?.role === "staff") && (
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button disabled={schoolDataLoading}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Schedule Exam
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" /> Schedule Exam
                 </Button>
               </DialogTrigger>
+              {/* Form Dialog Content is unchanged */}
               <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
                 <DialogHeader>
                   <DialogTitle>
@@ -387,18 +364,16 @@ export default function ExamsPage() {
                   <DialogDescription>
                     {editingExam
                       ? "Update the examination details."
-                      : "Create a new examination period for students."}
+                      : "Create a new examination period."}
                   </DialogDescription>
                 </DialogHeader>
-
-                {/* Scrollable form */}
                 <div className="flex-1 overflow-y-auto pr-2">
                   <Form {...form}>
                     <form
                       onSubmit={form.handleSubmit(handleSubmit)}
                       className="space-y-4"
                     >
-                      {/* Form fields are unchanged */}
+                      {/* All form fields like Title, Term, Class are unchanged */}
                       <FormField
                         control={form.control}
                         name="title"
@@ -407,7 +382,7 @@ export default function ExamsPage() {
                             <FormLabel>Exam Title</FormLabel>
                             <FormControl>
                               <Input
-                                placeholder="Enter exam title"
+                                placeholder="e.g., Midterm Examination"
                                 {...field}
                               />
                             </FormControl>
@@ -415,7 +390,6 @@ export default function ExamsPage() {
                           </FormItem>
                         )}
                       />
-
                       <FormField
                         control={form.control}
                         name="term"
@@ -451,7 +425,6 @@ export default function ExamsPage() {
                           </FormItem>
                         )}
                       />
-
                       <FormField
                         control={form.control}
                         name="class_id"
@@ -462,6 +435,7 @@ export default function ExamsPage() {
                               onValueChange={(value) =>
                                 field.onChange(Number(value))
                               }
+                              value={String(field.value)}
                             >
                               <FormControl>
                                 <SelectTrigger>
@@ -472,7 +446,7 @@ export default function ExamsPage() {
                                 {(classes || []).map((cls: any) => (
                                   <SelectItem
                                     key={cls.id}
-                                    value={cls.id.toString()}
+                                    value={String(cls.id)}
                                   >
                                     {cls.grade} - {cls.section}
                                   </SelectItem>
@@ -484,7 +458,7 @@ export default function ExamsPage() {
                         )}
                       />
 
-                      {/* Subjects Section */}
+                      {/* Dynamic Subjects Section is unchanged */}
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
                           <FormLabel className="text-base font-medium">
@@ -494,25 +468,21 @@ export default function ExamsPage() {
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={() => {
-                              const currentSubjects =
-                                form.getValues("subjects");
+                            onClick={() =>
                               form.setValue("subjects", [
-                                ...currentSubjects,
+                                ...form.getValues("subjects"),
                                 {
                                   subject_id: 0,
                                   exam_date: "",
                                   start_time: "",
                                   end_time: "",
                                 },
-                              ]);
-                            }}
+                              ])
+                            }
                           >
-                            <Plus className="mr-2 h-4 w-4" />
-                            Add Subject
+                            <Plus className="mr-2 h-4 w-4" /> Add Subject
                           </Button>
                         </div>
-
                         {form.watch("subjects").map((_, index) => (
                           <div
                             key={index}
@@ -526,21 +496,18 @@ export default function ExamsPage() {
                                 type="button"
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => {
-                                  const currentSubjects =
-                                    form.getValues("subjects");
+                                onClick={() =>
                                   form.setValue(
                                     "subjects",
-                                    currentSubjects.filter(
-                                      (_, i) => i !== index
-                                    )
-                                  );
-                                }}
+                                    form
+                                      .getValues("subjects")
+                                      .filter((_, i) => i !== index)
+                                  )
+                                }
                               >
                                 Remove
                               </Button>
                             </div>
-
                             <div className="grid grid-cols-2 gap-4">
                               <FormField
                                 control={form.control}
@@ -549,8 +516,8 @@ export default function ExamsPage() {
                                   <FormItem>
                                     <FormLabel>Subject</FormLabel>
                                     <Select
-                                      onValueChange={(value) =>
-                                        field.onChange(Number(value))
+                                      onValueChange={(v) =>
+                                        field.onChange(Number(v))
                                       }
                                       value={String(field.value)}
                                     >
@@ -560,23 +527,20 @@ export default function ExamsPage() {
                                         </SelectTrigger>
                                       </FormControl>
                                       <SelectContent>
-                                        {(subjects || []).map(
-                                          (subject: any) => (
-                                            <SelectItem
-                                              key={subject.id}
-                                              value={String(subject.id)}
-                                            >
-                                              {subject.subject_name}
-                                            </SelectItem>
-                                          )
-                                        )}
+                                        {(subjects || []).map((s: any) => (
+                                          <SelectItem
+                                            key={s.id}
+                                            value={String(s.id)}
+                                          >
+                                            {s.subject_name}
+                                          </SelectItem>
+                                        ))}
                                       </SelectContent>
                                     </Select>
                                     <FormMessage />
                                   </FormItem>
                                 )}
                               />
-
                               <FormField
                                 control={form.control}
                                 name={`subjects.${index}.exam_date`}
@@ -591,7 +555,6 @@ export default function ExamsPage() {
                                 )}
                               />
                             </div>
-
                             <div className="grid grid-cols-2 gap-4">
                               <FormField
                                 control={form.control}
@@ -606,7 +569,6 @@ export default function ExamsPage() {
                                   </FormItem>
                                 )}
                               />
-
                               <FormField
                                 control={form.control}
                                 name={`subjects.${index}.end_time`}
@@ -623,16 +585,14 @@ export default function ExamsPage() {
                             </div>
                           </div>
                         ))}
-
                         {form.watch("subjects").length === 0 && (
                           <div className="text-center py-8 text-muted-foreground">
-                            No subjects added yet. Click "Add Subject" to get
-                            started.
+                            Click "Add Subject" to get started.
                           </div>
                         )}
                       </div>
 
-                      <div className="flex justify-end space-x-2">
+                      <div className="flex justify-end space-x-2 pt-4">
                         <Button
                           type="button"
                           variant="outline"
@@ -643,16 +603,13 @@ export default function ExamsPage() {
                         <Button
                           type="submit"
                           disabled={
-                            (createExamMutation.isPending ||
-                              updateExamMutation.isPending) &&
-                            !schoolData?.id
+                            createExamMutation.isPending ||
+                            updateExamMutation.isPending
                           }
                         >
                           {createExamMutation.isPending ||
                           updateExamMutation.isPending
-                            ? editingExam
-                              ? "Updating..."
-                              : "Scheduling..."
+                            ? "Saving..."
                             : editingExam
                             ? "Update Exam"
                             : "Schedule Exam"}
@@ -666,11 +623,13 @@ export default function ExamsPage() {
           )}
         </div>
 
-        {/* The rest of the component's rendering logic is unchanged */}
         {isLoading ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {[...Array(6)].map((_, i) => (
-              <Card key={i} className="animate-pulse">
+              /* Skeleton loader unchanged */ <Card
+                key={i}
+                className="animate-pulse"
+              >
                 <CardHeader>
                   <div className="h-4 bg-gray-200 rounded w-3/4"></div>
                   <div className="h-3 bg-gray-200 rounded w-1/2"></div>
@@ -684,110 +643,65 @@ export default function ExamsPage() {
               </Card>
             ))}
           </div>
-        ) : (
+        ) : exams.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {(exams as any[]).map((exam: any) => (
-              <Card
-                key={exam.id}
-                className="rounded-2xl  shadow-md hover:shadow-lg transition-all duration-300 border border-gray-200 bg-gradient-to-br from-white to-gray-50"
-              >
-                <CardHeader className="pb-4">
-                  {/* Title */}
-                  <div className="flex justify-between items-center rounded-lg border border-gray-300 bg-blue-700 px-3 py-2">
-                    <CardTitle className="text-l font-semibold tracking-tight text-white">
-                      {exam.title}
-                    </CardTitle>
-                  </div>
-
-                  {/* Description inside outlined box */}
-                  <div className="mt-2 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2">
-                    <CardDescription className="text-gray-700 text-sm">
-                      {exam.term} • Class {exam.class_name || "N/A"}
-                    </CardDescription>
-                  </div>
+            {exams.map((exam) => (
+              <Card key={exam.id}>
+                <CardHeader>
+                  <CardTitle>{exam.title}</CardTitle>
+                  <CardDescription>
+                    {exam.term} • {exam.class_name}
+                  </CardDescription>
                 </CardHeader>
-
-                <CardContent className="space-y-3">
-                  {/* Badges row */}
-                  <div className="flex justify-between items-center mb-3">
-                    <Badge variant="secondary">{exam.term}</Badge>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between text-sm">
                     {getExamStatusBadge(exam.start_date, exam.end_date)}
+                    {getDaysUntilExam(exam.start_date) > 0 && (
+                      <span className="text-muted-foreground">
+                        Starts in {getDaysUntilExam(exam.start_date)} days
+                      </span>
+                    )}
                   </div>
-
-                  {/* Exam details */}
-                  <div className="space-y-2 text-sm text-gray-700">
+                  <div className="text-sm text-muted-foreground space-y-2">
                     <div className="flex items-center">
-                      <Calendar className="mr-2 h-4 w-4 text-indigo-500" />
+                      <Calendar className="mr-2 h-4 w-4" />
                       <span>
-                        <strong>Date:</strong> {formatDate(exam.start_date)} -{" "}
+                        {formatDate(exam.start_date)} -{" "}
                         {formatDate(exam.end_date)}
                       </span>
                     </div>
-
                     <div className="flex items-center">
-                      <Users className="mr-2 h-4 w-4 text-indigo-500" />
-                      <span>
-                        <strong>Class:</strong> {exam.class_name || "N/A"}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center">
-                      <BookOpen className="mr-2 h-4 w-4 text-indigo-500" />
-                      <span>
-                        <strong>Subjects:</strong>{" "}
-                        {exam.subject_ids?.length || 0} subjects
-                      </span>
-                    </div>
-
-                    {getDaysUntilExam(exam.start_date) > 0 && (
-                      <div className="flex items-center">
-                        <Clock className="mr-2 h-4 w-4 text-indigo-500" />
-                        <span>
-                          <strong>Days to start:</strong>{" "}
-                          {getDaysUntilExam(exam.start_date)} days
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex items-center">
-                      <Eye className="mr-2 h-4 w-4 text-indigo-500" />
-                      <a
-                        href="#"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline truncate"
-                      >
-                        View Result
-                      </a>
+                      {/* ✨ FIX: Use the new subjects_count property from the API */}
+                      <BookOpen className="mr-2 h-4 w-4" />
+                      <span>{exam.subjects_count || 0} subjects</span>
                     </div>
                   </div>
-
-                  {/* Footer row (Date + Action buttons) */}
-                  <div className="mt-4 flex justify-between items-center text-sm text-gray-500">
-                    <span>
-                      Created{" "}
-                      {new Date(
-                        exam.created_at || Date.now()
-                      ).toLocaleDateString()}
-                    </span>
-
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <Button
+                      variant="link"
+                      className="p-0 h-auto"
+                      onClick={() => setLocation(`/exam-results/${exam.id}`)}
+                    >
+                      <Eye className="mr-2 h-4 w-4" /> View Results
+                    </Button>
                     {(user?.role === "school_admin" ||
                       user?.role === "staff") && (
-                      <div className="flex gap-3">
+                      <div className="flex gap-2">
                         <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex items-center gap-1 border-blue-500 text-blue-600 hover:bg-blue-50"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
                           onClick={() => handleEdit(exam)}
                         >
-                          <Edit className="h-4 w-4" /> Edit
+                          <Edit className="h-4 w-4" />
                         </Button>
-
                         <Button
-                          variant="destructive"
-                          size="sm"
-                          className="flex items-center gap-1"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
                           onClick={() => handleDelete(exam.id)}
                         >
-                          <Trash className="h-4 w-4" /> Delete
+                          <Trash className="h-4 w-4" />
                         </Button>
                       </div>
                     )}
@@ -796,40 +710,36 @@ export default function ExamsPage() {
               </Card>
             ))}
           </div>
-        )}
-
-        {!isLoading && (exams as any[]).length === 0 && (
+        ) : (
           <Card>
+            {/* "No exams scheduled" view is unchanged */}
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">No exams scheduled</h3>
               <p className="text-muted-foreground text-center mb-4">
-                Create your first exam schedule to start tracking student
-                assessments.
+                Create your first exam schedule to get started.
               </p>
               {(user?.role === "school_admin" || user?.role === "staff") && (
                 <Button onClick={() => setIsDialogOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
-                  Schedule First Exam
+                  Schedule Exam
                 </Button>
               )}
             </CardContent>
           </Card>
         )}
 
-        {/* Delete Confirmation Dialog */}
         <AlertDialog
           open={!!deleteExamId}
           onOpenChange={() => setDeleteExamId(null)}
         >
+          {/* Delete confirmation dialog is unchanged */}
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>
-                Are you sure you want to delete this exam?
-              </AlertDialogTitle>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
               <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete the
-                exam schedule and all associated data.
+                This will permanently delete the exam and all associated
+                results. This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

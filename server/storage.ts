@@ -1439,37 +1439,132 @@ export class DatabaseStorage {
     return exam;
   }
 
-  async getExamsBySchoolId(schoolId: number): Promise<Exam[]> {
-    return await db.select().from(exams).where(eq(exams.school_id, schoolId));
+  async getExamsBySchoolId(
+    schoolId: number
+  ): Promise<(Exam & { subjects_count: number })[]> {
+    return await db
+      .select({
+        id: exams.id,
+        title: exams.title,
+        term: exams.term,
+        class_id: exams.class_id,
+        class_name: exams.class_name,
+        school_id: exams.school_id,
+        start_date: exams.start_date,
+        end_date: exams.end_date,
+        subjects_count: sql<number>`COUNT(${examSubjects.id})`.mapWith(Number),
+      })
+      .from(exams)
+      .leftJoin(examSubjects, eq(exams.id, examSubjects.exam_id))
+      .where(eq(exams.school_id, schoolId))
+      .groupBy(exams.id);
   }
 
   async getExamsByClassId(classId: number): Promise<Exam[]> {
     return await db.select().from(exams).where(eq(exams.class_id, classId));
   }
 
-  async createExam(insertExam: InsertExam): Promise<Exam> {
-    const [exam] = await db.insert(exams).values(insertExam).returning();
+  async createExam(
+    insertExam: InsertExam & {
+      subjects?: Array<{
+        subject_id: number;
+        subject_name?: string;
+        exam_date: string;
+        start_time?: string;
+        end_time?: string;
+        max_marks?: number;
+      }>;
+    }
+  ): Promise<Exam> {
+    // Extract subjects data before creating exam
+    const subjectsData = insertExam.subjects || [];
+
+    // Remove subjects from exam data as it's not part of the schema
+    const { subjects, ...examData } = insertExam;
+
+    const [exam] = await db.insert(exams).values(examData).returning();
+
+    // Create exam_subjects records for each subject in the exam
+    if (subjectsData.length > 0) {
+      const examSubjectsData = subjectsData.map((subject) => ({
+        exam_id: exam.id,
+        subject_id: subject.subject_id,
+        subject_name: subject.subject_name,
+        exam_date: subject.exam_date,
+        start_time: subject.start_time,
+        end_time: subject.end_time,
+        max_marks: subject.max_marks || 100,
+      }));
+
+      await db.insert(examSubjects).values(examSubjectsData);
+    }
+
     return exam;
   }
 
   async updateExam(
     id: number,
-    data: Partial<InsertExam>
+    data: Partial<InsertExam> & {
+      subjects?: Array<{
+        subject_id: number;
+        subject_name?: string;
+        exam_date: string;
+        start_time?: string;
+        end_time?: string;
+        max_marks?: number;
+      }>;
+    }
   ): Promise<Exam | undefined> {
-    const [updated] = await db
-      .update(exams)
-      .set(data)
-      .where(eq(exams.id, id))
-      .returning();
-    return updated;
+    // Use a transaction to ensure all or nothing is updated
+    const updatedExam = await db.transaction(async (tx) => {
+      // 1. Separate the subjects array from the main exam data
+      const subjectsData = data.subjects || [];
+      const { subjects, ...examData } = data;
+
+      // 2. Update the main exam record in the 'exams' table
+      const [updated] = await tx
+        .update(exams)
+        .set(examData)
+        .where(eq(exams.id, id))
+        .returning();
+
+      if (!updated) {
+        // If the exam doesn't exist, throw an error to rollback the transaction
+        throw new Error("Exam not found for update.");
+      }
+
+      // 3. Delete all existing subjects associated with this exam
+      await tx.delete(examSubjects).where(eq(examSubjects.exam_id, id));
+
+      // 4. If new subjects are provided, insert them into the 'exam_subjects' table
+      if (subjectsData.length > 0) {
+        const newExamSubjectsData = subjectsData.map((subject) => ({
+          exam_id: id, // Use the ID of the exam being updated
+          subject_id: subject.subject_id,
+          subject_name: subject.subject_name,
+          exam_date: subject.exam_date,
+          start_time: subject.start_time,
+          end_time: subject.end_time,
+          max_marks: subject.max_marks || 100,
+        }));
+
+        await tx.insert(examSubjects).values(newExamSubjectsData);
+      }
+
+      // 5. Return the updated exam record
+      return updated;
+    });
+
+    return updatedExam;
   }
 
   async deleteExam(id: number): Promise<boolean> {
-    const [deleted] = await db
-      .delete(exams)
-      .where(eq(exams.id, id))
-      .returning();
-    return !!deleted;
+    const result = await db.transaction(async (tx) => {
+      await tx.delete(examSubjects).where(eq(examSubjects.exam_id, id));
+      const [deleted] = await tx.delete(exams).where(eq(exams.id, id)).returning();
+      return !!deleted;
+    });
+    return result;
   }
 
   // ExamSubject operations
@@ -1482,6 +1577,13 @@ export class DatabaseStorage {
   }
 
   async getExamSubjectsByExamId(examId: number): Promise<ExamSubject[]> {
+    return await db
+      .select()
+      .from(examSubjects)
+      .where(eq(examSubjects.exam_id, examId));
+  }
+
+  async getExamSubjects(examId: number): Promise<ExamSubject[]> {
     return await db
       .select()
       .from(examSubjects)
@@ -2084,6 +2186,202 @@ export class DatabaseStorage {
       .where(eq(tests.id, id))
       .returning();
     return !!deleted;
+  }
+
+  // Update exam marks for a subject
+  async updateExamMarks(
+    subjectId: number,
+    marksData: { student_id: number; marks_obtained: number }[]
+  ) {
+    try {
+      // Use a transaction to ensure all updates are atomic
+      await db.transaction(async (tx) => {
+        for (const mark of marksData) {
+          // Check if mark exists
+          const existingMark = await tx
+            .select()
+            .from(marks)
+            .where(
+              and(
+                eq(marks.exam_subject_id, subjectId),
+                eq(marks.student_id, mark.student_id)
+              )
+            )
+            .limit(1);
+
+          if (existingMark.length > 0) {
+            // Update existing mark
+            await tx
+              .update(marks)
+              .set({ marks_obtained: mark.marks_obtained })
+              .where(eq(marks.id, existingMark[0].id));
+          } else {
+            // Create new mark
+            await tx.insert(marks).values({
+              exam_subject_id: subjectId,
+              student_id: mark.student_id,
+              marks_obtained: mark.marks_obtained,
+            });
+          }
+        }
+      });
+      return { success: true };
+    } catch (error) {
+      console.error("Error updating exam marks:", error);
+      throw error;
+    }
+  }
+
+  // Get exam results with subjects and marks
+  async getExamResults(examId: number) {
+    try {
+      // Validate input
+      if (!examId || examId <= 0) {
+        throw new Error("Invalid exam ID provided");
+      }
+
+      // Get the exam details with class information
+      const examWithClass = await db
+        .select({
+          exam: exams,
+          class: {
+            grade: classes.grade,
+            section: classes.section,
+          },
+        })
+        .from(exams)
+        .leftJoin(classes, eq(exams.class_id, classes.id))
+        .where(eq(exams.id, examId))
+        .limit(1);
+
+      if (!examWithClass || examWithClass.length === 0) {
+        throw new Error(`Exam with ID ${examId} not found`);
+      }
+
+      const exam = examWithClass[0].exam;
+      const classInfo = examWithClass[0].class;
+
+      // Get exam subjects with all details from examSubjects table
+      const examSubjectsData = await db
+        .select({
+          id: examSubjects.id,
+          exam_id: examSubjects.exam_id,
+          subject_id: examSubjects.subject_id,
+          subject_name: examSubjects.subject_name,
+          exam_date: examSubjects.exam_date,
+          start_time: examSubjects.start_time,
+          end_time: examSubjects.end_time,
+          max_marks: examSubjects.max_marks,
+        })
+        .from(examSubjects)
+        .where(eq(examSubjects.exam_id, examId));
+
+      if (!examSubjectsData || examSubjectsData.length === 0) {
+        console.warn(`No subjects found for exam ID ${examId}`);
+      }
+
+      // Get all students in the class for this exam
+      const classStudents = await db
+        .select({
+          id: students.id,
+          full_name: students.full_name,
+          roll_no: students.roll_no,
+        })
+        .from(students)
+        .where(eq(students.class_id, exam.class_id))
+        .orderBy(students.roll_no);
+
+      // For each subject, get the marks or create default entries
+      const subjectsWithMarks = await Promise.all(
+        examSubjectsData.map(async (subject) => {
+          try {
+            const marks = await this.getMarksByExamSubjectId(subject.id);
+
+            // Create a map of existing marks by student_id for quick lookup
+            const marksMap = new Map(
+              marks.map((mark) => [mark.student_id, mark])
+            );
+
+            // For each student in the class, get their mark or create a default one
+            const marksWithStudents = classStudents.map((student) => {
+              const existingMark = marksMap.get(student.id);
+
+              if (existingMark) {
+                // Calculate percentage for existing marks
+                const percentage =
+                  subject.max_marks > 0
+                    ? Math.round(
+                        (existingMark.marks_obtained / subject.max_marks) * 100
+                      )
+                    : 0;
+
+                return {
+                  student_id: student.id,
+                  student_name: student.full_name,
+                  roll_no: student.roll_no || 0,
+                  marks_obtained: existingMark.marks_obtained,
+                  percentage: percentage,
+                };
+              } else {
+                // Create default entry with 0 marks
+                return {
+                  student_id: student.id,
+                  student_name: student.full_name,
+                  roll_no: student.roll_no || 0,
+                  marks_obtained: 0,
+                  percentage: 0,
+                };
+              }
+            });
+
+            return {
+              id: subject.id, // This is the exam_subject_id
+              subject_name: subject.subject_name || "Unknown Subject",
+              exam_date: subject.exam_date,
+              start_time: subject.start_time,
+              end_time: subject.end_time,
+              max_marks: subject.max_marks,
+              marks: marksWithStudents,
+            };
+          } catch (error) {
+            console.error(`Error processing subject ${subject.id}:`, error);
+            // Return default entries for all students if there's an error
+            const defaultMarks = classStudents.map((student) => ({
+              student_id: student.id,
+              student_name: student.full_name,
+              roll_no: student.roll_no || 0,
+              marks_obtained: 0,
+              percentage: 0,
+            }));
+
+            return {
+              id: subject.id,
+              subject_name: subject.subject_name || "Unknown Subject",
+              exam_date: subject.exam_date,
+              start_time: subject.start_time,
+              end_time: subject.end_time,
+              max_marks: subject.max_marks,
+              marks: defaultMarks,
+            };
+          }
+        })
+      );
+
+      return {
+        id: exam.id,
+        title: exam.title,
+        term: exam.term,
+        class_name: classInfo
+          ? `${classInfo.grade} ${classInfo.section}`
+          : exam.class_name || "Unknown Class",
+        start_date: exam.start_date,
+        end_date: exam.end_date,
+        subjects: subjectsWithMarks,
+      };
+    } catch (error) {
+      console.error(`Error in getExamResults for exam ID ${examId}:`, error);
+      throw error; // Re-throw to let the caller handle it
+    }
   }
 }
 
