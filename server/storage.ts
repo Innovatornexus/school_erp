@@ -1479,7 +1479,7 @@ export class DatabaseStorage {
       const subjectsData = insertExam.subjects || [];
 
       // Remove subjects from exam data as it's not part of the schema
-      const { subjects, ...examData } = insertExam;
+      const { subjects: _, ...examData } = insertExam;
 
       // Calculate start_date and end_date from subjects if they exist and dates not provided
       if (subjectsData.length > 0) {
@@ -1496,10 +1496,22 @@ export class DatabaseStorage {
 
       // Create exam_subjects records for each subject in the exam
       if (subjectsData.length > 0) {
+        // Get subject names from the subjects table if not provided
+        const subjectIds = subjectsData.map(s => s.subject_id);
+        const subjectsFromDb = await tx
+          .select({ id: subjects.id, subject_name: subjects.subject_name })
+          .from(subjects)
+          .where(inArray(subjects.id, subjectIds));
+        
+        const subjectNamesMap = subjectsFromDb.reduce((acc, s) => {
+          acc[s.id] = s.subject_name;
+          return acc;
+        }, {} as Record<number, string>);
+
         const examSubjectsData = subjectsData.map((subject) => ({
           exam_id: exam.id,
           subject_id: subject.subject_id,
-          subject_name: subject.subject_name,
+          subject_name: subject.subject_name || subjectNamesMap[subject.subject_id] || 'Unknown Subject',
           exam_date: subject.exam_date,
           start_time: subject.start_time,
           end_time: subject.end_time,
@@ -1530,7 +1542,7 @@ export class DatabaseStorage {
     const updatedExam = await db.transaction(async (tx) => {
       // 1. Separate the subjects array from the main exam data
       const subjectsData = data.subjects || [];
-      const { subjects, ...examData } = data;
+      const { subjects: _, ...examData } = data;
 
       // Calculate start_date and end_date from subjects if they exist and dates not provided
       if (subjectsData.length > 0) {
@@ -1560,10 +1572,22 @@ export class DatabaseStorage {
 
       // 4. If new subjects are provided, insert them into the 'exam_subjects' table
       if (subjectsData.length > 0) {
+        // Get subject names from the subjects table if not provided
+        const subjectIds = subjectsData.map(s => s.subject_id);
+        const subjectsFromDb = await tx
+          .select({ id: subjects.id, subject_name: subjects.subject_name })
+          .from(subjects)
+          .where(inArray(subjects.id, subjectIds));
+        
+        const subjectNamesMap = subjectsFromDb.reduce((acc, s) => {
+          acc[s.id] = s.subject_name;
+          return acc;
+        }, {} as Record<number, string>);
+
         const newExamSubjectsData = subjectsData.map((subject) => ({
           exam_id: id, // Use the ID of the exam being updated
           subject_id: subject.subject_id,
-          subject_name: subject.subject_name,
+          subject_name: subject.subject_name || subjectNamesMap[subject.subject_id] || 'Unknown Subject',
           exam_date: subject.exam_date,
           start_time: subject.start_time,
           end_time: subject.end_time,

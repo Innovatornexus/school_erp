@@ -261,13 +261,17 @@ export default function ExamsPage() {
         (latest, s) => (s.exam_date > latest ? s.exam_date : latest),
         data.subjects[0].exam_date
       ),
-      subjects: data.subjects.map((subject) => ({
-        subject_id: subject.subject_id,
-        exam_date: subject.exam_date,
-        start_time: subject.start_time,
-        end_time: subject.end_time,
-        max_marks: 100,
-      })),
+      subjects: data.subjects.map((subject) => {
+        const selectedSubject = subjects.find(s => s.id === subject.subject_id);
+        return {
+          subject_id: subject.subject_id,
+          subject_name: selectedSubject?.subject_name || '',
+          exam_date: subject.exam_date,
+          start_time: subject.start_time,
+          end_time: subject.end_time,
+          max_marks: 100,
+        };
+      }),
     };
 
     if (editingExam) {
