@@ -1,6 +1,6 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { Express } from "express";
+import { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
@@ -12,6 +12,9 @@ import type { User as AppUser } from "@shared/schema";
 declare global {
   namespace Express {
     interface User extends AppUser {}
+    interface Request {
+      user?: User;
+    }
   }
 }
 
@@ -287,7 +290,7 @@ export function setupAuth(app: Express) {
 
   // User login endpoint
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err, user, info) => {
+    passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) return next(err);
       if (!user) {
         return res
@@ -317,22 +320,22 @@ export function setupAuth(app: Express) {
       return res.status(401).json({ message: "Not authenticated" });
     }
     // Return user data without password
-    const { password, ...userWithoutPassword } = req.user as User;
+    const { password, ...userWithoutPassword } = req.user as AppUser;
     res.json(userWithoutPassword);
   });
 
   // Middleware for role-based access control
   const requireRole = (roles: string[]) => {
     return (
-      req: Express.Request,
-      res: Express.Response,
-      next: Express.NextFunction
+      req: Request,
+      res: Response,
+      next: NextFunction
     ) => {
       if (!req.isAuthenticated()) {
         return res.status(401).json({ message: "Authentication required" });
       }
 
-      const user = req.user as User;
+      const user = req.user as AppUser;
       if (!roles.includes(user.role)) {
         return res.status(403).json({ message: "Insufficient permissions" });
       }
