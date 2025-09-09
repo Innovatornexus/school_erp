@@ -6,11 +6,11 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { z } from "zod";
-import type { User as AppUser } from "../shared/schema";
+import type { IUser } from "../shared/schema";
 
 declare global {
   namespace Express {
-    interface User extends AppUser {}
+    interface User extends IUser {}
     interface Request {
       user?: User;
     }
@@ -80,7 +80,7 @@ export function setupAuth(app: Express) {
     secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
-    store: storage.sessionStore,
+    // store: storage.sessionStore, // Using memory store for now
     cookie: {
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       secure: process.env.NODE_ENV === "production",
@@ -122,9 +122,9 @@ export function setupAuth(app: Express) {
   // Deserialize user from the session
   passport.deserializeUser(async (id: string, done) => {
     try {
-      const user = await storage.getUser(parseInt(id));
+      const user = await storage.getUserById(id);
       if (user && user.role === "school_admin") {
-        const schoolAdmin = await storage.getSchoolAdminByUserId(user.id);
+        const schoolAdmin = await storage.getSchoolAdminByUserId(user._id.toString());
         if (schoolAdmin) {
           (user as any).school_id = user.school_id;
         }

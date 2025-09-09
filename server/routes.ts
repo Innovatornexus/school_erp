@@ -4,16 +4,13 @@ import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import { z } from "zod";
 
-// Import Drizzle schemas
+// Import MongoDB schemas
 import { 
   insertSchoolSchema, insertSchoolAdminSchema, insertTeacherSchema, 
   insertStudentSchema, insertClassSchema, insertSubjectSchema, 
-  insertClassSubjectSchema, insertExamSchema, insertFeeStructureSchema, 
-  insertFeePaymentSchema, insertMaterialSchema, insertTestSchema, 
-  insertHomeworkSchema, studentAttendanceInputSchema, 
-  updateStudentAttendanceApiSchema, insertTeacherAttendanceSchema,
-  updateTeacherAttendanceApiSchema, addHolidaysSchema, 
-  generateReportQuerySchema
+  insertClassSubjectSchema, insertExamSchema,
+  insertMaterialSchema, insertTestSchema, 
+  insertHomeworkSchema, insertMessageSchema
 } from "../shared/schema";
 
 // Remove custom schemas - we'll use the Drizzle schemas
