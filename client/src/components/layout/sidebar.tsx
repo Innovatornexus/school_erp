@@ -152,7 +152,7 @@ export default function Sidebar({
           )}
 
           {/* School Admin & Teacher Navigation */}
-          {(user?.role === "school_admin" || user?.role === "staff") && (
+          {(user?.role === "school_admin" || user?.role === "teacher") && (
             <>
               <div className="px-4 mt-6 mb-2 text-xs font-semibold text-blue-300 uppercase tracking-wider">
                 School Management
@@ -167,7 +167,7 @@ export default function Sidebar({
                     }
                   >
                     <Users className="mr-3 h-4 w-4" />
-                    <span>Staff</span>
+                    <span>Teachers</span>
                   </Link>
                   <Link
                     href="/subjects"

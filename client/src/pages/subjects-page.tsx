@@ -181,7 +181,7 @@ export default function SubjectsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...values,
-          school_id: schoolData.id,
+          school_id: schoolData?.id,
         }),
       });
 

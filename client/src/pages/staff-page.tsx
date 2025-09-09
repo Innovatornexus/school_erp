@@ -75,7 +75,7 @@ const staffFormSchema = z
     // Keep subject_specialization as a string in the schema
     subject_specialization: z
       .array(z.string().min(1, "Each subject must be at least 1 character"))
-      .min(1, "At least one subject specialization is required"),
+      .optional(),
 
     gender: z.string().min(1, "Subject Gender is required"),
     joining_date: z.date({

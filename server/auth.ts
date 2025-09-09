@@ -64,7 +64,7 @@ const UserregistrationSchema = z
     confirmPassword: z
       .string()
       .min(6, "Confirm password must be at least 6 characters"),
-    role: z.enum(["super_admin", "school_admin", "student", "staff"]),
+    role: z.enum(["super_admin", "school_admin", "student", "teacher"]),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
@@ -262,6 +262,11 @@ export function setupAuth(app: Express) {
           contact_phone: "",
         });
 
+        // Update user with the school_id
+        const updatedUser = await storage.updateUser(newUser.id, {
+          school_id: school.id
+        });
+        
         // Create school_admin record linking the user and school
         await storage.createSchoolAdmin({
           user_id: newUser.id,
@@ -269,6 +274,11 @@ export function setupAuth(app: Express) {
           full_name: userData.name,
           phone_number: "", // This will be updated later
         });
+        
+        // Update newUser object for login
+        if (updatedUser) {
+          newUser.school_id = school.id;
+        }
       }
 
       // Auto-login after registration

@@ -201,7 +201,7 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({
           "SchoolDataProvider: Fetched admin data:",
           schoolDataResponse
         );
-      } else if (user.role === "staff") {
+      } else if (user.role === "teacher") {
         // First fetch staff data to get school_id
         const staffRes = await fetch(`/api/Teachers/${user.email}/staff`);
         if (!staffRes.ok) throw new Error("Failed to fetch staff data");

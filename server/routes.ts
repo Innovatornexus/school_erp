@@ -80,7 +80,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get a specific school by school id
   app.get(
     "/api/schools/:id",
-    requireRole(["super_admin", "school_admin", "staff"]),
+    requireRole(["super_admin", "school_admin", "teacher"]),
     async (req, res) => {
       try {
         const id = parseInt(req.params.id);
@@ -279,7 +279,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //get staff detail from staff email
   app.get(
     "/api/Teachers/:TeacherEmail/staff",
-    requireRole(["super_admin", "school_admin", "staff"]),
+    requireRole(["super_admin", "school_admin", "teacher"]),
     async (req, res) => {
       try {
         const TeacherEmail = req.params.TeacherEmail;
@@ -301,7 +301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get teachers by school
   app.get(
     "/api/schools/:schoolId/teachers",
-    requireRole(["super_admin", "school_admin", "staff"]),
+    requireRole(["super_admin", "school_admin", "teacher"]),
     async (req, res) => {
       try {
         const schoolId = parseInt(req.params.schoolId);
@@ -446,7 +446,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get classes assigned to a teacher
   app.get(
     "/api/teachers/:teacherId/classes",
-    requireRole(["super_admin", "school_admin", "staff"]),
+    requireRole(["super_admin", "school_admin", "teacher"]),
     async (req, res) => {
       try {
         const teacherId = parseInt(req.params.teacherId);
@@ -466,7 +466,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get students by school
   app.get(
     "/api/schools/all-students/:schoolId",
-    requireRole(["super_admin", "school_admin", "staff"]),
+    requireRole(["super_admin", "school_admin", "teacher"]),
     async (req, res) => {
       try {
         console.log("fetching student by schoolID..");
@@ -482,7 +482,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get students by class
   app.get(
     "/api/classes/:classId/students",
-    requireRole(["super_admin", "school_admin", "staff"]),
+    requireRole(["super_admin", "school_admin", "teacher"]),
     async (req, res) => {
       try {
         const classId = parseInt(req.params.classId);
@@ -726,7 +726,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get subjects by school
   app.get(
     "/api/schools/:schoolId/subjects",
-    requireRole(["super_admin", "school_admin", "staff"]),
+    requireRole(["super_admin", "school_admin", "teacher"]),
     async (req, res) => {
       try {
         const schoolId = parseInt(req.params.schoolId);
@@ -1136,7 +1136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get attendance by class and date
   app.get(
     "/api/classes/:classId/attendance",
-    requireRole(["super_admin", "school_admin", "staff"]),
+    requireRole(["super_admin", "school_admin", "teacher"]),
     async (req, res) => {
       try {
         const classId = parseInt(req.params.classId);
@@ -1145,7 +1145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const user = req.user as Express.User;
 
-        if (user.role === "staff") {
+        if (user.role === "teacher") {
           const teacher = await storage.getTeacherByUserId(user.id);
           if (!teacher) {
             return res.status(403).json({ message: "Forbidden" });
@@ -1242,7 +1242,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const classId = parseInt(req.params.classId);
         const user = req.user as Express.User;
 
-        if (user.role === "staff") {
+        if (user.role === "teacher") {
           const teacher = await storage.getTeacherByUserId(user.id);
           if (!teacher) {
             return res.status(403).json({ message: "Forbidden" });
@@ -2133,7 +2133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get(
     "/api/classes/:classId/messages",
-    requireRole(["super_admin", "school_admin", "staff"]),
+    requireRole(["super_admin", "school_admin", "teacher"]),
     async (req, res) => {
       try {
         const classId = parseInt(req.params.classId);
@@ -2188,7 +2188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new material
   app.post(
     "/api/materials",
-    requireRole(["super_admin", "school_admin", "staff"]),
+    requireRole(["super_admin", "school_admin", "teacher"]),
     async (req, res) => {
       try {
         console.log("material data :: ", req.body);
@@ -2226,7 +2226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update a material
   app.put(
     "/api/materials/:id",
-    requireRole(["super_admin", "school_admin", "staff"]),
+    requireRole(["super_admin", "school_admin", "teacher"]),
     async (req, res) => {
       try {
         const id = parseInt(req.params.id);
@@ -2252,7 +2252,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete a material
   app.delete(
     "/api/materials/:id",
-    requireRole(["super_admin", "school_admin", "staff"]),
+    requireRole(["super_admin", "school_admin", "teacher"]),
     async (req, res) => {
       try {
         const id = parseInt(req.params.id);
@@ -2352,7 +2352,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new test
   app.post(
     "/api/tests",
-    requireRole(["super_admin", "school_admin", "staff"]),
+    requireRole(["super_admin", "school_admin", "teacher"]),
     async (req, res) => {
       try {
         const testData = insertTestSchema.parse(req.body);
@@ -2389,7 +2389,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update a test
   app.put(
     "/api/tests/:id",
-    requireRole(["super_admin", "school_admin", "staff"]),
+    requireRole(["super_admin", "school_admin", "teacher"]),
     async (req, res) => {
       try {
         const id = parseInt(req.params.id);
@@ -2432,7 +2432,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete a test
   app.delete(
     "/api/tests/:id",
-    requireRole(["super_admin", "school_admin", "staff"]),
+    requireRole(["super_admin", "school_admin", "teacher"]),
     async (req, res) => {
       try {
         const id = parseInt(req.params.id);
@@ -2510,7 +2510,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new homework
   app.post(
     "/api/homework",
-    requireRole(["super_admin", "school_admin", "staff"]),
+    requireRole(["super_admin", "school_admin", "teacher"]),
     async (req, res) => {
       try {
         const homeworkData = insertHomeworkSchema.parse(req.body);
@@ -2544,7 +2544,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update a homework
   app.put(
     "/api/homework/:id",
-    requireRole(["super_admin", "school_admin", "staff"]),
+    requireRole(["super_admin", "school_admin", "teacher"]),
     async (req, res) => {
       try {
         const id = parseInt(req.params.id);
@@ -2581,7 +2581,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete a homework
   app.delete(
     "/api/homework/:id",
-    requireRole(["super_admin", "school_admin", "staff"]),
+    requireRole(["super_admin", "school_admin", "teacher"]),
     async (req, res) => {
       try {
         const id = parseInt(req.params.id);
