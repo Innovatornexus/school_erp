@@ -61,7 +61,53 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({
         studentsInAssignedClasses?: any;
         teachers: any;
       };
-      if (user.role === "school_admin") {
+      if (user.role === "super_admin") {
+        // Super admin can access all schools
+        const schoolsRes = await fetch("/api/schools");
+        if (!schoolsRes.ok)
+          throw new Error("Failed to fetch schools for super admin");
+        const schools = await schoolsRes.json();
+        console.log("SchoolDataProvider: Fetched all schools:", schools);
+        
+        // For super admin, we'll use the first school or empty data if no schools
+        const firstSchool = schools.length > 0 ? schools[0] : null;
+        
+        schoolDataResponse = {
+          school: firstSchool,
+          classes: [],
+          subjects: [],
+          students: [],
+          teachers: [],
+        };
+        
+        // If there's a school, fetch its data
+        if (firstSchool) {
+          const [classesRes, subjectsRes, studentsRes, teachersRes] =
+            await Promise.all([
+              fetch(`/api/schools/${firstSchool.id}/classes`),
+              fetch(`/api/schools/${firstSchool.id}/subjects`),
+              fetch(`/api/schools/all-students/${firstSchool.id}`),
+              fetch(`/api/schools/${firstSchool.id}/teachers`),
+            ]);
+
+          if (classesRes.ok) {
+            const classesData = await classesRes.json();
+            schoolDataResponse.classes = classesData;
+          }
+          if (subjectsRes.ok) {
+            const subjectsData = await subjectsRes.json();
+            schoolDataResponse.subjects = subjectsData;
+          }
+          if (studentsRes.ok) {
+            const studentsData = await studentsRes.json();
+            schoolDataResponse.students = studentsData;
+          }
+          if (teachersRes.ok) {
+            const teachersData = await teachersRes.json();
+            schoolDataResponse.teachers = teachersData;
+          }
+        }
+      } else if (user.role === "school_admin") {
         const schoolRes = await fetch(`/api/schools/${user.school_id}`);
         if (!schoolRes.ok)
           throw new Error("Failed to fetch school data for admin");
