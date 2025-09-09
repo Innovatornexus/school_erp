@@ -61,7 +61,7 @@ const schoolAdminSchema = new Schema<ISchoolAdmin>({
   user_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   school_id: { type: Schema.Types.ObjectId, ref: 'School', required: true },
   full_name: { type: String, required: true },
-  phone_number: { type: String, required: true }
+  phone_number: { type: String, default: "" }
 });
 
 export const SchoolAdmin = mongoose.model<ISchoolAdmin>('SchoolAdmin', schoolAdminSchema);
@@ -426,7 +426,7 @@ export const insertSchoolAdminSchema = z.object({
   user_id: z.string(),
   school_id: z.string(),
   full_name: z.string().min(1),
-  phone_number: z.string()
+  phone_number: z.string().default("")
 });
 
 export const insertTeacherSchema = z.object({
