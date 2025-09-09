@@ -106,17 +106,18 @@ export const StudentManager = ({
     resolver: zodResolver(studentFormSchema),
     defaultValues: {
       fullName: "",
-      studentEmail: "",
+      email: "",
       password: "",
       confirmPassword: "",
       gender: undefined, // Let placeholder show
-      dob: undefined,
+      dateOfBirth: undefined,
       classId: undefined,
       parentContact: "",
       admissionDate: new Date(),
       parentName: "",
       address: "",
       status: "Active",
+      schoolId: "",
     },
   });
 
@@ -127,7 +128,7 @@ export const StudentManager = ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: data.fullName,
-          email: data.studentEmail,
+          email: data.email,
           password: data.password,
           confirmPassword: data.confirmPassword,
           role: "student",
@@ -149,7 +150,7 @@ export const StudentManager = ({
           userId: userId,
           schoolId: user?.schoolId,
           admissionDate: format(data.admissionDate, "yyyy-MM-dd"),
-          dob: format(data.dob, "yyyy-MM-dd"),
+          dob: format(data.dateOfBirth, "yyyy-MM-dd"),
         }),
       });
 
@@ -170,7 +171,7 @@ export const StudentManager = ({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             ...data,
-            dob: format(data.dob, "yyyy-MM-dd"),
+            dob: format(data.dateOfBirth, "yyyy-MM-dd"),
             admissionDate: format(data.admissionDate, "yyyy-MM-dd"),
           }),
         });
@@ -293,7 +294,7 @@ export const StudentManager = ({
     },
     {
       header: "Date of Birth",
-      accessorKey: "dob",
+      accessorKey: "dateOfBirth",
       cell: (student: StudentItem) => format(new Date(student.dob), "PPP"),
     },
     { header: "Parent Contact", accessorKey: "parentContact" },
@@ -404,7 +405,7 @@ export const StudentManager = ({
                     />
                     <FormField
                       control={form.control}
-                      name="studentEmail"
+                      name="email"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Student Email</FormLabel>
@@ -475,7 +476,7 @@ export const StudentManager = ({
                     />
                     <FormField
                       control={form.control}
-                      name="dob"
+                      name="dateOfBirth"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
                           <FormLabel>Date of Birth</FormLabel>
