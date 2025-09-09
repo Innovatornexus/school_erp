@@ -123,14 +123,9 @@ export function setupAuth(app: Express) {
   passport.deserializeUser(async (id: string, done) => {
     try {
       const user = await storage.getUserById(id);
-      if (user && user.role === "school_admin") {
-        const schoolAdmin = await storage.getSchoolAdminByUserId(user._id.toString());
-        if (schoolAdmin) {
-          (user as any).school_id = user.school_id;
-        }
-      }
       done(null, user);
     } catch (err) {
+      console.error("Error deserializing user:", err);
       done(err);
     }
   });
@@ -283,10 +278,19 @@ export function setupAuth(app: Express) {
 
       // Auto-login after registration
       req.login(newUser, (err) => {
-        if (err) return next(err);
-        // Return user data without password
-        const { password, ...userWithoutPassword } = newUser;
-        res.status(201).json(userWithoutPassword);
+        if (err) {
+          console.error("Auto-login error:", err);
+          return next(err);
+        }
+        console.log("Auto-login successful for user:", newUser.email);
+        // Return user data without password and transform to frontend format
+        const { password, __v, ...userWithoutPassword } = newUser;
+        const transformedUser = {
+          ...userWithoutPassword,
+          id: newUser._id.toString(),
+          school_id: newUser.school_id ? newUser.school_id.toString() : null,
+        };
+        res.status(201).json(transformedUser);
       });
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -329,6 +333,10 @@ export function setupAuth(app: Express) {
 
   // Get current user data endpoint
   app.get("/api/user", (req, res) => {
+    console.log("Checking authentication for /api/user - isAuthenticated():", req.isAuthenticated());
+    console.log("Session ID:", req.sessionID);
+    console.log("User in session:", req.user ? "User found" : "No user");
+    
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Not authenticated" });
     }
