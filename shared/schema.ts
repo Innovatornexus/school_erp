@@ -1,803 +1,567 @@
-import {
-  pgTable,
-  text,
-  serial,
-  integer,
-  date,
-  timestamp,
-  doublePrecision,
-  boolean,
-  unique,
-  pgEnum,
-  varchar,
-} from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
+import mongoose, { Schema, Document } from 'mongoose';
 import { z } from "zod";
-import { format, sub } from "date-fns";
 
-// Material type enum
-export const materialTypeEnum = pgEnum("material_type", [
-  "notes",
-  "presentation",
-  "video",
-  "document",
-  "link",
-]);
+// MongoDB Schema Definitions
 
-// Test type enum
-export const testTypeEnum = pgEnum("test_type", [
-  "quiz",
-  "unit_test",
-  "class_test",
-  "mock_exam",
-]);
+// User Schema
+export interface IUser extends Document {
+  school_id?: mongoose.Types.ObjectId;
+  class_id?: mongoose.Types.ObjectId;
+  name: string;
+  email: string;
+  password: string;
+  role: 'super_admin' | 'school_admin' | 'teacher' | 'student' | 'parent';
+  created_at: Date;
+}
 
-// Core user entity with authentication info
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  school_id: integer("school_id").references(() => schools.id),
-  class_id: integer("class_id"),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  password: text("password").notNull(),
-  role: text("role").notNull(), // 'super_admin', 'school_admin', 'teacher', 'student', 'parent'
-  created_at: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const insertUserSchema = createInsertSchema(users).omit({
-  id: true,
-  created_at: true,
-});
-
-// Schools information
-export const schools = pgTable("schools", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  address: text("address").notNull(),
-  contact_email: text("contact_email").notNull(),
-  contact_phone: text("contact_phone").notNull(),
-  created_at: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const insertSchoolSchema = createInsertSchema(schools).omit({
-  id: true,
-  created_at: true,
-});
-
-// School administrators
-export const schoolAdmins = pgTable("school_admins", {
-  id: serial("id").primaryKey(),
-  user_id: integer("user_id")
-    .notNull()
-    .references(() => users.id),
-  school_id: integer("school_id")
-    .notNull()
-    .references(() => schools.id),
-  full_name: text("full_name").notNull(),
-  phone_number: text("phone_number").notNull(),
-});
-
-export const insertSchoolAdminSchema = createInsertSchema(schoolAdmins).omit({
-  id: true,
-});
-
-// Teachers information
-export const teachers = pgTable("teachers", {
-  id: serial("id").primaryKey(),
-  user_id: integer("user_id")
-    .notNull()
-    .references(() => users.id),
-  school_id: integer("school_id")
-    .notNull()
-    .references(() => schools.id),
-  full_name: text("full_name").notNull(),
-  email: text("email").notNull(),
-  gender: text("gender").notNull(),
-  joining_date: date("joining_date").notNull(),
-  phone_number: text("phone_number").notNull(),
-  status: text("status").notNull(),
-  subject_specialization: text("subject_specialization").array(),
-});
-
-export const insertTeacherSchema = createInsertSchema(teachers).omit({
-  id: true,
-});
-
-// Students information
-export const students = pgTable("students", {
-  id: serial("id").primaryKey(),
-  user_id: integer("user_id")
-    .notNull()
-    .references(() => users.id),
-  roll_no: integer("roll_no"),
-  school_id: integer("school_id")
-    .notNull()
-    .references(() => schools.id),
-  class_id: integer("class_id").references(() => classes.id),
-  full_name: text("full_name").notNull(),
-  student_email: text("student_email").notNull().unique(),
-  password: text("password").notNull(),
-  dob: date("dob").notNull(),
-  gender: text("gender").notNull(),
-  admission_date: date("admission_date").notNull(),
-  parent_name: text("parent_name"),
-  parent_contact: text("parent_contact"),
-  parent_address: text("parent_address"),
-  status: text("status").notNull(),
-});
-
-export const insertStudentSchema = createInsertSchema(students).omit({
-  id: true,
-});
-
-// Classes information
-export const classes = pgTable("classes", {
-  id: serial("id").primaryKey(),
-  school_id: integer("school_id")
-    .notNull()
-    .references(() => schools.id),
-  grade: text("grade").notNull(),
-  section: text("section").notNull(),
-  class_teacher_id: integer("class_teacher_id").references(() => teachers.id),
-  class_teacher_name: text("class_teacher_name"),
-});
-
-export const insertClassSchema = createInsertSchema(classes).omit({
-  id: true,
-});
-
-// Subjects information
-export const subjects = pgTable("subjects", {
-  id: serial("id").primaryKey(),
-  school_id: integer("school_id")
-    .notNull()
-    .references(() => schools.id),
-  subject_name: text("subject_name").notNull(),
-  subject_description: text("subject_description"),
-});
-
-export const insertSubjectSchema = createInsertSchema(subjects).omit({
-  id: true,
-});
-
-// Class-Subject mapping for teacher
-export const classSubjects = pgTable("class_subjects", {
-  id: serial("id").primaryKey(),
-  class_id: integer("class_id")
-    .notNull()
-    .references(() => classes.id),
-  subject_id: integer("subject_id")
-    .notNull()
-    .references(() => subjects.id),
-  teacher_id: integer("teacher_id").references(() => teachers.id),
-});
-
-export const insertClassSubjectSchema = createInsertSchema(classSubjects).omit({
-  id: true,
-});
-
-// Teacher-Subject mapping
-export const teacherSubjects = pgTable("teacher_subjects", {
-  id: serial("id").primaryKey(),
-  teacher_id: integer("teacher_id")
-    .notNull()
-    .references(() => teachers.id),
-  subject_id: integer("subject_id")
-    .notNull()
-    .references(() => subjects.id),
-});
-
-export const insertTeacherSubjectSchema = createInsertSchema(
-  teacherSubjects
-).omit({
-  id: true,
-});
-
-// Student attendance records
-export const studentAttendance = pgTable("student_attendance", {
-  id: serial("id").primaryKey(),
-  student_id: integer("student_id")
-    .notNull()
-    .references(() => students.id),
-  class_id: integer("class_id")
-    .notNull()
-    .references(() => classes.id),
-  roll_no: integer("roll_no"),
-  date: date("date").notNull(),
-  day: text("day").notNull(),
-  status: text("status").notNull(), // 'present', 'absent', 'late'
-  entry_id: integer("entry_id")
-    .notNull()
-    .references(() => users.id),
-  entry_name: text("entry_name").notNull(),
-  notes: text("notes"),
-});
-
-export const studentAttendanceApiSchema = z.object({
-  id: z.number(), // required for update
-  student_id: z.number(),
-  class_id: z.number(),
-  date: z.string(),
-  day: z.string(),
-  status: z.enum(["present", "absent", "late"]),
-  notes: z.string().nullable().optional(),
-});
-export const updateStudentAttendanceApiSchema = z.object({
-  student_id: z.number(),
-  class_id: z.number(),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), // Validates 'YYYY-MM-DD' format
-  day: z.string(),
-  status: z.enum(["present", "absent", "late"]),
-});
-
-export const updateTeacherAttendanceApiSchema = z.object({
-  teacher_id: z.number(),
-  school_id: z.number(),
-  teacher_name: z.string(),
-
-  // FIX: Add this preprocess block to convert the string to a Date object
-  date: z.preprocess(
-    (val) =>
-      val instanceof Date || typeof val === "string"
-        ? new Date(val)
-        : undefined,
-    z.date()
-  ),
-
-  day: z.string(),
-  status: z.enum(["present", "absent", "leave"]),
-});
-
-// In your schema file (e.g., db/schema.ts)
-export const holidays = pgTable(
-  "holidays",
-  {
-    id: serial("id").primaryKey(),
-    school_id: integer("school_id")
-      .notNull()
-      .references(() => schools.id, { onDelete: "cascade" }),
-    date: date("date").notNull(),
-    name: text("name").notNull(), // e.g., "Diwali", "Summer Vacation", "Sunday"
+const userSchema = new Schema<IUser>({
+  school_id: { type: Schema.Types.ObjectId, ref: 'School' },
+  class_id: { type: Schema.Types.ObjectId, ref: 'Class' },
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  role: { 
+    type: String, 
+    required: true,
+    enum: ['super_admin', 'school_admin', 'teacher', 'student', 'parent']
   },
-  (table) => {
-    return {
-      // Ensure a school can't have the same holiday date twice
-      unq: unique().on(table.school_id, table.date),
-    };
-  }
-);
-
-// Schema for adding a list of holidays
-export const addHolidaysSchema = z.object({
-  year: z.number().int().positive(),
-  // Expecting dates in "YYYY-MM-DD" format
-  holidays: z.array(
-    z.object({
-      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-      name: z.string().min(1),
-    })
-  ),
+  created_at: { type: Date, default: Date.now }
 });
 
-// Schema for validating report generation query parameters
-export const generateReportQuerySchema = z.object({
-  reportType: z.enum(["student", "teacher"]),
-  periodType: z.enum(["month", "year"]),
-  year: z
-    .string()
-    .regex(/^\d{4}$/)
-    .transform(Number), // Convert year string to number
-  month: z
-    .string()
-    .optional()
-    .transform((v) => (v ? Number(v) : undefined)), // Optional month string to number
-  classId: z
-    .string()
-    .optional()
-    .transform((v) => (v ? Number(v) : undefined)), // Optional classId string to number
+export const User = mongoose.model<IUser>('User', userSchema);
+
+// School Schema
+export interface ISchool extends Document {
+  name: string;
+  address: string;
+  contact_email: string;
+  contact_phone: string;
+  created_at: Date;
+}
+
+const schoolSchema = new Schema<ISchool>({
+  name: { type: String, required: true },
+  address: { type: String, required: true },
+  contact_email: { type: String, required: true },
+  contact_phone: { type: String, required: true },
+  created_at: { type: Date, default: Date.now }
 });
-// schema for data received from frontend
-export const studentAttendanceInputSchema = z.object({
-  student_id: z.number(),
-  class_id: z.number(),
+
+export const School = mongoose.model<ISchool>('School', schoolSchema);
+
+// School Admin Schema
+export interface ISchoolAdmin extends Document {
+  user_id: mongoose.Types.ObjectId;
+  school_id: mongoose.Types.ObjectId;
+  full_name: string;
+  phone_number: string;
+}
+
+const schoolAdminSchema = new Schema<ISchoolAdmin>({
+  user_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  school_id: { type: Schema.Types.ObjectId, ref: 'School', required: true },
+  full_name: { type: String, required: true },
+  phone_number: { type: String, required: true }
+});
+
+export const SchoolAdmin = mongoose.model<ISchoolAdmin>('SchoolAdmin', schoolAdminSchema);
+
+// Teacher Schema
+export interface ITeacher extends Document {
+  user_id: mongoose.Types.ObjectId;
+  school_id: mongoose.Types.ObjectId;
+  full_name: string;
+  email: string;
+  gender: string;
+  joining_date: Date;
+  phone_number: string;
+  status: string;
+  subject_specialization?: string[];
+}
+
+const teacherSchema = new Schema<ITeacher>({
+  user_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  school_id: { type: Schema.Types.ObjectId, ref: 'School', required: true },
+  full_name: { type: String, required: true },
+  email: { type: String, required: true },
+  gender: { type: String, required: true },
+  joining_date: { type: Date, required: true },
+  phone_number: { type: String, required: true },
+  status: { type: String, required: true },
+  subject_specialization: [{ type: String }]
+});
+
+export const Teacher = mongoose.model<ITeacher>('Teacher', teacherSchema);
+
+// Student Schema
+export interface IStudent extends Document {
+  user_id: mongoose.Types.ObjectId;
+  roll_no?: number;
+  school_id: mongoose.Types.ObjectId;
+  class_id?: mongoose.Types.ObjectId;
+  full_name: string;
+  student_email: string;
+  password: string;
+  dob: Date;
+  gender: string;
+  admission_date: Date;
+  parent_name?: string;
+  parent_contact?: string;
+  parent_address?: string;
+  status: string;
+}
+
+const studentSchema = new Schema<IStudent>({
+  user_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  roll_no: { type: Number },
+  school_id: { type: Schema.Types.ObjectId, ref: 'School', required: true },
+  class_id: { type: Schema.Types.ObjectId, ref: 'Class' },
+  full_name: { type: String, required: true },
+  student_email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  dob: { type: Date, required: true },
+  gender: { type: String, required: true },
+  admission_date: { type: Date, required: true },
+  parent_name: { type: String },
+  parent_contact: { type: String },
+  parent_address: { type: String },
+  status: { type: String, required: true }
+});
+
+export const Student = mongoose.model<IStudent>('Student', studentSchema);
+
+// Class Schema
+export interface IClass extends Document {
+  school_id: mongoose.Types.ObjectId;
+  grade: string;
+  section: string;
+  class_teacher_id?: mongoose.Types.ObjectId;
+  class_teacher_name?: string;
+}
+
+const classSchema = new Schema<IClass>({
+  school_id: { type: Schema.Types.ObjectId, ref: 'School', required: true },
+  grade: { type: String, required: true },
+  section: { type: String, required: true },
+  class_teacher_id: { type: Schema.Types.ObjectId, ref: 'Teacher' },
+  class_teacher_name: { type: String }
+});
+
+export const Class = mongoose.model<IClass>('Class', classSchema);
+
+// Subject Schema
+export interface ISubject extends Document {
+  school_id: mongoose.Types.ObjectId;
+  subject_name: string;
+  subject_description?: string;
+}
+
+const subjectSchema = new Schema<ISubject>({
+  school_id: { type: Schema.Types.ObjectId, ref: 'School', required: true },
+  subject_name: { type: String, required: true },
+  subject_description: { type: String }
+});
+
+export const Subject = mongoose.model<ISubject>('Subject', subjectSchema);
+
+// Class Subject Schema
+export interface IClassSubject extends Document {
+  class_id: mongoose.Types.ObjectId;
+  subject_id: mongoose.Types.ObjectId;
+  teacher_id?: mongoose.Types.ObjectId;
+}
+
+const classSubjectSchema = new Schema<IClassSubject>({
+  class_id: { type: Schema.Types.ObjectId, ref: 'Class', required: true },
+  subject_id: { type: Schema.Types.ObjectId, ref: 'Subject', required: true },
+  teacher_id: { type: Schema.Types.ObjectId, ref: 'Teacher' }
+});
+
+export const ClassSubject = mongoose.model<IClassSubject>('ClassSubject', classSubjectSchema);
+
+// Teacher Subject Schema
+export interface ITeacherSubject extends Document {
+  teacher_id: mongoose.Types.ObjectId;
+  subject_id: mongoose.Types.ObjectId;
+}
+
+const teacherSubjectSchema = new Schema<ITeacherSubject>({
+  teacher_id: { type: Schema.Types.ObjectId, ref: 'Teacher', required: true },
+  subject_id: { type: Schema.Types.ObjectId, ref: 'Subject', required: true }
+});
+
+export const TeacherSubject = mongoose.model<ITeacherSubject>('TeacherSubject', teacherSubjectSchema);
+
+// Student Attendance Schema
+export interface IStudentAttendance extends Document {
+  student_id: mongoose.Types.ObjectId;
+  class_id: mongoose.Types.ObjectId;
+  roll_no?: number;
+  date: Date;
+  day: string;
+  status: 'present' | 'absent' | 'late';
+  entry_id: mongoose.Types.ObjectId;
+  entry_name: string;
+  notes?: string;
+}
+
+const studentAttendanceSchema = new Schema<IStudentAttendance>({
+  student_id: { type: Schema.Types.ObjectId, ref: 'Student', required: true },
+  class_id: { type: Schema.Types.ObjectId, ref: 'Class', required: true },
+  roll_no: { type: Number },
+  date: { type: Date, required: true },
+  day: { type: String, required: true },
+  status: { type: String, required: true, enum: ['present', 'absent', 'late'] },
+  entry_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  entry_name: { type: String, required: true },
+  notes: { type: String }
+});
+
+export const StudentAttendance = mongoose.model<IStudentAttendance>('StudentAttendance', studentAttendanceSchema);
+
+// Teacher Attendance Schema
+export interface ITeacherAttendance extends Document {
+  teacher_id: mongoose.Types.ObjectId;
+  teacher_name: string;
+  school_id: mongoose.Types.ObjectId;
+  date: Date;
+  day: string;
+  status: 'present' | 'absent' | 'leave';
+}
+
+const teacherAttendanceSchema = new Schema<ITeacherAttendance>({
+  teacher_id: { type: Schema.Types.ObjectId, ref: 'Teacher', required: true },
+  teacher_name: { type: String, required: true },
+  school_id: { type: Schema.Types.ObjectId, ref: 'School', required: true },
+  date: { type: Date, required: true },
+  day: { type: String, required: true },
+  status: { type: String, required: true, enum: ['present', 'absent', 'leave'] }
+});
+
+export const TeacherAttendance = mongoose.model<ITeacherAttendance>('TeacherAttendance', teacherAttendanceSchema);
+
+// Exam Schema
+export interface IExam extends Document {
+  school_id: mongoose.Types.ObjectId;
+  title: string;
+  start_date: Date;
+  end_date: Date;
+  term: string;
+  class_id: mongoose.Types.ObjectId;
+  class_name?: string;
+}
+
+const examSchema = new Schema<IExam>({
+  school_id: { type: Schema.Types.ObjectId, ref: 'School', required: true },
+  title: { type: String, required: true },
+  start_date: { type: Date, required: true },
+  end_date: { type: Date, required: true },
+  term: { type: String, required: true },
+  class_id: { type: Schema.Types.ObjectId, ref: 'Class', required: true },
+  class_name: { type: String }
+});
+
+export const Exam = mongoose.model<IExam>('Exam', examSchema);
+
+// Message Schema
+export interface IMessage extends Document {
+  sender_id: number;
+  sender_role?: string;
+  receiver_role?: string;
+  receiver_id?: number;
+  school_id: number;
+  message_type: string;
+  content: string;
+  status?: string;
+  created_at: Date;
+}
+
+const messageSchema = new Schema<IMessage>({
+  sender_id: { type: Number, required: true },
+  sender_role: { type: String },
+  receiver_role: { type: String },
+  receiver_id: { type: Number },
+  school_id: { type: Number, required: true },
+  message_type: { type: String, required: true },
+  content: { type: String, required: true },
+  status: { type: String, default: "unread" },
+  created_at: { type: Date, default: Date.now }
+});
+
+export const Message = mongoose.model<IMessage>('Message', messageSchema);
+
+// Homework Schema
+export interface IHomework extends Document {
+  teacher_id: mongoose.Types.ObjectId;
+  teacher_name?: string;
+  school_id: mongoose.Types.ObjectId;
+  class_id: mongoose.Types.ObjectId;
+  class_name?: string;
+  subject_id: mongoose.Types.ObjectId;
+  subject_name?: string;
+  title: string;
+  description: string;
+  assigned_date: Date;
+  due_date: Date;
+  instructions?: string;
+  attachment_url?: string;
+  status?: string;
+  created_at: Date;
+}
+
+const homeworkSchema = new Schema<IHomework>({
+  teacher_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  teacher_name: { type: String },
+  school_id: { type: Schema.Types.ObjectId, ref: 'School', required: true },
+  class_id: { type: Schema.Types.ObjectId, ref: 'Class', required: true },
+  class_name: { type: String },
+  subject_id: { type: Schema.Types.ObjectId, ref: 'Subject', required: true },
+  subject_name: { type: String },
+  title: { type: String, required: true },
+  description: { type: String, required: true },
+  assigned_date: { type: Date, required: true },
+  due_date: { type: Date, required: true },
+  instructions: { type: String },
+  attachment_url: { type: String },
+  status: { type: String, default: "active" },
+  created_at: { type: Date, default: Date.now }
+});
+
+export const Homework = mongoose.model<IHomework>('Homework', homeworkSchema);
+
+// Material Schema
+export interface IMaterial extends Document {
+  teacher_id: mongoose.Types.ObjectId;
+  teacher_name?: string;
+  class_id: mongoose.Types.ObjectId;
+  class_name?: string;
+  subject_id: mongoose.Types.ObjectId;
+  subject_name?: string;
+  title: string;
+  description: string;
+  material_type: 'notes' | 'presentation' | 'video' | 'document' | 'link';
+  file_url?: string;
+  content?: string;
+  created_at: Date;
+}
+
+const materialSchema = new Schema<IMaterial>({
+  teacher_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  teacher_name: { type: String },
+  class_id: { type: Schema.Types.ObjectId, ref: 'Class', required: true },
+  class_name: { type: String },
+  subject_id: { type: Schema.Types.ObjectId, ref: 'Subject', required: true },
+  subject_name: { type: String },
+  title: { type: String, required: true },
+  description: { type: String, required: true },
+  material_type: { 
+    type: String, 
+    required: true,
+    enum: ['notes', 'presentation', 'video', 'document', 'link']
+  },
+  file_url: { type: String },
+  content: { type: String },
+  created_at: { type: Date, default: Date.now }
+});
+
+export const Material = mongoose.model<IMaterial>('Material', materialSchema);
+
+// Test Schema
+export interface ITest extends Document {
+  teacher_id: mongoose.Types.ObjectId;
+  teacher_name?: string;
+  class_id: mongoose.Types.ObjectId;
+  class_name?: string;
+  subject_id: mongoose.Types.ObjectId;
+  subject_name?: string;
+  title: string;
+  description: string;
+  test_date: Date;
+  duration: number;
+  max_marks: number;
+  test_type: 'quiz' | 'unit_test' | 'class_test' | 'mock_exam';
+  created_at: Date;
+}
+
+const testSchema = new Schema<ITest>({
+  teacher_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  teacher_name: { type: String },
+  class_id: { type: Schema.Types.ObjectId, ref: 'Class', required: true },
+  class_name: { type: String },
+  subject_id: { type: Schema.Types.ObjectId, ref: 'Subject', required: true },
+  subject_name: { type: String },
+  title: { type: String, required: true },
+  description: { type: String, required: true },
+  test_date: { type: Date, required: true },
+  duration: { type: Number, required: true },
+  max_marks: { type: Number, required: true },
+  test_type: { 
+    type: String, 
+    required: true,
+    enum: ['quiz', 'unit_test', 'class_test', 'mock_exam']
+  },
+  created_at: { type: Date, default: Date.now }
+});
+
+export const Test = mongoose.model<ITest>('Test', testSchema);
+
+// Zod Validation Schemas
+export const insertUserSchema = z.object({
+  school_id: z.string().optional(),
+  class_id: z.string().optional(),
+  name: z.string().min(1),
+  email: z.string().email(),
+  password: z.string().min(6),
+  role: z.enum(['super_admin', 'school_admin', 'teacher', 'student', 'parent'])
+});
+
+export const insertSchoolSchema = z.object({
+  name: z.string().min(1),
+  address: z.string(),
+  contact_email: z.string().email(),
+  contact_phone: z.string()
+});
+
+export const insertSchoolAdminSchema = z.object({
+  user_id: z.string(),
+  school_id: z.string(),
+  full_name: z.string().min(1),
+  phone_number: z.string()
+});
+
+export const insertTeacherSchema = z.object({
+  user_id: z.string(),
+  school_id: z.string(),
+  full_name: z.string().min(1),
+  email: z.string().email(),
+  gender: z.string(),
+  joining_date: z.date(),
+  phone_number: z.string(),
+  status: z.string(),
+  subject_specialization: z.array(z.string()).optional()
+});
+
+export const insertStudentSchema = z.object({
+  user_id: z.string(),
   roll_no: z.number().optional(),
-  date: z.preprocess(
-    (val) =>
-      typeof val === "string"
-        ? val
-        : val instanceof Date
-        ? format(val, "yyyy-MM-dd")
-        : undefined,
-    z.string()
-  ),
-  day: z.string(),
-  status: z.enum(["present", "absent", "late"]),
-  notes: z.string().optional(),
-});
-export const insertStudentAttendanceSchema =
-  studentAttendanceInputSchema.extend({
-    entry_id: z.number(),
-    entry_name: z.string().min(1, "Entry name is required"),
-  });
-
-// Teacher attendance records
-export const teacherAttendance = pgTable("teacher_attendance", {
-  id: serial("id").primaryKey(),
-  teacher_id: integer("teacher_id")
-    .notNull()
-    .references(() => teachers.id),
-  teacher_name: text("teacher_name").notNull(),
-
-  school_id: integer("school_id")
-    .notNull()
-    .references(() => schools.id),
-  date: date("date").notNull(),
-  day: text("day").notNull(),
-  status: text("status").notNull(), // 'present', 'absent', 'leave'
+  school_id: z.string(),
+  class_id: z.string().optional(),
+  full_name: z.string().min(1),
+  student_email: z.string().email(),
+  password: z.string().min(6),
+  dob: z.date(),
+  gender: z.string(),
+  admission_date: z.date(),
+  parent_name: z.string().optional(),
+  parent_contact: z.string().optional(),
+  parent_address: z.string().optional(),
+  status: z.string()
 });
 
-export const insertTeacherAttendanceSchema = z.object({
-  teacher_id: z.number(),
-  school_id: z.number(),
-  teacher_name: z.string(),
-  // FIX: This preprocess block correctly handles incoming strings or Date objects
-  // and ensures the final parsed type is a Date object.
-  date: z.preprocess(
-    (val) =>
-      val instanceof Date || typeof val === "string"
-        ? new Date(val)
-        : undefined,
-    z.date()
-  ),
-  day: z.string(),
-  status: z.enum(["present", "absent", "leave"]),
+export const insertClassSchema = z.object({
+  school_id: z.string(),
+  grade: z.string().min(1),
+  section: z.string().min(1),
+  class_teacher_id: z.string().optional(),
+  class_teacher_name: z.string().optional()
 });
 
-// Weekly lesson plans submitted by teachers
-export const lessonPlans = pgTable("lesson_plans", {
-  id: serial("id").primaryKey(),
-  teacher_id: integer("teacher_id")
-    .notNull()
-    .references(() => teachers.id),
-  class_id: integer("class_id")
-    .notNull()
-    .references(() => classes.id),
-  subject_id: integer("subject_id")
-    .notNull()
-    .references(() => subjects.id),
-  week_start_date: date("week_start_date").notNull(),
-  plan_content: text("plan_content").notNull(),
-  status: text("status").notNull(), // 'draft', 'submitted', 'approved', 'rejected'
+export const insertSubjectSchema = z.object({
+  school_id: z.string(),
+  subject_name: z.string().min(1),
+  subject_description: z.string().optional()
 });
 
-export const insertLessonPlanSchema = createInsertSchema(lessonPlans).omit({
-  id: true,
+export const insertClassSubjectSchema = z.object({
+  class_id: z.string(),
+  subject_id: z.string(),
+  teacher_id: z.string().optional()
 });
 
-// Learning materials shared by teachers
-export const materials = pgTable("materials", {
-  id: serial("id").primaryKey(),
-  teacher_id: integer("teacher_id")
-    .notNull()
-    .references(() => users.id),
-  teacher_name: text("teacher_name"),
-  class_id: integer("class_id")
-    .notNull()
-    .references(() => classes.id),
-  class_name: text("class_name"),
-  subject_id: integer("subject_id")
-    .notNull()
-    .references(() => subjects.id),
-  subject_name: text("subject_name"),
-  title: text("title").notNull(),
-  description: text("description").notNull(),
-  material_type: materialTypeEnum("material_type").notNull(),
-  file_url: text("file_url"),
-  content: text("content"),
-  created_at: timestamp("created_at").defaultNow().notNull(),
+export const insertTeacherSubjectSchema = z.object({
+  teacher_id: z.string(),
+  subject_id: z.string()
 });
 
-export const insertMaterialSchema = createInsertSchema(materials).omit({
-  id: true,
-  created_at: true,
+export const insertHomeworkSchema = z.object({
+  teacher_id: z.string(),
+  teacher_name: z.string().optional(),
+  school_id: z.string(),
+  class_id: z.string(),
+  class_name: z.string().optional(),
+  subject_id: z.string(),
+  subject_name: z.string().optional(),
+  title: z.string().min(1),
+  description: z.string().min(1),
+  assigned_date: z.date(),
+  due_date: z.date(),
+  instructions: z.string().optional(),
+  attachment_url: z.string().optional(),
+  status: z.string().optional()
 });
 
-// Tests and quizzes created by teachers
-export const tests = pgTable("tests", {
-  id: serial("id").primaryKey(),
-  teacher_id: integer("teacher_id")
-    .notNull()
-    .references(() => users.id),
-  teacher_name: text("teacher_name"),
-  class_id: integer("class_id")
-    .notNull()
-    .references(() => classes.id),
-  class_name: text("class_name"),
-  subject_id: integer("subject_id")
-    .notNull()
-    .references(() => subjects.id),
-  subject_name: text("subject_name"),
-  title: text("title").notNull(),
-  description: text("description").notNull(),
-  test_date: date("test_date").notNull(),
-  duration: integer("duration").notNull(), // in minutes
-  max_marks: integer("max_marks").notNull(),
-  test_type: testTypeEnum("test_type").notNull(),
-  created_at: timestamp("created_at").defaultNow().notNull(),
+export const insertMaterialSchema = z.object({
+  teacher_id: z.string(),
+  teacher_name: z.string().optional(),
+  class_id: z.string(),
+  class_name: z.string().optional(),
+  subject_id: z.string(),
+  subject_name: z.string().optional(),
+  title: z.string().min(1),
+  description: z.string().min(1),
+  material_type: z.enum(['notes', 'presentation', 'video', 'document', 'link']),
+  file_url: z.string().optional(),
+  content: z.string().optional()
 });
 
-export const insertTestSchema = createInsertSchema(tests).omit({
-  id: true,
-  created_at: true,
+export const insertTestSchema = z.object({
+  teacher_id: z.string(),
+  teacher_name: z.string().optional(),
+  class_id: z.string(),
+  class_name: z.string().optional(),
+  subject_id: z.string(),
+  subject_name: z.string().optional(),
+  title: z.string().min(1),
+  description: z.string().min(1),
+  test_date: z.date(),
+  duration: z.number().positive(),
+  max_marks: z.number().positive(),
+  test_type: z.enum(['quiz', 'unit_test', 'class_test', 'mock_exam'])
 });
 
-// Type definitions for materials and tests
-export type Material = typeof materials.$inferSelect;
-export type InsertMaterial = z.infer<typeof insertMaterialSchema>;
-
-export type Test = typeof tests.$inferSelect;
-export type InsertTest = z.infer<typeof insertTestSchema>;
-
-// Exams information
-
-export const exams = pgTable("exams", {
-  id: serial("id").primaryKey(),
-
-  school_id: integer("school_id")
-    .notNull()
-    .references(() => schools.id),
-
-  title: text("title").notNull(),
-
-  // overall exam date range
-  start_date: date("start_date").notNull(),
-  end_date: date("end_date").notNull(),
-
-  term: text("term").notNull(),
-
-  class_id: integer("class_id")
-    .notNull()
-    .references(() => classes.id),
-  class_name: text("class_name"),
-});
-
-export const insertExamSchema = createInsertSchema(exams).omit({
-  id: true,
-}).extend({
-  subjects: z.array(z.object({
-    subject_id: z.number(),
-    subject_name: z.string().optional(),
-    exam_date: z.string(),
-    start_time: z.string().optional(),
-    end_time: z.string().optional(),
-    max_marks: z.number().optional(),
-  })).optional(),
-});
-
-// Exam subjects details
-export const examSubjects = pgTable("exam_subjects", {
-  id: serial("id").primaryKey(),
-  exam_id: integer("exam_id")
-    .notNull()
-    .references(() => exams.id, { onDelete: "cascade" }),
-  subject_id: integer("subject_id")
-    .notNull()
-    .references(() => subjects.id),
-  subject_name: text("subject_name"),
-  exam_date: date("exam_date").notNull(),
-  start_time: varchar("start_time", { length: 10 }),
-  end_time: varchar("end_time", { length: 10 }),
-  max_marks: integer("max_marks").notNull(),
-});
-
-export const insertExamSubjectSchema = createInsertSchema(examSubjects).omit({
-  id: true,
-});
-
-// Student marks in exams
-export const marks = pgTable("marks", {
-  id: serial("id").primaryKey(),
-  student_id: integer("student_id")
-    .notNull()
-    .references(() => students.id),
-  exam_subject_id: integer("exam_subject_id")
-    .notNull()
-    .references(() => examSubjects.id, { onDelete: "cascade" }),
-  marks_obtained: doublePrecision("marks_obtained").notNull(),
-});
-
-export const insertMarkSchema = createInsertSchema(marks).omit({
-  id: true,
-});
-
-// Fee structure by class and term
-export const feeStructures = pgTable("fee_structures", {
-  id: serial("id").primaryKey(),
-  school_id: integer("school_id")
-    .notNull()
-    .references(() => schools.id),
-  class_id: integer("class_id")
-    .notNull()
-    .references(() => classes.id),
-  term: text("term").notNull(),
-  amount: doublePrecision("amount").notNull(),
-});
-
-export const insertFeeStructureSchema = createInsertSchema(feeStructures).omit({
-  id: true,
-});
-
-// Fee payments by students
-export const feePayments = pgTable("fee_payments", {
-  id: serial("id").primaryKey(),
-  student_id: integer("student_id")
-    .notNull()
-    .references(() => students.id),
-  amount_paid: doublePrecision("amount_paid").notNull(),
-  payment_date: date("payment_date").notNull(),
-  receipt_url: text("receipt_url"),
-  term: text("term").notNull(),
-  status: text("status").notNull(), // 'paid', 'pending', 'overdue'
-});
-
-export const insertFeePaymentSchema = createInsertSchema(feePayments).omit({
-  id: true,
-});
-
-// School bills management
-export const bills = pgTable("bills", {
-  id: serial("id").primaryKey(),
-  school_id: integer("school_id")
-    .notNull()
-    .references(() => schools.id),
-  title: text("title").notNull(),
-  amount: doublePrecision("amount").notNull(),
-  bill_month: text("bill_month").notNull(),
-  category: text("category").notNull(), // 'electricity', 'water', 'salaries', etc.
-  upload_url: text("upload_url"),
-  status: text("status").notNull(), // 'paid', 'pending', 'overdue'
-});
-
-export const insertBillSchema = createInsertSchema(bills).omit({
-  id: true,
-});
-
-// Messages for communication
-export const messages = pgTable("messages", {
-  id: serial("id").primaryKey(),
-  sender_id: integer("sender_id").notNull(),
-  sender_role: text("sender_role"),
-  receiver_role: text("receiver_role"), // e.g., 'student', 'teacher', etc.
-  receiver_id: integer("receiver_id"), // null for role-based broadcast
-  school_id: integer("school_id").notNull(),
-  message_type: text("message_type").notNull(), // e.g., 'announcement', 'direct'
-  content: text("content").notNull(),
-  status: text("status").default("unread"), // optional column
-  created_at: timestamp("created_at", { withTimezone: false }).defaultNow(),
-});
-
-export const teacher_messages = pgTable("teacher_messages", {
-  id: serial("id").primaryKey(),
-  sender_id: integer("sender_id").references(() => users.id),
-  receiver_id: integer("receiver_id").references(() => users.id),
-  message: text("message").notNull(),
-  created_at: timestamp("created_at").defaultNow().notNull(),
-});
-export const messageTargets = pgTable("message_targets", {
-  id: serial("id").primaryKey(),
-  message_id: integer("message_id")
-    .notNull()
-    .references(() => messages.id),
-  target_type: text("target_type").notNull(), // 'user', 'class', 'subject', 'role'
-  target_id: integer("target_id"), // nullable for 'role'
-});
-export const messageReads = pgTable("message_reads", {
-  id: serial("id").primaryKey(),
-  message_id: integer("message_id").references(() => messages.id),
-  user_id: integer("user_id").references(() => users.id),
-  read_at: timestamp("read_at"),
+export const insertExamSchema = z.object({
+  school_id: z.string(),
+  title: z.string().min(1),
+  start_date: z.date(),
+  end_date: z.date(),
+  term: z.string().min(1),
+  class_id: z.string(),
+  class_name: z.string().optional()
 });
 
 export const insertMessageSchema = z.object({
   sender_id: z.number(),
   sender_role: z.string(),
   receiver_role: z.string().nullable(),
-  receiver_id: z.union([z.number(), z.array(z.number())]), // <-- updated
+  receiver_id: z.union([z.number(), z.array(z.number())]),
   school_id: z.number(),
   message_type: z.string(),
   content: z.string(),
-  status: z.string().nullable().default("unread"),
+  status: z.string().nullable().default("unread")
 });
 
-// Class-specific messages
-export const classMessages = pgTable("class_messages", {
-  id: serial("id").primaryKey(),
-  class_id: integer("class_id")
-    .notNull()
-    .references(() => classes.id),
-  sender_id: integer("sender_id")
-    .notNull()
-    .references(() => users.id),
-  content: text("content").notNull(),
-  created_at: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const insertClassMessageSchema = createInsertSchema(classMessages).omit({
-  id: true,
-  created_at: true,
-});
-
-// Class logs for subject covered updates
-export const classLogs = pgTable("class_logs", {
-  id: serial("id").primaryKey(),
-  class_id: integer("class_id")
-    .notNull()
-    .references(() => classes.id),
-  teacher_id: integer("teacher_id")
-    .notNull()
-    .references(() => teachers.id),
-  subject_id: integer("subject_id")
-    .notNull()
-    .references(() => subjects.id),
-  log_date: date("log_date").notNull(),
-  covered_topics: text("covered_topics").notNull(),
-  notes: text("notes"),
-  created_at: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const insertClassLogSchema = createInsertSchema(classLogs).omit({
-  id: true,
-  created_at: true,
-});
-
-// Homework - daily homework assigned by teachers
-export const homework = pgTable("homework", {
-  id: serial("id").primaryKey(),
-  teacher_id: integer("teacher_id")
-    .notNull()
-    .references(() => users.id),
-  teacher_name: text("teacher_name"),
-  school_id: integer("school_id")
-    .notNull()
-    .references(() => schools.id),
-
-  class_id: integer("class_id")
-    .notNull()
-    .references(() => classes.id),
-  class_name: text("class_name"),
-  subject_id: integer("subject_id")
-    .notNull()
-    .references(() => subjects.id),
-  subject_name: text("subject_name"),
-  title: text("title").notNull(),
-  description: text("description").notNull(),
-  assigned_date: date("assigned_date").notNull(),
-  due_date: date("due_date").notNull(),
-  instructions: text("instructions"),
-  attachment_url: text("attachment_url"),
-  status: text("status").default("active"), // 'active', 'completed', 'cancelled'
-  created_at: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const insertHomeworkSchema = createInsertSchema(homework).omit({
-  id: true,
-  created_at: true,
-});
-
-// Homework submissions by students
-export const homeworkSubmissions = pgTable("homework_submissions", {
-  id: serial("id").primaryKey(),
-  homework_id: integer("homework_id")
-    .notNull()
-    .references(() => homework.id),
-  student_id: integer("student_id")
-    .notNull()
-    .references(() => students.id),
-  submission_date: timestamp("submission_date").defaultNow().notNull(),
-  content: text("content").notNull(),
-  grade: text("grade"),
-  feedback: text("feedback"),
-  status: text("status").default("submitted"), // 'submitted', 'graded', 'late'
-});
-
-export const insertHomeworkSubmissionSchema = createInsertSchema(
-  homeworkSubmissions
-).omit({
-  id: true,
-  submission_date: true,
-});
-// Timetable management
-export const timetables = pgTable("timetables", {
-  id: serial("id").primaryKey(),
-  school_id: integer("school_id")
-    .notNull()
-    .references(() => schools.id),
-  class_id: integer("class_id")
-    .notNull()
-    .references(() => classes.id),
-  image_url: text("image_url").notNull(),
-  upload_date: date("upload_date").defaultNow().notNull(),
-  created_at: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const insertTimetableSchema = createInsertSchema(timetables).omit({
-  id: true,
-  created_at: true,
-});
-
-// Export new types
-export type ClassLog = typeof classLogs.$inferSelect;
-export type InsertClassLog = z.infer<typeof insertClassLogSchema>;
-
-export type Timetable = typeof timetables.$inferSelect;
-export type InsertTimetable = z.infer<typeof insertTimetableSchema>;
-
-// Export types for use in the application
-export type User = typeof users.$inferSelect;
+// Type exports
 export type InsertUser = z.infer<typeof insertUserSchema>;
-
-export type School = typeof schools.$inferSelect;
 export type InsertSchool = z.infer<typeof insertSchoolSchema>;
-
-export type SchoolAdmin = typeof schoolAdmins.$inferSelect;
 export type InsertSchoolAdmin = z.infer<typeof insertSchoolAdminSchema>;
-
-export type Teacher = typeof teachers.$inferSelect;
 export type InsertTeacher = z.infer<typeof insertTeacherSchema>;
-
-export type Student = typeof students.$inferSelect;
 export type InsertStudent = z.infer<typeof insertStudentSchema>;
-
-export type Class = typeof classes.$inferSelect;
 export type InsertClass = z.infer<typeof insertClassSchema>;
-
-export type Subject = typeof subjects.$inferSelect;
 export type InsertSubject = z.infer<typeof insertSubjectSchema>;
-
-export type ClassSubject = typeof classSubjects.$inferSelect;
 export type InsertClassSubject = z.infer<typeof insertClassSubjectSchema>;
-
-export type StudentAttendance = typeof studentAttendance.$inferSelect;
-export type InsertStudentAttendance = z.infer<
-  typeof insertStudentAttendanceSchema
->;
-
-export type TeacherAttendance = typeof teacherAttendance.$inferSelect;
-export type InsertTeacherAttendance = z.infer<
-  typeof insertTeacherAttendanceSchema
->;
-
-export type LessonPlan = typeof lessonPlans.$inferSelect;
-export type InsertLessonPlan = z.infer<typeof insertLessonPlanSchema>;
-
-export type Homework = typeof homework.$inferSelect;
+export type InsertTeacherSubject = z.infer<typeof insertTeacherSubjectSchema>;
 export type InsertHomework = z.infer<typeof insertHomeworkSchema>;
-
-export type HomeworkSubmission = typeof homeworkSubmissions.$inferSelect;
-export type InsertHomeworkSubmission = z.infer<
-  typeof insertHomeworkSubmissionSchema
->;
-
-export type Exam = typeof exams.$inferSelect;
+export type InsertMaterial = z.infer<typeof insertMaterialSchema>;
+export type InsertTest = z.infer<typeof insertTestSchema>;
 export type InsertExam = z.infer<typeof insertExamSchema>;
-
-export type ExamSubject = typeof examSubjects.$inferSelect;
-export type InsertExamSubject = z.infer<typeof insertExamSubjectSchema>;
-
-export type Mark = typeof marks.$inferSelect;
-export type InsertMark = z.infer<typeof insertMarkSchema>;
-
-export type FeeStructure = typeof feeStructures.$inferSelect;
-export type InsertFeeStructure = z.infer<typeof insertFeeStructureSchema>;
-
-export type FeePayment = typeof feePayments.$inferSelect;
-export type InsertFeePayment = z.infer<typeof insertFeePaymentSchema>;
-
-export type Bill = typeof bills.$inferSelect;
-export type InsertBill = z.infer<typeof insertBillSchema>;
-
-export type Message = typeof messages.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
-
-export type ClassMessage = typeof classMessages.$inferSelect;
-export type InsertClassMessage = z.infer<typeof insertClassMessageSchema>;
