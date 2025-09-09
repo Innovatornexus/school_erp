@@ -253,26 +253,26 @@ export function setupAuth(app: Express) {
         const school = await storage.createSchool({
           name: schoolName,
           address: "", // These will be updated later by the admin
-          contact_email: userData.email,
-          contact_phone: "",
+          contactEmail: userData.email,
+          contactPhone: "",
         });
 
-        // Update user with the school_id
+        // Update user with the schoolId
         const updatedUser = await storage.updateUser(newUser._id.toString(), {
-          school_id: school._id
+          schoolId: school._id
         });
         
         // Create school_admin record linking the user and school
         await storage.createSchoolAdmin({
-          user_id: newUser._id.toString(),
-          school_id: school._id.toString(),
-          full_name: userData.name,
-          phone_number: "", // This will be updated later
+          userId: newUser._id.toString(),
+          schoolId: school._id.toString(),
+          fullName: userData.name,
+          phoneNumber: "", // This will be updated later
         });
         
         // Update newUser object for login
         if (updatedUser) {
-          newUser.school_id = school._id;
+          (newUser as any).schoolId = school._id;
         }
       }
 
@@ -288,7 +288,7 @@ export function setupAuth(app: Express) {
         const transformedUser = {
           ...userWithoutPassword,
           id: newUser._id.toString(),
-          school_id: newUser.school_id ? newUser.school_id.toString() : null,
+          schoolId: (newUser as any).schoolId ? (newUser as any).schoolId.toString() : null,
         };
         res.status(201).json(transformedUser);
       });
