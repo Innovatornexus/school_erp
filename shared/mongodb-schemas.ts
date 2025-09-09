@@ -165,6 +165,65 @@ export const insertTeacherSchema = z.object({
   subjectSpecialization: z.array(z.string()).optional()
 });
 
+// Student interface and schema
+export interface IStudent extends mongoose.Document {
+  userId: mongoose.Types.ObjectId;
+  schoolId: mongoose.Types.ObjectId;
+  classId?: mongoose.Types.ObjectId;
+  fullName: string;
+  email: string;
+  gender: 'male' | 'female' | 'other';
+  dateOfBirth: Date;
+  admissionDate: Date;
+  parentName?: string;
+  parentContact: string;
+  parentId?: mongoose.Types.ObjectId;
+  address?: string;
+  status: 'Active' | 'Inactive';
+  createdAt: Date;
+}
+
+const studentSchema = new Schema<IStudent>({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  schoolId: { type: Schema.Types.ObjectId, ref: 'School', required: true },
+  classId: { type: Schema.Types.ObjectId, ref: 'Class' },
+  fullName: { type: String, required: true },
+  email: { type: String, required: true },
+  gender: { type: String, enum: ['male', 'female', 'other'], required: true },
+  dateOfBirth: { type: Date, required: true },
+  admissionDate: { type: Date, required: true },
+  parentName: String,
+  parentContact: { type: String, required: true },
+  parentId: { type: Schema.Types.ObjectId, ref: 'User' },
+  address: String,
+  status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },
+  createdAt: { type: Date, default: Date.now }
+});
+
+export const Student = mongoose.model<IStudent>('Student', studentSchema);
+
+export type InsertStudent = z.infer<typeof insertStudentSchema>;
+
+export const insertStudentSchema = z.object({
+  userId: z.string(),
+  schoolId: z.string(),
+  classId: z.string().optional(),
+  fullName: z.string().min(1),
+  email: z.string().email(),
+  gender: z.enum(['male', 'female', 'other']),
+  dateOfBirth: z.union([z.date(), z.string()]).transform((date) => {
+    return date instanceof Date ? date : new Date(date);
+  }),
+  admissionDate: z.union([z.date(), z.string()]).transform((date) => {
+    return date instanceof Date ? date : new Date(date);
+  }),
+  parentName: z.string().optional(),
+  parentContact: z.string().min(1),
+  parentId: z.string().optional(),
+  address: z.string().optional(),
+  status: z.enum(['Active', 'Inactive']).default('Active')
+});
+
 export const insertClassSchema = z.object({
   schoolId: z.string(),
   grade: z.string().min(1),

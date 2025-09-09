@@ -1,9 +1,8 @@
 import { storage } from "../mongodb-storage";
-// Student schema not yet defined
-// import type { IStudent, InsertStudent } from "../../shared/mongodb-schemas";
+import type { IStudent, InsertStudent } from "../../shared/mongodb-schemas";
+import mongoose from "mongoose";
 
 export class StudentService {
-  // TODO: Define student service when student schema is ready
   // Transform MongoDB student to frontend format
   static transformStudentToFrontend(student: IStudent) {
     const studentObj = student.toObject();
@@ -35,8 +34,23 @@ export class StudentService {
   }
 
   // Update student
-  static async updateStudent(id: string, studentData: Partial<IStudent>) {
-    const student = await storage.updateStudent(id, studentData);
+  static async updateStudent(id: string, studentData: any) {
+    // Convert string IDs to ObjectIds for database operations
+    const processedData: any = { ...studentData };
+    if (studentData.schoolId && typeof studentData.schoolId === 'string') {
+      processedData.schoolId = new mongoose.Types.ObjectId(studentData.schoolId);
+    }
+    if (studentData.userId && typeof studentData.userId === 'string') {
+      processedData.userId = new mongoose.Types.ObjectId(studentData.userId);
+    }
+    if (studentData.classId && typeof studentData.classId === 'string') {
+      processedData.classId = new mongoose.Types.ObjectId(studentData.classId);
+    }
+    if (studentData.parentId && typeof studentData.parentId === 'string') {
+      processedData.parentId = new mongoose.Types.ObjectId(studentData.parentId);
+    }
+    
+    const student = await storage.updateStudent(id, processedData);
     return student ? this.transformStudentToFrontend(student) : null;
   }
 

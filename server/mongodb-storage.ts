@@ -1,8 +1,8 @@
 import mongoose from 'mongoose';
 import {
-  User, School, SchoolAdmin, Teacher, Subject, Class,
-  IUser, ISchool, ISchoolAdmin, ITeacher, ISubject, IClass,
-  InsertUser, InsertSchool, InsertSchoolAdmin, InsertTeacher, InsertSubject, InsertClass
+  User, School, SchoolAdmin, Teacher, Subject, Class, Student,
+  IUser, ISchool, ISchoolAdmin, ITeacher, ISubject, IClass, IStudent,
+  InsertUser, InsertSchool, InsertSchoolAdmin, InsertTeacher, InsertSubject, InsertClass, InsertStudent
 } from "../shared/mongodb-schemas";
 
 export interface IStorage {
@@ -45,6 +45,14 @@ export interface IStorage {
   getSubjectsBySchool(schoolId: string): Promise<ISubject[]>;
   updateSubject(id: string, subjectData: Partial<ISubject>): Promise<ISubject | null>;
   deleteSubject(id: string): Promise<boolean>;
+
+  // Student operations
+  createStudent(studentData: InsertStudent): Promise<IStudent>;
+  getStudent(id: string): Promise<IStudent | null>;
+  getStudentsBySchool(schoolId: string): Promise<IStudent[]>;
+  getStudentsByClass(classId: string): Promise<IStudent[]>;
+  updateStudent(id: string, studentData: Partial<IStudent>): Promise<IStudent | null>;
+  deleteStudent(id: string): Promise<boolean>;
 }
 
 export class MongoDBStorage implements IStorage {
@@ -257,6 +265,54 @@ export class MongoDBStorage implements IStorage {
       return false;
     }
     const result = await Subject.findByIdAndDelete(id).exec();
+    return result !== null;
+  }
+
+  // Student operations
+  async createStudent(studentData: InsertStudent): Promise<IStudent> {
+    const student = new Student({
+      ...studentData,
+      userId: new mongoose.Types.ObjectId(studentData.userId),
+      schoolId: new mongoose.Types.ObjectId(studentData.schoolId),
+      classId: studentData.classId ? new mongoose.Types.ObjectId(studentData.classId) : undefined,
+      parentId: studentData.parentId ? new mongoose.Types.ObjectId(studentData.parentId) : undefined,
+    });
+    return await student.save();
+  }
+
+  async getStudent(id: string): Promise<IStudent | null> {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return null;
+    }
+    return await Student.findById(id).exec();
+  }
+
+  async getStudentsBySchool(schoolId: string): Promise<IStudent[]> {
+    if (!mongoose.Types.ObjectId.isValid(schoolId)) {
+      return [];
+    }
+    return await Student.find({ schoolId: new mongoose.Types.ObjectId(schoolId) }).exec();
+  }
+
+  async getStudentsByClass(classId: string): Promise<IStudent[]> {
+    if (!mongoose.Types.ObjectId.isValid(classId)) {
+      return [];
+    }
+    return await Student.find({ classId: new mongoose.Types.ObjectId(classId) }).exec();
+  }
+
+  async updateStudent(id: string, studentData: Partial<IStudent>): Promise<IStudent | null> {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return null;
+    }
+    return await Student.findByIdAndUpdate(id, studentData, { new: true }).exec();
+  }
+
+  async deleteStudent(id: string): Promise<boolean> {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return false;
+    }
+    const result = await Student.findByIdAndDelete(id).exec();
     return result !== null;
   }
 }
