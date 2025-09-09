@@ -1,0 +1,192 @@
+hook.js:608 Warning: validateDOMNesting(...): <a> cannot appear as a descendant of <a>. Error Component Stack
+    at a (<anonymous>)
+    at a (<anonymous>)
+    at wouter.js?v=3ccbcea1:279:18
+    at nav (<anonymous>)
+    at div (<anonymous>)
+    at div (<anonymous>)
+    at chunk-IWFJIMEQ.js?v=3ccbcea1:42:13
+    at @radix-ui_react-scroll-area.js?v=3ccbcea1:117:13
+    at div (<anonymous>)
+    at chunk-IWFJIMEQ.js?v=3ccbcea1:42:13
+    at Provider (chunk-OXZDJRWN.js?v=3ccbcea1:38:15)
+    at @radix-ui_react-scroll-area.js?v=3ccbcea1:55:7
+    at _c (scroll-area.tsx:9:6)
+    at div (<anonymous>)
+    at Sidebar (sidebar.tsx:30:3)
+    at div (<anonymous>)
+    at div (<anonymous>)
+    at DashboardLayout (dashboard-layout.tsx:14:43)
+    at StaffPage (staff-page.tsx:104:20)
+    at Route (wouter.js?v=3ccbcea1:265:16)
+    at ProtectedRoute (protected-route.tsx:10:3)
+    at Switch (wouter.js?v=3ccbcea1:321:17)
+    at Router (<anonymous>)
+    at Provider (chunk-OXZDJRWN.js?v=3ccbcea1:38:15)
+    at TooltipProvider (@radix-ui_react-tooltip.js?v=3ccbcea1:68:5)
+    at SchoolDataProvider (SchoolDataContext.tsx:29:3)
+    at AuthProvider (use-auth.tsx:42:32)
+    at QueryClientProvider (@tanstack_react-query.js?v=3ccbcea1:2805:3)
+    at App (<anonymous>)
+    at V (next-themes.js?v=3ccbcea1:44:25)
+    at J (next-themes.js?v=3ccbcea1:42:18)
+overrideMethod @ hook.js:608
+printWarning @ chunk-RPCDYKBN.js?v=3ccbcea1:521
+error @ chunk-RPCDYKBN.js?v=3ccbcea1:505
+validateDOMNesting @ chunk-RPCDYKBN.js?v=3ccbcea1:8256
+createInstance @ chunk-RPCDYKBN.js?v=3ccbcea1:8328
+completeWork @ chunk-RPCDYKBN.js?v=3ccbcea1:16290
+completeUnitOfWork @ chunk-RPCDYKBN.js?v=3ccbcea1:19224
+performUnitOfWork @ chunk-RPCDYKBN.js?v=3ccbcea1:19206
+workLoopSync @ chunk-RPCDYKBN.js?v=3ccbcea1:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=3ccbcea1:19116
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=3ccbcea1:18874
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=3ccbcea1:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=3ccbcea1:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=3ccbcea1:555
+flush @ @tanstack_react-query.js?v=3ccbcea1:569
+batch @ @tanstack_react-query.js?v=3ccbcea1:587
+dispatch_fn @ @tanstack_react-query.js?v=3ccbcea1:996
+setData @ @tanstack_react-query.js?v=3ccbcea1:696
+onSuccess @ @tanstack_react-query.js?v=3ccbcea1:897
+resolve @ @tanstack_react-query.js?v=3ccbcea1:456
+Promise.then
+run @ @tanstack_react-query.js?v=3ccbcea1:498
+start @ @tanstack_react-query.js?v=3ccbcea1:536
+fetch @ @tanstack_react-query.js?v=3ccbcea1:926
+executeFetch_fn @ @tanstack_react-query.js?v=3ccbcea1:2211
+onSubscribe @ @tanstack_react-query.js?v=3ccbcea1:1898
+subscribe @ @tanstack_react-query.js?v=3ccbcea1:24
+(anonymous) @ @tanstack_react-query.js?v=3ccbcea1:3022
+subscribeToStore @ chunk-RPCDYKBN.js?v=3ccbcea1:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=3ccbcea1:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=3ccbcea1:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=3ccbcea1:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=3ccbcea1:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=3ccbcea1:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=3ccbcea1:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=3ccbcea1:19447
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=3ccbcea1:18868
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=3ccbcea1:9119
+commitRootImpl @ chunk-RPCDYKBN.js?v=3ccbcea1:19432
+commitRoot @ chunk-RPCDYKBN.js?v=3ccbcea1:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=3ccbcea1:18805
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=3ccbcea1:18718
+workLoop @ chunk-RPCDYKBN.js?v=3ccbcea1:197
+flushWork @ chunk-RPCDYKBN.js?v=3ccbcea1:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=3ccbcea1:384
+SchoolDataContext.tsx:43 SchoolDataProvider: Starting data fetch for user: kalaimagalschool@email.com with role: school_admin and schoolId: 68c052057fe7a830eb29ed97
+SchoolDataContext.tsx:115 SchoolDataProvider: Fetched school data: {_id: '68c052057fe7a830eb29ed97', name: 'kalaimagal', address: '', contactEmail: 'kalaimagalschool@email.com', contactPhone: '', …}
+SchoolDataContext.tsx:135 SchoolDataProvider: Fetched classes data: [{…}]
+SchoolDataContext.tsx:137 SchoolDataProvider: Fetched subjects data: [{…}]
+SchoolDataContext.tsx:139 SchoolDataProvider: Fetched students data: []
+SchoolDataContext.tsx:141 SchoolDataProvider: Fetched teachers data: []
+SchoolDataContext.tsx:153 Error fetching subjects for class 68c0626d43d1890a30afda46: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+overrideMethod @ hook.js:608
+(anonymous) @ SchoolDataContext.tsx:153
+await in (anonymous)
+(anonymous) @ SchoolDataContext.tsx:144
+await in (anonymous)
+(anonymous) @ SchoolDataContext.tsx:326
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=3ccbcea1:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=3ccbcea1:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=3ccbcea1:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=3ccbcea1:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=3ccbcea1:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=3ccbcea1:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=3ccbcea1:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=3ccbcea1:19416
+commitRoot @ chunk-RPCDYKBN.js?v=3ccbcea1:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=3ccbcea1:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=3ccbcea1:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=3ccbcea1:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=3ccbcea1:555
+flush @ @tanstack_react-query.js?v=3ccbcea1:569
+batch @ @tanstack_react-query.js?v=3ccbcea1:587
+dispatch_fn @ @tanstack_react-query.js?v=3ccbcea1:996
+setData @ @tanstack_react-query.js?v=3ccbcea1:696
+onSuccess @ @tanstack_react-query.js?v=3ccbcea1:897
+resolve @ @tanstack_react-query.js?v=3ccbcea1:456
+Promise.then
+run @ @tanstack_react-query.js?v=3ccbcea1:498
+start @ @tanstack_react-query.js?v=3ccbcea1:536
+fetch @ @tanstack_react-query.js?v=3ccbcea1:926
+executeFetch_fn @ @tanstack_react-query.js?v=3ccbcea1:2211
+onSubscribe @ @tanstack_react-query.js?v=3ccbcea1:1898
+subscribe @ @tanstack_react-query.js?v=3ccbcea1:24
+(anonymous) @ @tanstack_react-query.js?v=3ccbcea1:3022
+subscribeToStore @ chunk-RPCDYKBN.js?v=3ccbcea1:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=3ccbcea1:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=3ccbcea1:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=3ccbcea1:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=3ccbcea1:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=3ccbcea1:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=3ccbcea1:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=3ccbcea1:19447
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=3ccbcea1:18868
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=3ccbcea1:9119
+commitRootImpl @ chunk-RPCDYKBN.js?v=3ccbcea1:19432
+commitRoot @ chunk-RPCDYKBN.js?v=3ccbcea1:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=3ccbcea1:18805
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=3ccbcea1:18718
+workLoop @ chunk-RPCDYKBN.js?v=3ccbcea1:197
+flushWork @ chunk-RPCDYKBN.js?v=3ccbcea1:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=3ccbcea1:384
+SchoolDataContext.tsx:200 SchoolDataProvider: Fetched admin data: {school: {…}, classes: Array(1), subjects: Array(1), students: Array(0), teachers: Array(0)}
+SchoolDataContext.tsx:321 SchoolDataProvider: Data fetching complete.
+staff-page.tsx:171 No userId received: {name: 'giri', email: 'giristaff@email.com', password: '408c48a78372b74526ff52cb8ecc538cf620cb2fc3e600f207…2527ff75bf808bd3.c48a25bb9134f255ce4bdf492c360d14', role: 'teacher', _id: '68c0639b43d1890a30afdab5', …}
+overrideMethod @ hook.js:608
+createStaff @ staff-page.tsx:171
+await in createStaff
+onSubmit @ staff-page.tsx:272
+(anonymous) @ chunk-4BFJKWC4.js?v=3ccbcea1:1465
+await in (anonymous)
+callCallback2 @ chunk-RPCDYKBN.js?v=3ccbcea1:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=3ccbcea1:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=3ccbcea1:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=3ccbcea1:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=3ccbcea1:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=3ccbcea1:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=3ccbcea1:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=3ccbcea1:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=3ccbcea1:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=3ccbcea1:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=3ccbcea1:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=3ccbcea1:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=3ccbcea1:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=3ccbcea1:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=3ccbcea1:5449
+staff-page.tsx:200 Error creating staff: Error: No userId received from user creation
+    at createStaff (staff-page.tsx:172:15)
+    at async onSubmit (staff-page.tsx:272:9)
+    at async chunk-4BFJKWC4.js?v=3ccbcea1:1465:9
+overrideMethod @ hook.js:608
+createStaff @ staff-page.tsx:200
+await in createStaff
+onSubmit @ staff-page.tsx:272
+(anonymous) @ chunk-4BFJKWC4.js?v=3ccbcea1:1465
+await in (anonymous)
+callCallback2 @ chunk-RPCDYKBN.js?v=3ccbcea1:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=3ccbcea1:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=3ccbcea1:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=3ccbcea1:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=3ccbcea1:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=3ccbcea1:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=3ccbcea1:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=3ccbcea1:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=3ccbcea1:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=3ccbcea1:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=3ccbcea1:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=3ccbcea1:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=3ccbcea1:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=3ccbcea1:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=3ccbcea1:5449
+staff-page.tsx:284 error :: Error: No userId received from user creation
+    at createStaff (staff-page.tsx:172:15)
+    at async onSubmit (staff-page.tsx:272:9)
+    at async chunk-4BFJKWC4.js?v=3ccbcea1:1465:9
+staff:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+staff:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+staff:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received

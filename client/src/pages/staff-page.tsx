@@ -165,7 +165,7 @@ export default function StaffPage() {
       }
       
       const newUser = await userRes.json();
-      const userId = newUser.id;
+      const userId = newUser._id || newUser.id;
       
       if (!userId) {
         console.error('No userId received:', newUser);
