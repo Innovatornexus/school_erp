@@ -1,18 +1,18 @@
 // src/types.ts
 export type StudentItem = {
-  student_email: string | undefined;
+  studentEmail: string | undefined;
   id: number;
-  full_name: string;
+  fullName: string;
 
   gender: "male" | "female" | "other";
   dob: Date;
-  class_id: number;
-  parent_name: string;
-  parent_contact: string;
+  classId: number;
+  parentName: string;
+  parentContact: string;
   admissionDate: Date;
   status: "Active" | "Inactive";
   address: string;
-  roll_no: number;
+  rollNo: number;
 };
 // export type ClassItem = {
 //   id: number;
@@ -24,52 +24,52 @@ export type ClassItem = {
   name: string;
   grade: string;
   section: string;
-  class_teacher_id: number | null;
+  classTeacherId: number | null;
   studentCount: number;
   subjects?: Array<{
-    subject_id: number;
-    teacher_id: number | null;
+    subjectId: number;
+    teacherId: number | null;
   }>;
 };
 export type SchoolItem = {
   id: number;
   name: string;
   address: string;
-  contact_email: string;
-  contact_phone: string;
+  contactEmail: string;
+  contactPhone: string;
 };
 export type ClassItemWithCount = {
   id: number;
   grade: string;
   section: string;
   studentCount: number; // ➡️ newly added
-  class_teacher_id: number | null;
+  classTeacherId: number | null;
 };
 
 export type SubjectItem = {
   id: number;
-  school_id: number;
-  subject_name: string;
-  subject_description: string;
+  schoolId: number;
+  subjectName: string;
+  subjectDescription: string;
 };
 
 export interface StaffItem {
   id: number;
-  school_id: number;
-  full_name: string;
+  schoolId: number;
+  fullName: string;
   email: string;
   gender: "male" | "female" | "other";
-  joining_date: Date;
+  joiningDate: Date;
   status: "Active" | "Inactive";
   address: string;
-  phone_number: string;
-  subject_specialization: string[];
+  phoneNumber: string;
+  subjectSpecialization: string[];
 }
 
 export type ClassMessage = {
   id: number;
-  class_id: number;
-  sender_id: number;
+  classId: number;
+  senderId: number;
   content: string;
-  created_at: Date;
+  createdAt: Date;
 };

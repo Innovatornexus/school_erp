@@ -52,8 +52,8 @@ type Props = {
 // Student form schema aligned with DB schema
 const studentFormSchema = z
   .object({
-    full_name: z.string().min(2, "Full name must be at least 2 characters"),
-    student_email: z.string().email("Please enter a valid email address"),
+    fullName: z.string().min(2, "Full name must be at least 2 characters"),
+    studentEmail: z.string().email("Please enter a valid email address"),
     status: z.enum(["Active", "Inactive"]),
     password: z.string().min(6, "Password must be at least 6 characters"),
     confirmPassword: z
@@ -65,15 +65,15 @@ const studentFormSchema = z
     gender: z.enum(["male", "female", "other"], {
       required_error: "Please select a gender",
     }),
-    class_id: z.number({
+    classId: z.number({
       required_error: "Please select a class",
     }),
     parentId: z.string().optional(),
-    parent_contact: z.string().min(10, "Please enter a valid contact number"),
+    parentContact: z.string().min(10, "Please enter a valid contact number"),
     admissionDate: z.date({
       required_error: "Admission date is required",
     }),
-    parent_name: z.string().optional(),
+    parentName: z.string().optional(),
     address: z.string().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -104,16 +104,16 @@ export const StudentManager = ({
   const form = useForm<StudentFormValues>({
     resolver: zodResolver(studentFormSchema),
     defaultValues: {
-      full_name: "",
-      student_email: "",
+      fullName: "",
+      studentEmail: "",
       password: "",
       confirmPassword: "",
       gender: undefined, // Let placeholder show
       dob: undefined,
-      class_id: undefined,
-      parent_contact: "",
+      classId: undefined,
+      parentContact: "",
       admissionDate: new Date(),
-      parent_name: "",
+      parentName: "",
       address: "",
       status: "Active",
     },
@@ -125,8 +125,8 @@ export const StudentManager = ({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: data.full_name,
-          email: data.student_email,
+          name: data.fullName,
+          email: data.studentEmail,
           password: data.password,
           confirmPassword: data.confirmPassword,
           role: "student",
@@ -145,9 +145,9 @@ export const StudentManager = ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
-          user_id: userId,
-          school_id: user?.school_id,
-          admission_date: format(data.admissionDate, "yyyy-MM-dd"),
+          userId: userId,
+          schoolId: user?.schoolId,
+          admissionDate: format(data.admissionDate, "yyyy-MM-dd"),
           dob: format(data.dob, "yyyy-MM-dd"),
         }),
       });
@@ -170,7 +170,7 @@ export const StudentManager = ({
           body: JSON.stringify({
             ...data,
             dob: format(data.dob, "yyyy-MM-dd"),
-            admission_date: format(data.admissionDate, "yyyy-MM-dd"),
+            admissionDate: format(data.admissionDate, "yyyy-MM-dd"),
           }),
         });
         if (!res.ok) throw new Error("Failed to update student");
@@ -207,14 +207,14 @@ export const StudentManager = ({
   const openEditDialog = (student: StudentItem) => {
     setEditingStudent(student);
     form.reset({
-      full_name: student.full_name,
-      student_email: student.student_email,
+      fullName: student.fullName,
+      studentEmail: student.studentEmail,
       gender: student.gender as "male" | "female" | "other",
       dob: new Date(student.dob),
-      class_id: student.class_id,
-      parent_contact: student.parent_contact,
+      classId: student.classId,
+      parentContact: student.parentContact,
       admissionDate: new Date(student.admissionDate),
-      parent_name: student.parent_name,
+      parentName: student.parentName,
       status: student.status,
       password: "dummyPassword", // Set dummy passwords for validation
       confirmPassword: "dummyPassword",
@@ -271,13 +271,13 @@ export const StudentManager = ({
   };
 
   const columns: DataTableColumn<StudentItem>[] = [
-    { header: "Roll No", accessorKey: "roll_no" },
-    { header: "Name", accessorKey: "full_name" },
+    { header: "Roll No", accessorKey: "rollNo" },
+    { header: "Name", accessorKey: "fullName" },
     {
       header: "Class",
-      accessorKey: "class_id",
+      accessorKey: "classId",
       cell: (student: StudentItem) => {
-        const classItem = classData.find((cls) => cls.id === student.class_id);
+        const classItem = classData.find((cls) => cls.id === student.classId);
         return classItem
           ? `Class ${classItem.grade} ${classItem.section}`
           : "N/A";
@@ -295,7 +295,7 @@ export const StudentManager = ({
       accessorKey: "dob",
       cell: (student: StudentItem) => format(new Date(student.dob), "PPP"),
     },
-    { header: "Parent Contact", accessorKey: "parent_contact" },
+    { header: "Parent Contact", accessorKey: "parentContact" },
     {
       header: "Status",
       accessorKey: "status",
@@ -349,10 +349,10 @@ export const StudentManager = ({
 
   const filteredStudents = useMemo(() => {
     return studentData.filter((student) => {
-      const studentClass = classData.find((cls) => cls.id === student.class_id);
+      const studentClass = classData.find((cls) => cls.id === student.classId);
       const matchesSearchTerm =
-        student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.student_email?.toLowerCase().includes(searchTerm.toLowerCase());
+        student.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.studentEmail?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesGrade =
         !selectedGrade || studentClass?.grade.toString() === selectedGrade;
       const matchesSection =
@@ -390,7 +390,7 @@ export const StudentManager = ({
                   <div className="grid gap-4 py-4">
                     <FormField
                       control={form.control}
-                      name="full_name"
+                      name="fullName"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Full Name</FormLabel>
@@ -403,7 +403,7 @@ export const StudentManager = ({
                     />
                     <FormField
                       control={form.control}
-                      name="student_email"
+                      name="studentEmail"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Student Email</FormLabel>
@@ -505,7 +505,7 @@ export const StudentManager = ({
                     />
                     <FormField
                       control={form.control}
-                      name="class_id"
+                      name="classId"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Class</FormLabel>
@@ -537,7 +537,7 @@ export const StudentManager = ({
                     />
                     <FormField
                       control={form.control}
-                      name="parent_name"
+                      name="parentName"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Parent Name</FormLabel>
@@ -550,7 +550,7 @@ export const StudentManager = ({
                     />
                     <FormField
                       control={form.control}
-                      name="parent_contact"
+                      name="parentContact"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Parent Contact</FormLabel>
