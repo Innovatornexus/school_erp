@@ -1,5 +1,6 @@
 import { storage } from "../mongodb-storage";
 import type { IClass, InsertClass } from "../../shared/mongodb-schemas";
+import mongoose from "mongoose";
 
 export class ClassService {
   // Transform MongoDB class to frontend format
@@ -32,8 +33,17 @@ export class ClassService {
   }
 
   // Update class
-  static async updateClass(id: string, classData: Partial<IClass>) {
-    const classItem = await storage.updateClass(id, classData);
+  static async updateClass(id: string, classData: any) {
+    // Convert string IDs to ObjectIds for database operations
+    const processedData: any = { ...classData };
+    if (classData.schoolId && typeof classData.schoolId === 'string') {
+      processedData.schoolId = new mongoose.Types.ObjectId(classData.schoolId);
+    }
+    if (classData.classTeacherId && typeof classData.classTeacherId === 'string') {
+      processedData.classTeacherId = new mongoose.Types.ObjectId(classData.classTeacherId);
+    }
+    
+    const classItem = await storage.updateClass(id, processedData);
     return classItem ? this.transformClassToFrontend(classItem) : null;
   }
 
