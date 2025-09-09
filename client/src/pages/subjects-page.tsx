@@ -40,7 +40,7 @@ import { Redirect } from "wouter";
 
 // Subject form schema
 const subjectFormSchema = z.object({
-  subject_name: z.string().min(2, "Subject name must be at least 2 characters"),
+  subjectName: z.string().min(2, "Subject name must be at least 2 characters"),
   subject_description: z.string().optional(),
 });
 
@@ -63,7 +63,7 @@ export default function SubjectsPage() {
   const form = useForm<SubjectFormValues>({
     resolver: zodResolver(subjectFormSchema),
     defaultValues: {
-      subject_name: "",
+      subjectName: "",
       subject_description: "",
     },
   });
@@ -135,7 +135,7 @@ export default function SubjectsPage() {
       return subjectData;
     }
     return subjectData.filter((subject) =>
-      subject.subject_name.toLowerCase().includes(searchTerm.toLowerCase())
+      subject.subjectName.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [subjectData, searchTerm]);
 
@@ -143,13 +143,13 @@ export default function SubjectsPage() {
     if (subject) {
       setEditingSubject(subject);
       form.reset({
-        subject_name: subject.subject_name,
+        subjectName: subject.subjectName,
         subject_description: subject.subject_description,
       });
     } else {
       setEditingSubject(undefined);
       form.reset({
-        subject_name: "",
+        subjectName: "",
         subject_description: "",
       });
     }
@@ -165,7 +165,7 @@ export default function SubjectsPage() {
   };
   const openAddDialog = () => {
     setEditingSubject(undefined); // Clear any previous editing state
-    form.reset({ subject_name: "", subject_description: "" }); // Reset the form to be blank
+    form.reset({ subjectName: "", subject_description: "" }); // Reset the form to be blank
     setIsDialogOpen(true); // Open the dialog
   };
   const onSubmit = async (values: SubjectFormValues) => {
@@ -249,7 +249,7 @@ export default function SubjectsPage() {
   const columns = [
     {
       header: "Subject Name",
-      accessorKey: "subject_name",
+      accessorKey: "subjectName",
     },
     {
       header: "Description",
@@ -388,7 +388,7 @@ export default function SubjectsPage() {
               </p>
               <div className="mt-2 text-sm text-muted-foreground">
                 {high
-                  .map((s: { subject_name: string }) => s.subject_name)
+                  .map((s: { subjectName: string }) => s.subjectName)
                   .join(", ")}
               </div>
             </div>
@@ -402,7 +402,7 @@ export default function SubjectsPage() {
               </p>
               <div className="mt-2 text-sm text-muted-foreground">
                 {medium
-                  .map((s: { subject_name: string }) => s.subject_name)
+                  .map((s: { subjectName: string }) => s.subjectName)
                   .join(", ")}
               </div>
             </div>
@@ -416,7 +416,7 @@ export default function SubjectsPage() {
               </p>
               <div className="mt-2 text-sm text-muted-foreground">
                 {low
-                  .map((s: { subject_name: string }) => s.subject_name)
+                  .map((s: { subjectName: string }) => s.subjectName)
                   .join(", ")}
               </div>
             </div>
@@ -448,7 +448,7 @@ export default function SubjectsPage() {
                     <div className="grid gap-4 py-4">
                       <FormField
                         control={form.control}
-                        name="subject_name"
+                        name="subjectName"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Subject Name</FormLabel>
