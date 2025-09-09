@@ -342,15 +342,21 @@ export function setupAuth(app: Express) {
     }
     // Return user data without password and transform MongoDB format to frontend format
     const user = req.user as any;
-    const { password, __v, ...userWithoutPassword } = user;
+    
+    // Get the actual document data (handle Mongoose document vs plain object)
+    const userData = user._doc || user;
+    const { password, __v, ...userWithoutPassword } = userData;
     
     // Transform MongoDB ObjectId format to simple strings for frontend compatibility
     const transformedUser = {
       ...userWithoutPassword,
-      id: user._id.toString(), // Convert _id to id string
-      school_id: user.school_id ? user.school_id.toString() : null, // Convert ObjectId to string
-      class_id: user.class_id ? user.class_id.toString() : null,
+      id: userData._id.toString(), // Convert _id to id string
+      schoolId: userData.schoolId ? userData.schoolId.toString() : null, // Convert ObjectId to string
+      classId: userData.classId ? userData.classId.toString() : null,
     };
+    
+    // Remove the MongoDB _id from the response
+    delete transformedUser._id;
     
     res.json(transformedUser);
   });
