@@ -4,6 +4,8 @@ import { setupAuth } from "./auth";
 import schoolRoutes from "./routes/school-routes";
 import teacherRoutes from "./routes/teacher-routes";
 import classRoutes from "./routes/class-routes";
+import subjectRoutes from "./routes/subject-routes";
+import studentRoutes from "./routes/student-routes";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
@@ -19,6 +21,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Class management routes
   app.use("/api/classes", classRoutes);
+  
+  // Subject management routes
+  app.use("/api/subjects", subjectRoutes);
+  
+  // Student management routes
+  app.use("/api/students", studentRoutes);
 
   // Health check endpoint
   app.get("/api/health", (req, res) => {
