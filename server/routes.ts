@@ -1,17 +1,14 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage } from "./mongodb-storage";
 import { setupAuth } from "./auth";
 import { z } from "zod";
 
 // Import MongoDB schemas
 import { 
   insertSchoolSchema, insertSchoolAdminSchema, insertTeacherSchema, 
-  insertStudentSchema, insertClassSchema, insertSubjectSchema, 
-  insertClassSubjectSchema, insertExamSchema,
-  insertMaterialSchema, insertTestSchema, 
-  insertHomeworkSchema, insertMessageSchema
-} from "../shared/schema";
+  insertClassSchema, insertSubjectSchema
+} from "../shared/mongodb-schemas";
 
 // Remove custom schemas - we'll use the Drizzle schemas
 

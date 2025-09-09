@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { DatabaseStorage } from './storage';
+import { MongoDBStorage } from './mongodb-storage';
 
-describe('DatabaseStorage', () => {
+describe('MongoDBStorage', () => {
   it('should instantiate without errors', () => {
-    expect(() => new DatabaseStorage()).not.toThrow();
+    expect(() => new MongoDBStorage()).not.toThrow();
   });
 });

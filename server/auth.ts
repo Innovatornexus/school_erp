@@ -4,9 +4,9 @@ import { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { storage } from "./storage";
+import { storage } from "./mongodb-storage";
 import { z } from "zod";
-import type { IUser } from "../shared/schema";
+import type { IUser } from "../shared/mongodb-schemas";
 
 declare global {
   namespace Express {
