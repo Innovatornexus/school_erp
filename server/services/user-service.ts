@@ -41,14 +41,20 @@ export class UserService {
     schoolId?: string;
     classId?: string;
   }) {
+    console.log('UserService.createUser called with:', { ...userData, password: '[HIDDEN]' });
+    
     const hashedPassword = await hashPassword(userData.password);
+    console.log('Password hashed successfully');
     
     const user = await storage.createUser({
       ...userData,
       password: hashedPassword,
     });
+    console.log('Storage.createUser returned:', user);
 
-    return this.transformUserToFrontend(user);
+    const transformedUser = this.transformUserToFrontend(user);
+    console.log('Transformed user:', transformedUser);
+    return transformedUser;
   }
 
   // Get user by email

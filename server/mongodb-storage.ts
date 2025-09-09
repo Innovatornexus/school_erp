@@ -51,12 +51,16 @@ export class MongoDBStorage implements IStorage {
   
   // User operations
   async createUser(userData: Omit<InsertUser, 'schoolId' | 'classId'> & { schoolId?: string; classId?: string }): Promise<IUser> {
+    console.log('MongoDBStorage.createUser called with:', { ...userData, password: '[HIDDEN]' });
     const user = new User({
       ...userData,
       schoolId: userData.schoolId ? new mongoose.Types.ObjectId(userData.schoolId) : undefined,
       classId: userData.classId ? new mongoose.Types.ObjectId(userData.classId) : undefined,
     });
-    return await user.save();
+    console.log('About to save user to MongoDB...');
+    const savedUser = await user.save();
+    console.log('User saved to MongoDB:', savedUser);
+    return savedUser;
   }
 
   async getUserByEmail(email: string): Promise<IUser | null> {

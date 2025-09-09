@@ -32,31 +32,60 @@ router.get("/:id", async (req, res) => {
 // Create a new teacher
 router.post("/", async (req, res) => {
   try {
+    console.log("=== Teacher Creation Request ===");
+    console.log("Request body:", req.body);
+    
     // Extract password from request body
     const { password, ...teacherData } = req.body;
+    console.log("Extracted password:", password ? "[PROVIDED]" : "[NOT PROVIDED]");
+    console.log("Teacher data:", teacherData);
+    
     const validatedData = insertTeacherSchema.parse(teacherData);
+    console.log("Validated teacher data:", validatedData);
     
     // First create the user account
-    const user = await UserService.createUser({
+    const userData = {
       name: validatedData.fullName,
       email: validatedData.email,
-      password: password || "temp123", // Use provided password or default
+      password: password || "temp123",
       role: "teacher",
       schoolId: validatedData.schoolId,
-    });
+    };
+    console.log("Creating user with data:", { ...userData, password: "[HIDDEN]" });
+    
+    const user = await UserService.createUser(userData);
+    console.log("User created successfully:", user);
+    
+    if (!user || (!user.id && !user._id)) {
+      console.error("User creation returned invalid user object:", user);
+      throw new Error("User creation failed - no valid user ID returned");
+    }
+    
+    // UserService returns transformed user with 'id' field (not '_id')
+    const userId = user.id;
+    console.log("Using userId for teacher:", userId);
 
     // Then create the teacher profile
-    const teacher = await TeacherService.createTeacher({
+    const teacherPayload = {
       ...validatedData,
-      userId: user.id,
-    });
+      userId: userId,
+    };
+    console.log("Creating teacher with payload:", teacherPayload);
+    
+    const teacher = await TeacherService.createTeacher(teacherPayload);
+    console.log("Teacher created successfully:", teacher);
 
     res.status(201).json(teacher);
   } catch (error) {
+    console.error("=== Teacher Creation Error ===");
+    console.error("Error details:", error);
+    
     if (error instanceof z.ZodError) {
+      console.error("Validation errors:", error.errors);
       return res.status(400).json({ message: "Validation error", errors: error.errors });
     }
-    res.status(500).json({ message: "Failed to create teacher", error });
+    
+    res.status(500).json({ message: "Failed to create teacher", error: error.message || error });
   }
 });
 
