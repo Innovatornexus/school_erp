@@ -116,17 +116,17 @@ export function setupAuth(app: Express) {
 
   // Serialize user to the session
   passport.serializeUser((user, done) => {
-    done(null, user._id);
+    done(null, user.id);
   });
 
   // Deserialize user from the session
   passport.deserializeUser(async (id: string, done) => {
     try {
-      const user = await storage.getUser(id);
+      const user = await storage.getUser(parseInt(id));
       if (user && user.role === "school_admin") {
-        const schoolAdmin = await storage.getSchoolAdminByUserId(user._id.toString());
+        const schoolAdmin = await storage.getSchoolAdminByUserId(user.id);
         if (schoolAdmin) {
-          (user as any).school_id = user.schoolId;
+          (user as any).school_id = user.school_id;
         }
       }
       done(null, user);
@@ -264,8 +264,8 @@ export function setupAuth(app: Express) {
 
         // Create school_admin record linking the user and school
         await storage.createSchoolAdmin({
-          user_id: newUser._id.toString(),
-          school_id: school._id.toString(),
+          user_id: newUser.id,
+          school_id: school.id,
           full_name: userData.name,
           phone_number: "", // This will be updated later
         });
