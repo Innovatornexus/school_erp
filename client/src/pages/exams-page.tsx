@@ -67,16 +67,16 @@ import { useSchoolData } from "@/context/SchoolDataContext";
 
 // No changes to schema needed here
 const examSubjectSchema = z.object({
-  subject_id: z.number().min(1, "Subject is required"),
-  exam_date: z.string().min(1, "Exam date is required"),
-  start_time: z.string().min(1, "Start time is required"),
-  end_time: z.string().min(1, "End time is required"),
+  subjectId: z.number().min(1, "Subject is required"),
+  examDate: z.string().min(1, "Exam date is required"),
+  startTime: z.string().min(1, "Start time is required"),
+  endTime: z.string().min(1, "End time is required"),
 });
 
 const examFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
   term: z.string().min(1, "Term is required"),
-  class_id: z.number().min(1, "Class is required"),
+  classId: z.number().min(1, "Class is required"),
   subjects: z
     .array(examSubjectSchema)
     .min(1, "At least one subject is required"),
@@ -87,12 +87,12 @@ interface Exam {
   id: number;
   title: string;
   term: string;
-  class_id: number;
-  class_name: string;
-  start_date: string;
-  end_date: string;
-  created_at: string;
-  subjects_count: number; // ✨ ADDED: Expect this from the API
+  classId: number;
+  className: string;
+  startDate: string;
+  endDate: string;
+  createdAt: string;
+  subjectsCount: number; // ✨ ADDED: Expect this from the API
 }
 
 export default function ExamsPage() {
@@ -114,7 +114,7 @@ export default function ExamsPage() {
     defaultValues: {
       title: "",
       term: "",
-      class_id: 0,
+      classId: 0,
       subjects: [],
     },
   });
@@ -124,7 +124,7 @@ export default function ExamsPage() {
       form.reset({
         title: "",
         term: "",
-        class_id: 0,
+        classId: 0,
         subjects: [],
       });
     }
@@ -150,7 +150,7 @@ export default function ExamsPage() {
 
   // Get current teacher for staff role
   const currentTeacher = useMemo(
-    () => teachers.find((t) => t.user_id === user?.id),
+    () => teachers.find((t) => t.userId === user?.id),
     [teachers, user]
   );
 
@@ -160,11 +160,11 @@ export default function ExamsPage() {
       // Staff should see exams for classes/subjects they teach
       return exams.filter((exam) => {
         // Find the class for this exam
-        const examClass = classes.find(c => c.id === exam.class_id);
+        const examClass = classes.find(c => c.id === exam.classId);
         if (examClass && examClass.subjects) {
           // Check if teacher teaches any subject in this class
           return examClass.subjects.some(
-            (mapping: any) => mapping.teacher_id === currentTeacher.id
+            (mapping: any) => mapping.teacherId === currentTeacher.id
           );
         }
         return false;
@@ -181,7 +181,7 @@ export default function ExamsPage() {
     if (user?.role === "staff" && currentTeacher) {
       const assignedClassIds = new Set();
       classes.forEach((cls) => {
-        if (cls.subjects?.some((mapping: any) => mapping.teacher_id === currentTeacher.id)) {
+        if (cls.subjects?.some((mapping: any) => mapping.teacherId === currentTeacher.id)) {
           assignedClassIds.add(cls.id);
         }
       });
@@ -192,7 +192,7 @@ export default function ExamsPage() {
 
   // Available subjects for staff (only subjects they teach in selected class)
   const availableSubjectsForForm = useMemo(() => {
-    const selectedClassId = form.watch("class_id");
+    const selectedClassId = form.watch("classId");
     if (!selectedClassId) return [];
 
     const selectedClass = classes.find((c) => c.id === Number(selectedClassId));
@@ -200,7 +200,7 @@ export default function ExamsPage() {
 
     if (user?.role === "school_admin") {
       const subjectIdsInClass = new Set(
-        selectedClass.subjects.map((m: any) => m.subject_id)
+        selectedClass.subjects.map((m: any) => m.subjectId)
       );
       return subjects.filter((s) => subjectIdsInClass.has(s.id));
     }
@@ -208,14 +208,14 @@ export default function ExamsPage() {
     if (user?.role === "staff" && currentTeacher) {
       const taughtSubjectIds = new Set(
         selectedClass.subjects
-          .filter((mapping: any) => mapping.teacher_id === currentTeacher.id)
-          .map((mapping: any) => mapping.subject_id)
+          .filter((mapping: any) => mapping.teacherId === currentTeacher.id)
+          .map((mapping: any) => mapping.subjectId)
       );
       return subjects.filter((s) => taughtSubjectIds.has(s.id));
     }
 
     return [];
-  }, [form.watch("class_id"), classes, subjects, currentTeacher, user]);
+  }, [form.watch("classId"), classes, subjects, currentTeacher, user]);
 
   const createExamMutation = useMutation({
     mutationFn: async (data: any) => {

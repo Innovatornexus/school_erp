@@ -63,12 +63,12 @@ import { ConsoleLogWriter } from "drizzle-orm";
 const homeworkSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().min(1, "Description is required"),
-  class_id: z.coerce.number().min(1, "Class is required"),
-  subject_id: z.coerce.number().min(1, "Subject is required"),
-  assigned_date: z.string().min(1, "Assigned date is required"),
-  due_date: z.string().min(1, "Due date is required"),
+  classId: z.coerce.number().min(1, "Class is required"),
+  subjectId: z.coerce.number().min(1, "Subject is required"),
+  assignedDate: z.string().min(1, "Assigned date is required"),
+  dueDate: z.string().min(1, "Due date is required"),
   instructions: z.string().optional(),
-  attachment_url: z.string().url().optional().or(z.literal("")),
+  attachmentUrl: z.string().url().optional().or(z.literal("")),
 });
 
 type HomeworkFormData = z.infer<typeof homeworkSchema>;
@@ -76,12 +76,12 @@ type HomeworkFormData = z.infer<typeof homeworkSchema>;
 // FIX: Added type definitions to resolve 'implicit any' errors
 interface ClassSubjectMapping {
   id: number;
-  subject_id: number;
-  teacher_id: number;
+  subjectId: number;
+  teacherId: number;
 }
 
 interface StudentInClass {
-  user_id: number;
+  userId: number;
 }
 
 export default function HomeworkPage() {
@@ -102,12 +102,12 @@ export default function HomeworkPage() {
     defaultValues: {
       title: "",
       description: "",
-      class_id: 0,
-      subject_id: 0,
-      assigned_date: new Date().toISOString().split("T")[0],
-      due_date: "",
+      classId: 0,
+      subjectId: 0,
+      assignedDate: new Date().toISOString().split("T")[0],
+      dueDate: "",
       instructions: "",
-      attachment_url: "",
+      attachmentUrl: "",
     },
   });
 
