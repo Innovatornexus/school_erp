@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <style data-vite-theme="" data-inject-first="">:root {
+      --background: 217 99% 79%;
+--foreground: 231 100% 14%;
+--muted: 217 94% 69%;
+--muted-foreground: 231 100% 14%;
+--popover: 217 100% 99%;
+--popover-foreground: 231 100% 14%;
+--card: 217 100% 99%;
+--card-foreground: 231 100% 14%;
+--border: 217 94% 69%;
+--input: 217 94% 69%;
+--primary: 217 100% 69%;
+--primary-foreground: 217 100% 99%;
+--secondary: 217 100% 85%;
+--secondary-foreground: 231 100% 14%;
+--accent: 217 100% 85%;
+--accent-foreground: 231 100% 14%;
+--destructive: 0 84.2% 60.2%;
+--destructive-foreground: 60 9.1% 97.8%;
+--ring: 217 100% 69%;
+--radius: 0.75rem;
+  }
+  .dark {
+      --background: 243 100% 1%;
+--foreground: 217 100% 96%;
+--muted: 215 92% 31%;
+--muted-foreground: 217 100% 96%;
+--popover: 220 100% 11%;
+--popover-foreground: 217 100% 96%;
+--card: 220 100% 11%;
+--card-foreground: 217 100% 96%;
+--border: 215 92% 31%;
+--input: 215 92% 31%;
+--primary: 216 91% 56%;
+--primary-foreground: 217 100% 99%;
+--secondary: 215 92% 31%;
+--secondary-foreground: 217 100% 96%;
+--accent: 215 92% 31%;
+--accent-foreground: 217 100% 96%;
+--destructive: 0 62.8% 30.6%;
+--destructive-foreground: 0 0% 98%;
+--ring: 216 91% 56%;
+--radius: 0.75rem;
+  }</style>
+
+    <script type="module">
+import { createHotContext } from "/@vite/client";
+const hot = createHotContext("/__dummy__runtime-error-plugin");
+
+function sendError(error) {
+  if (!(error instanceof Error)) {
+    error = new Error("(unknown runtime error)");
+  }
+  const serialized = {
+    message: error.message,
+    stack: error.stack,
+  };
+  hot.send("runtime-error-plugin:error", serialized);
+}
+
+window.addEventListener("error", (evt) => {
+  sendError(evt.error);
+});
+
+window.addEventListener("unhandledrejection", (evt) => {
+  sendError(evt.reason);
+});
+</script>
+
+    <script type="module">
+import RefreshRuntime from "/@react-refresh"
+RefreshRuntime.injectIntoGlobalHook(window)
+window.$RefreshReg$ = () => {}
+window.$RefreshSig$ = () => (type) => type
+window.__vite_plugin_react_preamble_installed__ = true
+</script>
+
+    <script type="module" src="/@vite/client"></script>
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx?v=NfFjl7iv4Ls4b97CXGVo0"></script>
+    <!-- This is a replit script which adds a banner on the top of the page when opened in development mode outside the replit environment -->
+    <script type="text/javascript" src="https://replit.com/public/js/replit-dev-banner.js"></script>
+  </body>
+</html>

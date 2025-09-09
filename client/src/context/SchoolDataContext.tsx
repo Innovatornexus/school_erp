@@ -84,10 +84,10 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({
         if (firstSchool) {
           const [classesRes, subjectsRes, studentsRes, teachersRes] =
             await Promise.all([
-              fetch(`/api/schools/${firstSchool.id}/classes`),
-              fetch(`/api/schools/${firstSchool.id}/subjects`),
-              fetch(`/api/schools/all-students/${firstSchool.id}`),
-              fetch(`/api/schools/${firstSchool.id}/teachers`),
+              fetch(`/api/classes/school/${firstSchool.id}`),
+              fetch(`/api/subjects/school/${firstSchool.id}`),
+              fetch(`/api/students/school/${firstSchool.id}`),
+              fetch(`/api/teachers/school/${firstSchool.id}`),
             ]);
 
           if (classesRes.ok) {
@@ -116,10 +116,10 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({
 
         const [classesRes, subjectsRes, studentsRes, teachersRes] =
           await Promise.all([
-            fetch(`/api/schools/${school.id}/classes`),
-            fetch(`/api/schools/${school.id}/subjects`),
-            fetch(`/api/schools/all-students/${school.id}`),
-            fetch(`/api/schools/${school.id}/teachers`),
+            fetch(`/api/classes/school/${school.id}`),
+            fetch(`/api/subjects/school/${school.id}`),
+            fetch(`/api/students/school/${school.id}`),
+            fetch(`/api/teachers/school/${school.id}`),
           ]);
 
         if (!classesRes.ok)
@@ -227,10 +227,10 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({
         // Fetch data that staff members are allowed to see
         const [classesRes, subjectsRes, studentsRes, teachersRes] =
           await Promise.all([
-            fetch(`/api/schools/${schoolId}/classes`),
-            fetch(`/api/schools/${schoolId}/subjects`),
-            fetch(`/api/schools/all-students/${schoolId}`),
-            fetch(`/api/schools/${schoolId}/teachers`),
+            fetch(`/api/classes/school/${schoolId}`),
+            fetch(`/api/subjects/school/${schoolId}`),
+            fetch(`/api/students/school/${schoolId}`),
+            fetch(`/api/teachers/school/${schoolId}`),
           ]);
 
         if (!classesRes.ok)
