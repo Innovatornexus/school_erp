@@ -180,6 +180,17 @@ export default function Sidebar({
                     <BookOpen className="mr-3 h-4 w-4" />
                     <span>Subjects</span>
                   </Link>
+                  <Link
+                    href="/classes"
+                    className={
+                      location === "/classes"
+                        ? activeNavClass
+                        : inactiveNavClass
+                    }
+                  >
+                    <BookOpen className="mr-3 h-4 w-4" />
+                    <span>Classes</span>
+                  </Link>
                 </>
               )}
 
