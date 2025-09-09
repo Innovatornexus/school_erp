@@ -56,28 +56,29 @@ import { ClassItem, SchoolItem, StaffItem, StudentItem } from "./type";
 import { useAuth } from "@/hooks/use-auth";
 import { useSchoolData } from "@/context/SchoolDataContext";
 
-// Student form schema aligned with DB schema
+// Student form schema aligned with DB schema (camelCase)
 const studentFormSchema = z.object({
-  full_name: z.string().min(2, "Full name must be at least 2 characters"),
-  student_email: z.string().min(3, "email  must be at least 3 characters"),
-  status: z.enum(["Active", "Inactive"]),
+  fullName: z.string().min(2, "Full name must be at least 2 characters"),
+  email: z.string().email("Please enter a valid email address"),
+  status: z.enum(["Active", "Inactive"]).default("Active"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  dob: z.date({
+  dateOfBirth: z.date({
     required_error: "Date of birth is required",
   }),
   gender: z.enum(["male", "female", "other"], {
     required_error: "Please select a gender",
   }),
-  class_id: z.string({
+  classId: z.string({
     required_error: "Please select a class",
   }),
   parentId: z.string().optional(),
-  parent_contact: z.string().min(10, "Please enter a valid contact number"),
+  parentContact: z.string().min(10, "Please enter a valid contact number"),
   admissionDate: z.date({
     required_error: "Admission date is required",
   }),
-  parentName: z.string().optional(), // Added to match API
+  parentName: z.string().optional(),
   address: z.string().optional(),
+  schoolId: z.string(), // Add schoolId to schema
 });
 
 type StudentFormValues = z.infer<typeof studentFormSchema>;
@@ -98,7 +99,7 @@ export default function StudentsPage() {
   // For staff users, find the teacher record that corresponds to the current user
   const currentTeacher =
     user?.role === "staff"
-      ? teachers.find((teacher) => teacher.user_id === user.id)
+      ? teachers.find((teacher) => teacher.userId === user.id)
       : null;
 
   return (
@@ -123,7 +124,7 @@ export default function StudentsPage() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold">
-                {new Set(students.map((student) => student.class_id)).size}
+                {new Set(students.map((student) => student.classId)).size}
               </p>
             </CardContent>
           </Card>
@@ -154,18 +155,18 @@ export default function StudentsPage() {
             user?.role === "staff" && currentTeacher
               ? students.filter((s) => {
                   // Find the class for this student
-                  const studentClass = classes.find((c) => c.id === s.class_id);
+                  const studentClass = classes.find((c) => c.id === s.classId);
 
                   // If we can't find the class, exclude the student
                   if (!studentClass) return false;
 
                   // Check if the current teacher is the class teacher
                   const isClassTeacher =
-                    studentClass.class_teacher_id === currentTeacher.id;
+                    studentClass.classTeacherId === currentTeacher.id;
 
                   // Check if the current teacher teaches any subjects in this class
                   const teachesSubjectsInClass = studentClass.subjects?.some(
-                    (sub: any) => sub.teacher_id === currentTeacher.id
+                    (sub: any) => sub.teacherId === currentTeacher.id
                   );
 
                   // Include the student if either condition is true

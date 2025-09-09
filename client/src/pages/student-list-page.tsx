@@ -49,23 +49,23 @@ type Props = {
   fetchStudents: () => Promise<void>;
 };
 
-// Student form schema aligned with DB schema
+// Student form schema aligned with DB schema (camelCase)
 const studentFormSchema = z
   .object({
     fullName: z.string().min(2, "Full name must be at least 2 characters"),
-    studentEmail: z.string().email("Please enter a valid email address"),
-    status: z.enum(["Active", "Inactive"]),
+    email: z.string().email("Please enter a valid email address"),
+    status: z.enum(["Active", "Inactive"], {required_error: "Please select a status"}),
     password: z.string().min(6, "Password must be at least 6 characters"),
     confirmPassword: z
       .string()
       .min(6, "Confirm password must be at least 6 characters"),
-    dob: z.date({
+    dateOfBirth: z.date({
       required_error: "Date of birth is required",
     }),
     gender: z.enum(["male", "female", "other"], {
       required_error: "Please select a gender",
     }),
-    classId: z.number({
+    classId: z.string({
       required_error: "Please select a class",
     }),
     parentId: z.string().optional(),
@@ -75,6 +75,7 @@ const studentFormSchema = z
     }),
     parentName: z.string().optional(),
     address: z.string().optional(),
+    schoolId: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
