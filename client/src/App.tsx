@@ -62,6 +62,8 @@ function Router() {
             return <TeacherDashboardPage />;
           } else if (user?.role === "school_admin") {
             return <AdminDashboardPage />;
+          } else if (user?.role === "super_admin") {
+            return <AdminDashboardPage />;
           } else {
             // Optional: Redirect or render "Not Authorized"
             return <div>Unauthorized Access</div>;
