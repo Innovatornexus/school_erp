@@ -70,15 +70,15 @@ const staffFormSchema = z
       .min(6, "Confirm password must be at least 6 characters")
       .optional()
       .or(z.literal("")),
-    full_name: z.string().min(2, "Full name must be at least 2 characters"),
-    phone_number: z.string().min(10, "Please enter a valid phone number"),
-    // Keep subject_specialization as a string in the schema
-    subject_specialization: z
+    fullName: z.string().min(2, "Full name must be at least 2 characters"),
+    phoneNumber: z.string().min(10, "Please enter a valid phone number"),
+    // Keep subjectSpecialization as a string in the schema
+    subjectSpecialization: z
       .array(z.string().min(1, "Each subject must be at least 1 character"))
       .optional(),
 
     gender: z.string().min(1, "Subject Gender is required"),
-    joining_date: z.date({
+    joiningDate: z.date({
       required_error: "Joining date is required",
     }),
   })
@@ -114,14 +114,14 @@ export default function StaffPage() {
   const form = useForm<StaffFormValues>({
     resolver: zodResolver(staffFormSchema),
     defaultValues: {
-      full_name: "",
+      fullName: "",
       email: "",
       password: "",
       confirmPassword: "",
-      subject_specialization: [],
+      subjectSpecialization: [],
       gender: "male",
-      joining_date: new Date(),
-      phone_number: "",
+      joiningDate: new Date(),
+      phoneNumber: "",
       status: "Active",
     },
   });
@@ -150,7 +150,7 @@ export default function StaffPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: data.full_name,
+          name: data.fullName,
           email: data.email,
           password: data.password,
           confirmPassword: data.confirmPassword,
@@ -162,16 +162,16 @@ export default function StaffPage() {
       const userId = newUser.id;
 
       // 2. Create staff profile
-      console.log("Creating staff with data:", { ...data, user_id: userId });
+      console.log("Creating staff with data:", { ...data, userId: userId });
 
       const staffRes = await fetch("/api/teachers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
-          user_id: userId,
-          school_id: schoolData?.id,
-          joining_date: data.joining_date ?? new Date(),
+          userId: userId,
+          schoolId: schoolData?.id,
+          joiningDate: data.joiningDate ?? new Date(),
         }),
       });
 
@@ -192,7 +192,7 @@ export default function StaffPage() {
     return staffData.filter(
       (staff) =>
         // Check if the search term is in the name or email (case-insensitive)
-        staff.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        staff.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         staff.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [staffData, searchTerm]);
@@ -282,12 +282,12 @@ export default function StaffPage() {
       password: "",
       confirmPassword: "",
       gender: staff.gender ?? "male",
-      full_name: staff.full_name,
-      phone_number: staff.phone_number,
+      fullName: staff.fullName,
+      phoneNumber: staff.phoneNumber,
       // Join the array back into a string for the Textarea field
-      subject_specialization: staff.subject_specialization, // ✅ no need to join
-      joining_date: staff.joining_date
-        ? new Date(staff.joining_date)
+      subjectSpecialization: staff.subjectSpecialization, // ✅ no need to join
+      joiningDate: staff.joiningDate
+        ? new Date(staff.joiningDate)
         : new Date(),
       status: staff.status,
     });
@@ -341,7 +341,7 @@ export default function StaffPage() {
   const columns: DataTableColumn<StaffItem>[] = [
     {
       header: "Name",
-      accessorKey: "full_name",
+      accessorKey: "fullName",
     },
     {
       header: "Email",
@@ -349,11 +349,11 @@ export default function StaffPage() {
     },
     {
       header: "Subject",
-      accessorKey: "subject_specialization",
+      accessorKey: "subjectSpecialization",
       cell: (staff: StaffItem) => {
-        if (!staff?.subject_specialization) return "-";
+        if (!staff?.subjectSpecialization) return "-";
 
-        const specializations = staff.subject_specialization;
+        const specializations = staff.subjectSpecialization;
         return Array.isArray(specializations)
           ? specializations.join(", ")
           : specializations;
@@ -361,13 +361,13 @@ export default function StaffPage() {
     },
     {
       header: "Phone",
-      accessorKey: "phone_number",
+      accessorKey: "phoneNumber",
     },
     {
       header: "Joining Date",
-      accessorKey: "joining_date",
+      accessorKey: "joiningDate",
       cell: (staff: StaffItem) => {
-        const date = new Date(staff.joining_date);
+        const date = new Date(staff.joiningDate);
         return isNaN(date.getTime()) ? "-" : format(date, "PPP");
       },
     },
@@ -500,7 +500,7 @@ export default function StaffPage() {
                       <div className="grid gap-4 py-4">
                         <FormField
                           control={form.control}
-                          name="full_name"
+                          name="fullName"
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Full Name</FormLabel>
@@ -570,7 +570,7 @@ export default function StaffPage() {
                         />
                         <FormField
                           control={form.control}
-                          name="phone_number"
+                          name="phoneNumber"
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Phone Number</FormLabel>
@@ -610,7 +610,7 @@ export default function StaffPage() {
 
                         <FormField
                           control={form.control}
-                          name="subject_specialization"
+                          name="subjectSpecialization"
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Subject Specialization</FormLabel>
@@ -638,9 +638,9 @@ export default function StaffPage() {
                                           {subjects.map((subject: any) => (
                                             <SelectItem
                                               key={subject.id}
-                                              value={subject.subject_name}
+                                              value={subject.subjectName}
                                             >
-                                              {subject.subject_name}
+                                              {subject.subjectName}
                                             </SelectItem>
                                           ))}
                                         </SelectContent>
@@ -685,7 +685,7 @@ export default function StaffPage() {
 
                         <FormField
                           control={form.control}
-                          name="joining_date"
+                          name="joiningDate"
                           render={({ field }) => (
                             <FormItem className="flex flex-col">
                               <FormLabel>Joining Date</FormLabel>
