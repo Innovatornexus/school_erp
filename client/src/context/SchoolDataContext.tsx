@@ -45,8 +45,8 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({
       user.email,
       "with role:",
       user.role,
-      "and school_id:",
-      user.school_id
+      "and schoolId:",
+      user.schoolId
     );
 
     try {
@@ -108,7 +108,7 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({
           }
         }
       } else if (user.role === "school_admin") {
-        const schoolRes = await fetch(`/api/schools/${user.school_id}`);
+        const schoolRes = await fetch(`/api/schools/${user.schoolId}`);
         if (!schoolRes.ok)
           throw new Error("Failed to fetch school data for admin");
         const school = await schoolRes.json();
@@ -180,11 +180,11 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({
         setClasses(schoolDataResponse.classes || []);
         setSubjects(schoolDataResponse.subjects || []);
         setStudents(schoolDataResponse.students || []);
-        // Parse subject_specialization field for each teacher
+        // Parse subjectSpecialization field for each teacher
         const parsedTeachers = (teachersData || []).map((teacher: any) => {
-          if (typeof teacher.subject_specialization === "string") {
+          if (typeof teacher.subjectSpecialization === "string") {
             // Remove outer braces, quotes and split by comma
-            const cleaned = teacher.subject_specialization
+            const cleaned = teacher.subjectSpecialization
               .replace(/^\{/, "")
               .replace(/\}$/, "")
               .replace(/"/g, "");
@@ -192,7 +192,7 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({
               cleaned.length > 0
                 ? cleaned.split(",").map((s: any) => s.trim())
                 : [];
-            return { ...teacher, subject_specialization: arr };
+            return { ...teacher, subjectSpecialization: arr };
           }
           return teacher;
         });
@@ -208,9 +208,9 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({
         const staffData = await staffRes.json();
         console.log("SchoolDataProvider: Fetched staff data:", staffData);
 
-        // Extract school_id from staff data
+        // Extract schoolId from staff data
         const schoolId =
-          staffData.school_id || (staffData[0] && staffData[0].school_id);
+          staffData.schoolId || (staffData[0] && staffData[0].schoolId);
         if (!schoolId) {
           throw new Error("School ID not found in staff data");
         }
@@ -292,11 +292,11 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({
         setClasses(schoolDataResponse.classes || []);
         setSubjects(schoolDataResponse.subjects || []);
         setStudents(schoolDataResponse.students || []);
-        // Parse subject_specialization field for each teacher
+        // Parse subjectSpecialization field for each teacher
         const parsedTeachers = (teachersData || []).map((teacher: any) => {
-          if (typeof teacher.subject_specialization === "string") {
+          if (typeof teacher.subjectSpecialization === "string") {
             // Remove outer braces, quotes and split by comma
-            const cleaned = teacher.subject_specialization
+            const cleaned = teacher.subjectSpecialization
               .replace(/^\{/, "")
               .replace(/\}$/, "")
               .replace(/"/g, "");
@@ -304,7 +304,7 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({
               cleaned.length > 0
                 ? cleaned.split(",").map((s: any) => s.trim())
                 : [];
-            return { ...teacher, subject_specialization: arr };
+            return { ...teacher, subjectSpecialization: arr };
           }
           return teacher;
         });

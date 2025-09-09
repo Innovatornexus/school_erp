@@ -316,9 +316,21 @@ export function setupAuth(app: Express) {
       }
       req.login(user, (err) => {
         if (err) return next(err);
-        // Return user data without password
-        const { password, ...userWithoutPassword } = user;
-        return res.json(userWithoutPassword);
+        // Return user data without password and transform MongoDB format to frontend format
+        const userData = user._doc || user;
+        const { password, __v, ...userWithoutPassword } = userData;
+        
+        const transformedUser = {
+          ...userWithoutPassword,
+          id: userData._id.toString(),
+          schoolId: userData.schoolId ? userData.schoolId.toString() : null,
+          classId: userData.classId ? userData.classId.toString() : null,
+        };
+        
+        // Remove the MongoDB _id from the response
+        delete transformedUser._id;
+        
+        return res.json(transformedUser);
       });
     })(req, res, next);
   });
