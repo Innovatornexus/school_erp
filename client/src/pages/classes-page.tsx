@@ -156,7 +156,7 @@ export default function ClassesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...values,
-          school_id: schoolData.id,
+          schoolId: schoolData.id,
         }),
       });
 

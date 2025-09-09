@@ -157,7 +157,9 @@ export const insertTeacherSchema = z.object({
   fullName: z.string().min(1),
   email: z.string().email(),
   gender: z.string(),
-  joiningDate: z.date(),
+  joiningDate: z.union([z.date(), z.string()]).transform((date) => {
+    return date instanceof Date ? date : new Date(date);
+  }),
   phoneNumber: z.string(),
   status: z.string(),
   subjectSpecialization: z.array(z.string()).optional()
