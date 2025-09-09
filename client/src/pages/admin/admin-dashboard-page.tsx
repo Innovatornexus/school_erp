@@ -107,6 +107,8 @@ export default function AdminDashboardPage() {
       enabled: !!classes && classes.length > 0,
     });
   console.log("student attendance data", studentAttendanceData);
+  console.log("classes data", classes);
+  console.log("enabled condition for attendance query", !!classes && classes.length > 0);
 
   const { data: teacherAttendanceData, isLoading: isTeacherAttendanceLoading } =
     useQuery({

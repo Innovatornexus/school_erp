@@ -193,7 +193,21 @@ export default function StaffPage() {
         body: JSON.stringify(teacherData),
       });
 
-      if (!staffRes.ok) throw new Error("Failed to create staff");
+      if (!staffRes.ok) {
+        const errorData = await staffRes.json();
+        console.log("Staff creation failed:", errorData);
+        
+        // Handle specific error cases
+        if (errorData.error && errorData.error.code === 11000) {
+          // Duplicate key error
+          if (errorData.error.keyValue && errorData.error.keyValue.email) {
+            throw new Error(`A user with email '${errorData.error.keyValue.email}' already exists`);
+          }
+          throw new Error("A user with this email already exists");
+        }
+        
+        throw new Error(errorData.message || "Failed to create staff");
+      }
 
       await refetchData(); // Refresh data from context
     } catch (error) {
