@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -79,6 +79,7 @@ export default function TestsPage() {
   const {
     classes,
     subjects,
+    teachers,
     schoolData,
     loading: schoolDataLoading,
   } = useSchoolData();
@@ -335,6 +336,80 @@ export default function TestsPage() {
     );
   };
 
+  // Get current teacher for staff role
+  const currentTeacher = useMemo(
+    () => teachers.find((t) => t.user_id === user?.id),
+    [teachers, user]
+  );
+
+  // Filter tests based on user role
+  const filteredTests = useMemo(() => {
+    if (user?.role === "staff" && currentTeacher) {
+      // Staff should see tests they created OR tests for classes/subjects they teach
+      return tests.filter((test) => {
+        // Show if teacher created this test
+        if (test.teacher_id === currentTeacher.id) {
+          return true;
+        }
+        // Show if teacher teaches this class and subject
+        const testClass = classes.find(c => c.id === test.class_id);
+        if (testClass && testClass.subjects) {
+          return testClass.subjects.some(
+            (mapping: any) => 
+              mapping.teacher_id === currentTeacher.id && 
+              mapping.subject_id === test.subject_id
+          );
+        }
+        return false;
+      });
+    }
+    return tests; // Admins see all
+  }, [tests, user, currentTeacher, classes]);
+
+  // Available classes for staff (only classes they teach)
+  const availableClasses = useMemo(() => {
+    if (user?.role === "school_admin") {
+      return classes;
+    }
+    if (user?.role === "staff" && currentTeacher) {
+      const assignedClassIds = new Set();
+      classes.forEach((cls) => {
+        if (cls.subjects?.some((mapping: any) => mapping.teacher_id === currentTeacher.id)) {
+          assignedClassIds.add(cls.id);
+        }
+      });
+      return classes.filter((cls) => assignedClassIds.has(cls.id));
+    }
+    return [];
+  }, [classes, currentTeacher, user]);
+
+  // Available subjects for staff (only subjects they teach in selected class)
+  const availableSubjects = useMemo(() => {
+    const selectedClassId = form.watch("class_id");
+    if (!selectedClassId) return [];
+
+    const selectedClass = classes.find((c) => c.id === Number(selectedClassId));
+    if (!selectedClass?.subjects) return [];
+
+    if (user?.role === "school_admin") {
+      const subjectIdsInClass = new Set(
+        selectedClass.subjects.map((m: any) => m.subject_id)
+      );
+      return subjects.filter((s) => subjectIdsInClass.has(s.id));
+    }
+
+    if (user?.role === "staff" && currentTeacher) {
+      const taughtSubjectIds = new Set(
+        selectedClass.subjects
+          .filter((mapping: any) => mapping.teacher_id === currentTeacher.id)
+          .map((mapping: any) => mapping.subject_id)
+      );
+      return subjects.filter((s) => taughtSubjectIds.has(s.id));
+    }
+
+    return [];
+  }, [form.watch("class_id"), classes, subjects, currentTeacher, user]);
+
   return (
     <DashboardLayout title="Tests">
       <div className="space-y-6">
@@ -464,7 +539,7 @@ export default function TestsPage() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {(subjects as any[]).map((subject: any) => (
+                                {availableSubjects.map((subject: any) => (
                                   <SelectItem
                                     key={subject.id}
                                     value={String(subject.id)}
@@ -496,7 +571,7 @@ export default function TestsPage() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {(classes as any[]).map((cls: any) => (
+                                {availableClasses.map((cls: any) => (
                                   <SelectItem
                                     key={cls.id}
                                     value={String(cls.id)}
@@ -603,7 +678,7 @@ export default function TestsPage() {
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {tests.map((test) => (
+            {filteredTests.map((test) => (
               <Card
                 key={test.id}
                 className="rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 border border-gray-200 bg-gradient-to-br from-white to-gray-50"
