@@ -1,539 +1,310 @@
-import { eq, and, desc, asc, inArray, gte, lte, sql } from "drizzle-orm";
-import { db } from "./database";
-import { 
-  users, schools, schoolAdmins, teachers, students, classes, subjects, 
-  classSubjects, studentAttendance, teacherAttendance, holidays, exams, 
-  examSubjects, marks, feeStructures, feePayments, bills, messages, 
-  classMessages, classLogs, homework, homeworkSubmissions, timetables, 
-  lessonPlans, materials, tests
+import mongoose from 'mongoose';
+import {
+  User, School, SchoolAdmin, Teacher, Student, Class, Subject, 
+  ClassSubject, TeacherSubject, StudentAttendance, TeacherAttendance,
+  Exam, Message, Homework, Material, Test,
+  IUser, ISchool, ISchoolAdmin, ITeacher, IStudent, IClass, ISubject,
+  IClassSubject, ITeacherSubject, IStudentAttendance, ITeacherAttendance,
+  IExam, IMessage, IHomework, IMaterial, ITest,
+  InsertUser, InsertSchool, InsertSchoolAdmin, InsertTeacher, InsertStudent,
+  InsertClass, InsertSubject, InsertClassSubject, InsertTeacherSubject
 } from "../shared/schema";
-import session from 'express-session';
-import MemoryStore from 'memorystore';
 
-// Create memory store for sessions
-const SessionStore = MemoryStore(session);
-
-export class DatabaseStorage {
-  public sessionStore: session.Store;
-
-  constructor() {
-    this.sessionStore = new SessionStore({
-      checkPeriod: 86400000, // prune expired entries every 24h
-    });
-  }
-
+export interface IStorage {
   // User operations
-  async getUser(id: number) {
-    const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
-    return result[0] || null;
+  createUser(userData: Omit<InsertUser, 'school_id' | 'class_id'> & { school_id?: string; class_id?: string }): Promise<IUser>;
+  getUserByEmail(email: string): Promise<IUser | null>;
+  getUserById(id: string): Promise<IUser | null>;
+  updateUser(id: string, userData: Partial<IUser>): Promise<IUser | null>;
+  deleteUser(id: string): Promise<boolean>;
+
+  // School operations
+  createSchool(schoolData: InsertSchool): Promise<ISchool>;
+  getSchool(id: string): Promise<ISchool | null>;
+  getSchools(): Promise<ISchool[]>;
+  updateSchool(id: string, schoolData: Partial<ISchool>): Promise<ISchool | null>;
+
+  // School Admin operations
+  createSchoolAdmin(adminData: InsertSchoolAdmin): Promise<ISchoolAdmin>;
+  getSchoolAdminByUserId(userId: string): Promise<ISchoolAdmin | null>;
+  getSchoolAdminsBySchool(schoolId: string): Promise<ISchoolAdmin[]>;
+
+  // Teacher operations
+  createTeacher(teacherData: InsertTeacher): Promise<ITeacher>;
+  getTeacher(id: string): Promise<ITeacher | null>;
+  getTeacherByUserId(userId: string): Promise<ITeacher | null>;
+  getTeachersBySchool(schoolId: string): Promise<ITeacher[]>;
+  updateTeacher(id: string, teacherData: Partial<ITeacher>): Promise<ITeacher | null>;
+  deleteTeacher(id: string): Promise<boolean>;
+
+  // Student operations
+  createStudent(studentData: InsertStudent): Promise<IStudent>;
+  getStudent(id: string): Promise<IStudent | null>;
+  getStudentByUserId(userId: string): Promise<IStudent | null>;
+  getStudentsBySchool(schoolId: string): Promise<IStudent[]>;
+  getStudentsByClass(classId: string): Promise<IStudent[]>;
+  updateStudent(id: string, studentData: Partial<IStudent>): Promise<IStudent | null>;
+  deleteStudent(id: string): Promise<boolean>;
+
+  // Class operations
+  createClass(classData: InsertClass): Promise<IClass>;
+  getClass(id: string): Promise<IClass | null>;
+  getClassesBySchool(schoolId: string): Promise<IClass[]>;
+  updateClass(id: string, classData: Partial<IClass>): Promise<IClass | null>;
+  deleteClass(id: string): Promise<boolean>;
+
+  // Subject operations
+  createSubject(subjectData: InsertSubject): Promise<ISubject>;
+  getSubject(id: string): Promise<ISubject | null>;
+  getSubjectsBySchool(schoolId: string): Promise<ISubject[]>;
+  updateSubject(id: string, subjectData: Partial<ISubject>): Promise<ISubject | null>;
+  deleteSubject(id: string): Promise<boolean>;
+
+  // Class-Subject operations
+  createClassSubject(classSubjectData: InsertClassSubject): Promise<IClassSubject>;
+  getClassSubjectsByClass(classId: string): Promise<IClassSubject[]>;
+  getClassSubjectsBySubject(subjectId: string): Promise<IClassSubject[]>;
+  deleteClassSubject(id: string): Promise<boolean>;
+
+  // Teacher-Subject operations
+  createTeacherSubject(teacherSubjectData: InsertTeacherSubject): Promise<ITeacherSubject>;
+  getTeacherSubjectsByTeacher(teacherId: string): Promise<ITeacherSubject[]>;
+  getTeacherSubjectsBySubject(subjectId: string): Promise<ITeacherSubject[]>;
+  deleteTeacherSubject(id: string): Promise<boolean>;
+}
+
+export class DatabaseStorage implements IStorage {
+  
+  // User operations
+  async createUser(userData: Omit<InsertUser, 'school_id' | 'class_id'> & { school_id?: string; class_id?: string }): Promise<IUser> {
+    const user = new User({
+      ...userData,
+      school_id: userData.school_id ? new mongoose.Types.ObjectId(userData.school_id) : undefined,
+      class_id: userData.class_id ? new mongoose.Types.ObjectId(userData.class_id) : undefined,
+    });
+    return await user.save();
   }
 
-  async getUserByEmail(email: string) {
-    const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
-    return result[0] || null;
+  async getUserByEmail(email: string): Promise<IUser | null> {
+    return await User.findOne({ email }).exec();
   }
 
-  async getUserByUsername(username: string) {
-    return this.getUserByEmail(username);
+  async getUserById(id: string): Promise<IUser | null> {
+    return await User.findById(id).exec();
   }
 
-  async createUser(userData: {
-    email: string;
-    password: string;
-    role: string;
-    name: string;
-    school_id?: number;
-    class_id?: number;
-  }) {
-    const existingUser = await this.getUserByEmail(userData.email);
-    if (existingUser) {
-      throw new Error("User with this email already exists.");
-    }
-
-    const result = await db.insert(users).values({
-      email: userData.email,
-      password: userData.password,
-      role: userData.role,
-      name: userData.name,
-      school_id: userData.school_id,
-      class_id: userData.class_id,
-    }).returning();
-
-    return result[0];
+  async updateUser(id: string, userData: Partial<IUser>): Promise<IUser | null> {
+    return await User.findByIdAndUpdate(id, userData, { new: true }).exec();
   }
 
-  async updateUser(id: number, data: Partial<typeof users.$inferInsert>) {
-    const result = await db.update(users).set(data).where(eq(users.id, id)).returning();
-    return result[0] || null;
-  }
-
-  async deleteUser(id: number): Promise<boolean> {
-    const result = await db.delete(users).where(eq(users.id, id)).returning();
-    return result.length > 0;
+  async deleteUser(id: string): Promise<boolean> {
+    const result = await User.findByIdAndDelete(id).exec();
+    return result !== null;
   }
 
   // School operations
-  async getSchool(id: number) {
-    const result = await db.select().from(schools).where(eq(schools.id, id)).limit(1);
-    return result[0] || null;
+  async createSchool(schoolData: InsertSchool): Promise<ISchool> {
+    const school = new School(schoolData);
+    return await school.save();
   }
 
-  async getSchoolByEmail(contactEmail: string) {
-    const result = await db.select().from(schools).where(eq(schools.contact_email, contactEmail)).limit(1);
-    return result[0] || null;
+  async getSchool(id: string): Promise<ISchool | null> {
+    return await School.findById(id).exec();
   }
 
-  async getSchools() {
-    return await db.select().from(schools).orderBy(asc(schools.created_at));
+  async getSchools(): Promise<ISchool[]> {
+    return await School.find().exec();
   }
 
-  async createSchool(schoolData: typeof schools.$inferInsert) {
-    const result = await db.insert(schools).values(schoolData).returning();
-    return result[0];
-  }
-
-  async updateSchool(id: number, data: Partial<typeof schools.$inferInsert>) {
-    const result = await db.update(schools).set(data).where(eq(schools.id, id)).returning();
-    return result[0] || null;
-  }
-
-  async deleteSchool(id: number): Promise<boolean> {
-    const result = await db.delete(schools).where(eq(schools.id, id)).returning();
-    return result.length > 0;
+  async updateSchool(id: string, schoolData: Partial<ISchool>): Promise<ISchool | null> {
+    return await School.findByIdAndUpdate(id, schoolData, { new: true }).exec();
   }
 
   // School Admin operations
-  async getSchoolAdminsBySchoolId(schoolId: number) {
-    return await db.select().from(schoolAdmins).where(eq(schoolAdmins.school_id, schoolId));
+  async createSchoolAdmin(adminData: InsertSchoolAdmin): Promise<ISchoolAdmin> {
+    const admin = new SchoolAdmin({
+      ...adminData,
+      user_id: new mongoose.Types.ObjectId(adminData.user_id),
+      school_id: new mongoose.Types.ObjectId(adminData.school_id),
+    });
+    return await admin.save();
   }
 
-  async createSchoolAdmin(data: typeof schoolAdmins.$inferInsert) {
-    const result = await db.insert(schoolAdmins).values(data).returning();
-    return result[0];
+  async getSchoolAdminByUserId(userId: string): Promise<ISchoolAdmin | null> {
+    return await SchoolAdmin.findOne({ user_id: new mongoose.Types.ObjectId(userId) }).exec();
   }
 
-  async updateSchoolAdmin(id: number, data: Partial<typeof schoolAdmins.$inferInsert>) {
-    const result = await db.update(schoolAdmins).set(data).where(eq(schoolAdmins.id, id)).returning();
-    return result[0] || null;
-  }
-
-  async deleteSchoolAdmin(id: number): Promise<boolean> {
-    const result = await db.delete(schoolAdmins).where(eq(schoolAdmins.id, id)).returning();
-    return result.length > 0;
-  }
-
-  async getSchoolAdminByUserId(userId: number) {
-    const result = await db.select().from(schoolAdmins).where(eq(schoolAdmins.user_id, userId)).limit(1);
-    return result[0] || null;
+  async getSchoolAdminsBySchool(schoolId: string): Promise<ISchoolAdmin[]> {
+    return await SchoolAdmin.find({ school_id: new mongoose.Types.ObjectId(schoolId) }).exec();
   }
 
   // Teacher operations
-  async getTeachersBySchoolId(schoolId: number) {
-    return await db.select().from(teachers).where(eq(teachers.school_id, schoolId));
+  async createTeacher(teacherData: InsertTeacher): Promise<ITeacher> {
+    const teacher = new Teacher({
+      ...teacherData,
+      user_id: new mongoose.Types.ObjectId(teacherData.user_id),
+      school_id: new mongoose.Types.ObjectId(teacherData.school_id),
+    });
+    return await teacher.save();
   }
 
-  async getTeacherByUserId(userId: number) {
-    const result = await db.select().from(teachers).where(eq(teachers.user_id, userId)).limit(1);
-    return result[0] || null;
+  async getTeacher(id: string): Promise<ITeacher | null> {
+    return await Teacher.findById(id).exec();
   }
 
-  async getTeacherByTeacherEmail(email: string) {
-    const result = await db.select().from(teachers).where(eq(teachers.email, email)).limit(1);
-    return result[0] || null;
+  async getTeacherByUserId(userId: string): Promise<ITeacher | null> {
+    return await Teacher.findOne({ user_id: new mongoose.Types.ObjectId(userId) }).exec();
   }
 
-  async createTeacher(data: typeof teachers.$inferInsert) {
-    const result = await db.insert(teachers).values(data).returning();
-    return result[0];
+  async getTeachersBySchool(schoolId: string): Promise<ITeacher[]> {
+    return await Teacher.find({ school_id: new mongoose.Types.ObjectId(schoolId) }).exec();
   }
 
-  async updateTeacher(id: number, data: Partial<typeof teachers.$inferInsert>) {
-    const result = await db.update(teachers).set(data).where(eq(teachers.id, id)).returning();
-    return result[0] || null;
+  async updateTeacher(id: string, teacherData: Partial<ITeacher>): Promise<ITeacher | null> {
+    return await Teacher.findByIdAndUpdate(id, teacherData, { new: true }).exec();
   }
 
-  async deleteTeacher(id: number): Promise<boolean> {
-    const result = await db.delete(teachers).where(eq(teachers.id, id)).returning();
-    return result.length > 0;
+  async deleteTeacher(id: string): Promise<boolean> {
+    const result = await Teacher.findByIdAndDelete(id).exec();
+    return result !== null;
   }
 
   // Student operations
-  async getStudentsBySchoolId(schoolId: number) {
-    return await db.select().from(students).where(eq(students.school_id, schoolId));
+  async createStudent(studentData: InsertStudent): Promise<IStudent> {
+    const student = new Student({
+      ...studentData,
+      user_id: new mongoose.Types.ObjectId(studentData.user_id),
+      school_id: new mongoose.Types.ObjectId(studentData.school_id),
+      class_id: studentData.class_id ? new mongoose.Types.ObjectId(studentData.class_id) : undefined,
+    });
+    return await student.save();
   }
 
-  async getStudentsByClassId(classId: number) {
-    return await db.select().from(students).where(eq(students.class_id, classId));
+  async getStudent(id: string): Promise<IStudent | null> {
+    return await Student.findById(id).exec();
   }
 
-  async getStudentByUserId(userId: number) {
-    const result = await db.select().from(students).where(eq(students.user_id, userId)).limit(1);
-    return result[0] || null;
+  async getStudentByUserId(userId: string): Promise<IStudent | null> {
+    return await Student.findOne({ user_id: new mongoose.Types.ObjectId(userId) }).exec();
   }
 
-  async createStudent(data: typeof students.$inferInsert) {
-    const result = await db.insert(students).values(data).returning();
-    return result[0];
+  async getStudentsBySchool(schoolId: string): Promise<IStudent[]> {
+    return await Student.find({ school_id: new mongoose.Types.ObjectId(schoolId) }).exec();
   }
 
-  async updateStudent(id: number, data: Partial<typeof students.$inferInsert>) {
-    const result = await db.update(students).set(data).where(eq(students.id, id)).returning();
-    return result[0] || null;
+  async getStudentsByClass(classId: string): Promise<IStudent[]> {
+    return await Student.find({ class_id: new mongoose.Types.ObjectId(classId) }).exec();
   }
 
-  async deleteStudent(id: number): Promise<boolean> {
-    const result = await db.delete(students).where(eq(students.id, id)).returning();
-    return result.length > 0;
+  async updateStudent(id: string, studentData: Partial<IStudent>): Promise<IStudent | null> {
+    return await Student.findByIdAndUpdate(id, studentData, { new: true }).exec();
+  }
+
+  async deleteStudent(id: string): Promise<boolean> {
+    const result = await Student.findByIdAndDelete(id).exec();
+    return result !== null;
   }
 
   // Class operations
-  async getClassesBySchoolId(schoolId: number) {
-    return await db.select().from(classes).where(eq(classes.school_id, schoolId));
+  async createClass(classData: InsertClass): Promise<IClass> {
+    const classObj = new Class({
+      ...classData,
+      school_id: new mongoose.Types.ObjectId(classData.school_id),
+      class_teacher_id: classData.class_teacher_id ? new mongoose.Types.ObjectId(classData.class_teacher_id) : undefined,
+    });
+    return await classObj.save();
   }
 
-  async getClassesByTeacherId(teacherId: number) {
-    const result = await db.select({
-      class: classes
-    })
-    .from(classes)
-    .where(eq(classes.class_teacher_id, teacherId));
-    
-    return result.map(r => r.class);
+  async getClass(id: string): Promise<IClass | null> {
+    return await Class.findById(id).exec();
   }
 
-  async getAllClassesByTeacherId(teacherId: number) {
-    return this.getClassesByTeacherId(teacherId);
+  async getClassesBySchool(schoolId: string): Promise<IClass[]> {
+    return await Class.find({ school_id: new mongoose.Types.ObjectId(schoolId) }).exec();
   }
 
-  async createClass(data: typeof classes.$inferInsert) {
-    const result = await db.insert(classes).values(data).returning();
-    return result[0];
+  async updateClass(id: string, classData: Partial<IClass>): Promise<IClass | null> {
+    return await Class.findByIdAndUpdate(id, classData, { new: true }).exec();
   }
 
-  async updateClass(id: number, data: Partial<typeof classes.$inferInsert>) {
-    const result = await db.update(classes).set(data).where(eq(classes.id, id)).returning();
-    return result[0] || null;
-  }
-
-  async deleteClass(id: number): Promise<boolean> {
-    const result = await db.delete(classes).where(eq(classes.id, id)).returning();
-    return result.length > 0;
+  async deleteClass(id: string): Promise<boolean> {
+    const result = await Class.findByIdAndDelete(id).exec();
+    return result !== null;
   }
 
   // Subject operations
-  async getSubjectsBySchoolId(schoolId: number) {
-    return await db.select().from(subjects).where(eq(subjects.school_id, schoolId));
+  async createSubject(subjectData: InsertSubject): Promise<ISubject> {
+    const subject = new Subject({
+      ...subjectData,
+      school_id: new mongoose.Types.ObjectId(subjectData.school_id),
+    });
+    return await subject.save();
   }
 
-  async createSubject(data: typeof subjects.$inferInsert) {
-    const result = await db.insert(subjects).values(data).returning();
-    return result[0];
+  async getSubject(id: string): Promise<ISubject | null> {
+    return await Subject.findById(id).exec();
   }
 
-  async updateSubject(id: number, data: Partial<typeof subjects.$inferInsert>) {
-    const result = await db.update(subjects).set(data).where(eq(subjects.id, id)).returning();
-    return result[0] || null;
+  async getSubjectsBySchool(schoolId: string): Promise<ISubject[]> {
+    return await Subject.find({ school_id: new mongoose.Types.ObjectId(schoolId) }).exec();
   }
 
-  async deleteSubject(id: number): Promise<boolean> {
-    const result = await db.delete(subjects).where(eq(subjects.id, id)).returning();
-    return result.length > 0;
+  async updateSubject(id: string, subjectData: Partial<ISubject>): Promise<ISubject | null> {
+    return await Subject.findByIdAndUpdate(id, subjectData, { new: true }).exec();
   }
 
-  // Class Subject operations
-  async getClassSubjectsByClassId(classId: number) {
-    return await db.select().from(classSubjects).where(eq(classSubjects.class_id, classId));
+  async deleteSubject(id: string): Promise<boolean> {
+    const result = await Subject.findByIdAndDelete(id).exec();
+    return result !== null;
   }
 
-  async getClassSubjectsByTeacherId(teacherId: number) {
-    return await db.select().from(classSubjects).where(eq(classSubjects.teacher_id, teacherId));
+  // Class-Subject operations
+  async createClassSubject(classSubjectData: InsertClassSubject): Promise<IClassSubject> {
+    const classSubject = new ClassSubject({
+      ...classSubjectData,
+      class_id: new mongoose.Types.ObjectId(classSubjectData.class_id),
+      subject_id: new mongoose.Types.ObjectId(classSubjectData.subject_id),
+      teacher_id: classSubjectData.teacher_id ? new mongoose.Types.ObjectId(classSubjectData.teacher_id) : undefined,
+    });
+    return await classSubject.save();
   }
 
-  async createClassSubject(data: typeof classSubjects.$inferInsert) {
-    const result = await db.insert(classSubjects).values(data).returning();
-    return result[0];
+  async getClassSubjectsByClass(classId: string): Promise<IClassSubject[]> {
+    return await ClassSubject.find({ class_id: new mongoose.Types.ObjectId(classId) }).exec();
   }
 
-  async updateClassSubject(id: number, data: Partial<typeof classSubjects.$inferInsert>) {
-    const result = await db.update(classSubjects).set(data).where(eq(classSubjects.id, id)).returning();
-    return result[0] || null;
+  async getClassSubjectsBySubject(subjectId: string): Promise<IClassSubject[]> {
+    return await ClassSubject.find({ subject_id: new mongoose.Types.ObjectId(subjectId) }).exec();
   }
 
-  // Attendance operations
-  async getStudentAttendanceByClassAndDate(classId: number, date: string) {
-    return await db.select().from(studentAttendance)
-      .where(and(eq(studentAttendance.class_id, classId), eq(studentAttendance.date, date)));
+  async deleteClassSubject(id: string): Promise<boolean> {
+    const result = await ClassSubject.findByIdAndDelete(id).exec();
+    return result !== null;
   }
 
-  async getStudentAttendanceByStudentId(studentId: number) {
-    return await db.select().from(studentAttendance)
-      .where(eq(studentAttendance.student_id, studentId))
-      .orderBy(desc(studentAttendance.date));
+  // Teacher-Subject operations
+  async createTeacherSubject(teacherSubjectData: InsertTeacherSubject): Promise<ITeacherSubject> {
+    const teacherSubject = new TeacherSubject({
+      ...teacherSubjectData,
+      teacher_id: new mongoose.Types.ObjectId(teacherSubjectData.teacher_id),
+      subject_id: new mongoose.Types.ObjectId(teacherSubjectData.subject_id),
+    });
+    return await teacherSubject.save();
   }
 
-  async getStudentAttendanceByClassId(classId: number) {
-    return await db.select().from(studentAttendance)
-      .where(eq(studentAttendance.class_id, classId))
-      .orderBy(desc(studentAttendance.date));
+  async getTeacherSubjectsByTeacher(teacherId: string): Promise<ITeacherSubject[]> {
+    return await TeacherSubject.find({ teacher_id: new mongoose.Types.ObjectId(teacherId) }).exec();
   }
 
-  async getStudentAttendanceBySchoolId(schoolId: number) {
-    return await db.select().from(studentAttendance)
-      .where(eq(studentAttendance.school_id, schoolId))
-      .orderBy(desc(studentAttendance.date));
+  async getTeacherSubjectsBySubject(subjectId: string): Promise<ITeacherSubject[]> {
+    return await TeacherSubject.find({ subject_id: new mongoose.Types.ObjectId(subjectId) }).exec();
   }
 
-  async getStudentAttendanceByDateRange(schoolId: number, startDate: string, endDate: string) {
-    return await db.select().from(studentAttendance)
-      .where(and(
-        eq(studentAttendance.school_id, schoolId),
-        gte(studentAttendance.date, startDate),
-        lte(studentAttendance.date, endDate)
-      ))
-      .orderBy(desc(studentAttendance.date));
-  }
-
-  async createStudentAttendance(data: typeof studentAttendance.$inferInsert) {
-    const result = await db.insert(studentAttendance).values(data).returning();
-    return result[0];
-  }
-
-  async createStudentAttendances(attendanceRecords: typeof studentAttendance.$inferInsert[]) {
-    const result = await db.insert(studentAttendance).values(attendanceRecords).returning();
-    return result;
-  }
-
-  async updateStudentAttendances(attendanceRecords: Array<{ id: number; status: string }>) {
-    const results = [];
-    for (const record of attendanceRecords) {
-      const result = await db.update(studentAttendance)
-        .set({ status: record.status })
-        .where(eq(studentAttendance.id, record.id))
-        .returning();
-      if (result[0]) results.push(result[0]);
-    }
-    return results;
-  }
-
-  // Teacher Attendance operations
-  async getTeacherAttendanceBySchoolId(schoolId: number) {
-    return await db.select().from(teacherAttendance)
-      .where(eq(teacherAttendance.school_id, schoolId))
-      .orderBy(desc(teacherAttendance.date));
-  }
-
-  async getTeacherAttendanceByDateRange(schoolId: number, startDate: string, endDate: string) {
-    return await db.select().from(teacherAttendance)
-      .where(and(
-        eq(teacherAttendance.school_id, schoolId),
-        gte(teacherAttendance.date, startDate),
-        lte(teacherAttendance.date, endDate)
-      ))
-      .orderBy(desc(teacherAttendance.date));
-  }
-
-  async createTeacherAttendances(attendanceRecords: typeof teacherAttendance.$inferInsert[]) {
-    const result = await db.insert(teacherAttendance).values(attendanceRecords).returning();
-    return result;
-  }
-
-  async updateTeacherAttendances(attendanceRecords: Array<{ id: number; status: string }>) {
-    const results = [];
-    for (const record of attendanceRecords) {
-      const result = await db.update(teacherAttendance)
-        .set({ status: record.status })
-        .where(eq(teacherAttendance.id, record.id))
-        .returning();
-      if (result[0]) results.push(result[0]);
-    }
-    return results;
-  }
-
-  // Teachers by Class operations
-  async getTeachersByClassId(classId: number) {
-    const result = await db.select({
-      teacher: teachers
-    })
-    .from(classSubjects)
-    .innerJoin(teachers, eq(classSubjects.teacher_id, teachers.id))
-    .where(eq(classSubjects.class_id, classId));
-    
-    return result.map(r => r.teacher);
-  }
-
-  // Holiday operations
-  async createOrUpdateHolidays(schoolId: number, holidayData: any) {
-    // This would need custom logic based on your holiday requirements
-    return { success: true };
-  }
-
-  // Report generation
-  async generateAttendanceReport(schoolId: number, params: any) {
-    // Custom report generation logic would go here
-    return { report: "attendance report data" };
-  }
-
-  // Exam operations
-  async getExamsBySchoolId(schoolId: number) {
-    return await db.select().from(exams).where(eq(exams.school_id, schoolId));
-  }
-
-  async getExamsByClassId(classId: number) {
-    return await db.select().from(exams).where(eq(exams.class_id, classId));
-  }
-
-  async getExam(id: number) {
-    const result = await db.select().from(exams).where(eq(exams.id, id)).limit(1);
-    return result[0] || null;
-  }
-
-  async createExam(data: typeof exams.$inferInsert) {
-    const result = await db.insert(exams).values(data).returning();
-    return result[0];
-  }
-
-  async updateExam(id: number, data: Partial<typeof exams.$inferInsert>) {
-    const result = await db.update(exams).set(data).where(eq(exams.id, id)).returning();
-    return result[0] || null;
-  }
-
-  async deleteExam(id: number): Promise<boolean> {
-    const result = await db.delete(exams).where(eq(exams.id, id)).returning();
-    return result.length > 0;
-  }
-
-  async getExamSubjects(examId: number) {
-    return await db.select().from(examSubjects).where(eq(examSubjects.exam_id, examId));
-  }
-
-  async updateExamMarks(marks: any[]) {
-    // Custom logic for updating exam marks
-    return { success: true };
-  }
-
-  async getExamResults(examId: number) {
-    return await db.select().from(marks).where(eq(marks.exam_id, examId));
-  }
-
-  // Fee operations
-  async getFeeStructuresByClassId(classId: number) {
-    return await db.select().from(feeStructures).where(eq(feeStructures.class_id, classId));
-  }
-
-  async createFeeStructure(data: typeof feeStructures.$inferInsert) {
-    const result = await db.insert(feeStructures).values(data).returning();
-    return result[0];
-  }
-
-  async createFeePayment(data: typeof feePayments.$inferInsert) {
-    const result = await db.insert(feePayments).values(data).returning();
-    return result[0];
-  }
-
-  // Message operations
-  async getMessagesBySchoolId(schoolId: number) {
-    return await db.select().from(messages)
-      .where(eq(messages.school_id, schoolId))
-      .orderBy(desc(messages.created_at));
-  }
-
-  async getMessagesByTeacherId(teacherId: number) {
-    return await db.select().from(messages)
-      .where(eq(messages.sender_id, teacherId))
-      .orderBy(desc(messages.created_at));
-  }
-
-  async getMessagesWithUserInfo(schoolId: number) {
-    // Would need join with users table
-    return await db.select().from(messages)
-      .where(eq(messages.school_id, schoolId))
-      .orderBy(desc(messages.created_at));
-  }
-
-  async getMessagesForUser(userId: number) {
-    return await db.select().from(messages)
-      .where(eq(messages.sender_id, userId))
-      .orderBy(desc(messages.created_at));
-  }
-
-  async getMessagesSentByUser(userId: number) {
-    return this.getMessagesForUser(userId);
-  }
-
-  async getMessagesByClass(classId: number) {
-    return await db.select().from(classMessages)
-      .where(eq(classMessages.class_id, classId))
-      .orderBy(desc(classMessages.created_at));
-  }
-
-  async markMessageAsRead(messageId: number, userId: number) {
-    // Custom logic for marking messages as read
-    return { success: true };
-  }
-
-  // Material operations
-  async getMaterials(params: any) {
-    return await db.select().from(materials).orderBy(desc(materials.created_at));
-  }
-
-  async getMaterial(id: number) {
-    const result = await db.select().from(materials).where(eq(materials.id, id)).limit(1);
-    return result[0] || null;
-  }
-
-  async updateMaterial(id: number, data: Partial<typeof materials.$inferInsert>) {
-    const result = await db.update(materials).set(data).where(eq(materials.id, id)).returning();
-    return result[0] || null;
-  }
-
-  async deleteMaterial(id: number): Promise<boolean> {
-    const result = await db.delete(materials).where(eq(materials.id, id)).returning();
-    return result.length > 0;
-  }
-
-  // Test operations
-  async getTests(params: any) {
-    return await db.select().from(tests).orderBy(desc(tests.created_at));
-  }
-
-  async getTestsByClassId(classId: number) {
-    return await db.select().from(tests).where(eq(tests.class_id, classId));
-  }
-
-  async getTest(id: number) {
-    const result = await db.select().from(tests).where(eq(tests.id, id)).limit(1);
-    return result[0] || null;
-  }
-
-  async updateTest(id: number, data: Partial<typeof tests.$inferInsert>) {
-    const result = await db.update(tests).set(data).where(eq(tests.id, id)).returning();
-    return result[0] || null;
-  }
-
-  async deleteTest(id: number): Promise<boolean> {
-    const result = await db.delete(tests).where(eq(tests.id, id)).returning();
-    return result.length > 0;
-  }
-
-  // Homework operations
-  async getHomeworkList(params: any) {
-    return await db.select().from(homework).orderBy(desc(homework.created_at));
-  }
-
-  async getHomework(id: number) {
-    const result = await db.select().from(homework).where(eq(homework.id, id)).limit(1);
-    return result[0] || null;
-  }
-
-  async updateHomework(id: number, data: Partial<typeof homework.$inferInsert>) {
-    const result = await db.update(homework).set(data).where(eq(homework.id, id)).returning();
-    return result[0] || null;
-  }
-
-  async deleteHomework(id: number): Promise<boolean> {
-    const result = await db.delete(homework).where(eq(homework.id, id)).returning();
-    return result.length > 0;
+  async deleteTeacherSubject(id: string): Promise<boolean> {
+    const result = await TeacherSubject.findByIdAndDelete(id).exec();
+    return result !== null;
   }
 }
 
+// Create and export the storage instance
 export const storage = new DatabaseStorage();
