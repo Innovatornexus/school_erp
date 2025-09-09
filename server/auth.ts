@@ -332,9 +332,19 @@ export function setupAuth(app: Express) {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Not authenticated" });
     }
-    // Return user data without password
-    const { password, ...userWithoutPassword } = req.user as AppUser;
-    res.json(userWithoutPassword);
+    // Return user data without password and transform MongoDB format to frontend format
+    const user = req.user as any;
+    const { password, __v, ...userWithoutPassword } = user;
+    
+    // Transform MongoDB ObjectId format to simple strings for frontend compatibility
+    const transformedUser = {
+      ...userWithoutPassword,
+      id: user._id.toString(), // Convert _id to id string
+      school_id: user.school_id ? user.school_id.toString() : null, // Convert ObjectId to string
+      class_id: user.class_id ? user.class_id.toString() : null,
+    };
+    
+    res.json(transformedUser);
   });
 
   // Middleware for role-based access control
