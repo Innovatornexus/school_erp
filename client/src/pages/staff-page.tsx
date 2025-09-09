@@ -145,34 +145,7 @@ export default function StaffPage() {
   //create a staff
   const createStaff = async (data: StaffFormValues) => {
     try {
-      // 1. Create user
-      const userRes = await fetch("/api/register/user", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: data.fullName,
-          email: data.email,
-          password: data.password,
-          confirmPassword: data.confirmPassword,
-          role: "teacher",
-        }),
-      });
-      
-      if (!userRes.ok) {
-        const errorData = await userRes.json();
-        console.error('User creation failed:', errorData);
-        throw new Error("Failed to create user");
-      }
-      
-      const newUser = await userRes.json();
-      const userId = newUser._id || newUser.id;
-      
-      if (!userId) {
-        console.error('No userId received:', newUser);
-        throw new Error("No userId received from user creation");
-      }
-
-      // 2. Create staff profile
+      // Send complete teacher data to backend (backend handles user creation)
       const teacherData = {
         fullName: data.fullName,
         email: data.email,
@@ -181,21 +154,22 @@ export default function StaffPage() {
         status: data.status || "Active",
         subjectSpecialization: data.subjectSpecialization || [],
         joiningDate: data.joiningDate.toISOString(),
-        userId: userId,
         schoolId: schoolData?.id,
+        // Include password for backend user creation
+        password: data.password,
       };
       
-      console.log("Creating staff with data:", teacherData);
+      console.log("Creating teacher with data:", teacherData);
 
-      const staffRes = await fetch("/api/teachers", {
+      const response = await fetch("/api/teachers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(teacherData),
       });
 
-      if (!staffRes.ok) {
-        const errorData = await staffRes.json();
-        console.log("Staff creation failed:", errorData);
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.log("Teacher creation failed:", errorData);
         
         // Handle specific error cases
         if (errorData.error && errorData.error.code === 11000) {
@@ -206,12 +180,12 @@ export default function StaffPage() {
           throw new Error("A user with this email already exists");
         }
         
-        throw new Error(errorData.message || "Failed to create staff");
+        throw new Error(errorData.message || "Failed to create teacher");
       }
 
       await refetchData(); // Refresh data from context
     } catch (error) {
-      console.error("Error creating staff:", error);
+      console.error("Error creating teacher:", error);
       throw error;
     }
   };

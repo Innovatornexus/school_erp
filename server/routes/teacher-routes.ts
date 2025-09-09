@@ -32,13 +32,15 @@ router.get("/:id", async (req, res) => {
 // Create a new teacher
 router.post("/", async (req, res) => {
   try {
-    const validatedData = insertTeacherSchema.parse(req.body);
+    // Extract password from request body
+    const { password, ...teacherData } = req.body;
+    const validatedData = insertTeacherSchema.parse(teacherData);
     
     // First create the user account
     const user = await UserService.createUser({
       name: validatedData.fullName,
       email: validatedData.email,
-      password: "temp123", // Should be changed on first login
+      password: password || "temp123", // Use provided password or default
       role: "teacher",
       schoolId: validatedData.schoolId,
     });
