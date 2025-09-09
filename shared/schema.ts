@@ -96,7 +96,7 @@ export const teachers = pgTable("teachers", {
   joining_date: date("joining_date").notNull(),
   phone_number: text("phone_number").notNull(),
   status: text("status").notNull(),
-  subject_specialization: text("subject_specialization").array().notNull(),
+  subject_specialization: text("subject_specialization").array(),
 });
 
 export const insertTeacherSchema = createInsertSchema(teachers).omit({

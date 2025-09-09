@@ -122,6 +122,11 @@ export class DatabaseStorage {
     return result.length > 0;
   }
 
+  async getSchoolAdminByUserId(userId: number) {
+    const result = await db.select().from(schoolAdmins).where(eq(schoolAdmins.user_id, userId)).limit(1);
+    return result[0] || null;
+  }
+
   // Teacher operations
   async getTeachersBySchoolId(schoolId: number) {
     return await db.select().from(teachers).where(eq(teachers.school_id, schoolId));
