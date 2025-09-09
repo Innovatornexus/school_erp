@@ -4,6 +4,9 @@ import { UserService } from "../services/user-service";
 import { insertTeacherSchema } from "../../shared/mongodb-schemas";
 import { z } from "zod";
 
+// Schema for teacher creation request (without userId)
+const createTeacherRequestSchema = insertTeacherSchema.omit({ userId: true });
+
 const router = Router();
 
 // Get all teachers for a school
@@ -40,8 +43,9 @@ router.post("/", async (req, res) => {
     console.log("Extracted password:", password ? "[PROVIDED]" : "[NOT PROVIDED]");
     console.log("Teacher data:", teacherData);
     
-    const validatedData = insertTeacherSchema.parse(teacherData);
-    console.log("Validated teacher data:", validatedData);
+    // Validate teacher data without userId first
+    const validatedData = createTeacherRequestSchema.parse(teacherData);
+    console.log("Validated teacher data (without userId):", validatedData);
     
     // First create the user account
     const userData = {
@@ -65,14 +69,17 @@ router.post("/", async (req, res) => {
     const userId = user.id;
     console.log("Using userId for teacher:", userId);
 
-    // Then create the teacher profile
-    const teacherPayload = {
+    // Now create complete teacher data with userId
+    const completeTeacherData = {
       ...validatedData,
       userId: userId,
     };
-    console.log("Creating teacher with payload:", teacherPayload);
     
-    const teacher = await TeacherService.createTeacher(teacherPayload);
+    // Validate complete teacher data with userId
+    const validatedTeacherData = insertTeacherSchema.parse(completeTeacherData);
+    console.log("Final validated teacher data:", validatedTeacherData);
+    
+    const teacher = await TeacherService.createTeacher(validatedTeacherData);
     console.log("Teacher created successfully:", teacher);
 
     res.status(201).json(teacher);

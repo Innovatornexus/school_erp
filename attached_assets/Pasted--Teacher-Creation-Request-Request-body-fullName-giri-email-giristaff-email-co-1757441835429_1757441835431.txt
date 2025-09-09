@@ -1,0 +1,89 @@
+=== Teacher Creation Request ===
+Request body: {
+  fullName: 'giri',
+  email: 'giristaff@email.com',
+  gender: 'male',
+  phoneNumber: '7896541236',
+  status: 'Active',
+  subjectSpecialization: [],
+  joiningDate: '2025-09-09T18:16:17.787Z',
+  schoolId: '68c052057fe7a830eb29ed97',
+  password: 'password'
+}
+Extracted password: [PROVIDED]
+Teacher data: {
+  fullName: 'giri',
+  email: 'giristaff@email.com',
+  gender: 'male',
+  phoneNumber: '7896541236',
+  status: 'Active',
+  subjectSpecialization: [],
+  joiningDate: '2025-09-09T18:16:17.787Z',
+  schoolId: '68c052057fe7a830eb29ed97'
+}
+=== Teacher Creation Error ===
+Error details: ZodError: [
+  {
+    "code": "invalid_type",
+    "expected": "string",
+    "received": "undefined",
+    "path": [
+      "userId"
+    ],
+    "message": "Required"
+  }
+]
+    at get error (file:///D:/react%20project/school-nexus-19/node_modules/zod/lib/index.mjs:587:31)
+    at ZodObject.parse (file:///D:/react%20project/school-nexus-19/node_modules/zod/lib/index.mjs:663:22)
+    at <anonymous> (D:\react project\school-nexus-19\server\routes\teacher-routes.ts:43:47)
+    at Layer.handle [as handle_request] (D:\react project\school-nexus-19\node_modules\express\lib\router\layer.js:95:5)
+    at next (D:\react project\school-nexus-19\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (D:\react project\school-nexus-19\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (D:\react project\school-nexus-19\node_modules\express\lib\router\layer.js:95:5)
+    at D:\react project\school-nexus-19\node_modules\express\lib\router\index.js:284:15
+    at Function.process_params (D:\react project\school-nexus-19\node_modules\express\lib\router\index.js:346:12)
+    at next (D:\react project\school-nexus-19\node_modules\express\lib\router\index.js:280:10)
+    at Function.handle (D:\react project\school-nexus-19\node_modules\express\lib\router\index.js:175:3)
+    at router (D:\react project\school-nexus-19\node_modules\express\lib\router\index.js:47:12)
+    at Layer.handle [as handle_request] (D:\react project\school-nexus-19\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (D:\react project\school-nexus-19\node_modules\express\lib\router\index.js:328:13)
+    at D:\react project\school-nexus-19\node_modules\express\lib\router\index.js:286:9
+    at Function.process_params (D:\react project\school-nexus-19\node_modules\express\lib\router\index.js:346:12)
+    at next (D:\react project\school-nexus-19\node_modules\express\lib\router\index.js:280:10)
+    at strategy.pass (D:\react project\school-nexus-19\node_modules\passport\lib\middleware\authenticate.js:355:9)
+    at D:\react project\school-nexus-19\node_modules\passport\lib\strategies\session.js:120:12
+    at pass (D:\react project\school-nexus-19\node_modules\passport\lib\authenticator.js:352:31)
+    at deserialized (D:\react project\school-nexus-19\node_modules\passport\lib\authenticator.js:364:7)
+    at <anonymous> (D:\react project\school-nexus-19\server\auth.ts:126:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  issues: [
+    {
+      code: 'invalid_type',
+      expected: 'string',
+      received: 'undefined',
+      path: [Array],
+      message: 'Required'
+    }
+  ],
+  addIssue: [Function (anonymous)],
+  addIssues: [Function (anonymous)],
+  errors: [
+    {
+      code: 'invalid_type',
+      expected: 'string',
+      received: 'undefined',
+      path: [Array],
+      message: 'Required'
+    }
+  ]
+}
+Validation errors: [
+  {
+    code: 'invalid_type',
+    expected: 'string',
+    received: 'undefined',
+    path: [ 'userId' ],
+    message: 'Required'
+  }
+]
+11:46:33 PM [express] POST /api/teachers 400 in 61ms :: {"message":"Validation error","errors":[{"cod…
