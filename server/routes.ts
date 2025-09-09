@@ -1,58 +1,59 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage } from "./mongodb-storage";
 import { setupAuth } from "./auth";
 import { z } from "zod";
-import {
-  insertSchoolSchema,
-  insertSchoolAdminSchema,
-  insertTeacherSchema,
-  insertStudentSchema,
-  insertClassSchema,
-  insertSubjectSchema,
-  insertClassSubjectSchema,
-  insertTeacherAttendanceSchema,
-  insertMessageSchema,
-  insertClassMessageSchema,
-  insertExamSchema,
-  insertFeeStructureSchema,
-  insertFeePaymentSchema,
-  insertBillSchema,
-  insertClassLogSchema,
-  insertLessonPlanSchema,
-  insertExamSubjectSchema,
-  insertMarkSchema,
-  insertTimetableSchema,
-  messages,
-  users,
-  studentAttendanceInputSchema,
-  studentAttendanceApiSchema,
-  updateStudentAttendanceApiSchema,
-  updateTeacherAttendanceApiSchema,
-  generateReportQuerySchema,
-  addHolidaysSchema,
-  insertMaterialSchema,
-  insertTestSchema,
-  insertHomeworkSchema,
-} from "../shared/schema";
 
-// Custom schema for exam creation that includes subjects
-const createExamSchema = insertExamSchema.extend({
-  subjects: z
-    .array(
-      z.object({
-        subject_id: z.number(),
-        subject_name: z.string().optional(),
-        exam_date: z.string(),
-        start_time: z.string().optional(),
-        end_time: z.string().optional(),
-        max_marks: z.number().optional(),
-      })
-    )
-    .optional(),
+// Simple validation schemas for MongoDB
+const createSchoolSchema = z.object({
+  name: z.string(),
+  address: z.string(),
+  contact_email: z.string().email(),
+  contact_phone: z.string(),
 });
-import { eq } from "drizzle-orm";
-import { db } from "./db";
+
+const createClassSchema = z.object({
+  school_id: z.string(),
+  grade: z.string(),
+  section: z.string(),
+  class_teacher_id: z.string().optional(),
+  class_teacher_name: z.string().optional(),
+});
+
+const createHomeworkSchema = z.object({
+  class_id: z.string(),
+  subject_id: z.string(),
+  teacher_id: z.string(),
+  school_id: z.string(),
+  title: z.string(),
+  description: z.string().optional(),
+  assigned_date: z.string(),
+  due_date: z.string().optional(),
+  attachment_url: z.string().optional(),
+});
+
+const createTestSchema = z.object({
+  class_id: z.string(),
+  subject_id: z.string(),
+  teacher_id: z.string(),
+  school_id: z.string(),
+  title: z.string(),
+  description: z.string().optional(),
+  test_date: z.string(),
+  max_marks: z.number().optional(),
+});
+
+const createMaterialSchema = z.object({
+  class_id: z.string(),
+  subject_id: z.string(),
+  teacher_id: z.string(),
+  school_id: z.string(),
+  title: z.string(),
+  description: z.string().optional(),
+  upload_date: z.string(),
+  file_url: z.string().optional(),
+  material_type: z.string().optional(),
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes

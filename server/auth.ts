@@ -4,10 +4,9 @@ import { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { storage } from "./storage";
-import { InsertUser, insertUserSchema } from "@shared/schema";
+import { storage } from "./mongodb-storage";
 import { z } from "zod";
-import type { User as AppUser } from "@shared/schema";
+import type { IUser as AppUser } from "@shared/mongodb-schemas";
 
 declare global {
   namespace Express {
@@ -117,17 +116,17 @@ export function setupAuth(app: Express) {
 
   // Serialize user to the session
   passport.serializeUser((user, done) => {
-    done(null, user.id);
+    done(null, user._id);
   });
 
   // Deserialize user from the session
-  passport.deserializeUser(async (id: number, done) => {
+  passport.deserializeUser(async (id: string, done) => {
     try {
       const user = await storage.getUser(id);
       if (user && user.role === "school_admin") {
-        const schoolAdmin = await storage.getSchoolAdminByUserId(user.id);
+        const schoolAdmin = await storage.getSchoolAdminByUserId(user._id.toString());
         if (schoolAdmin) {
-          user.school_id = schoolAdmin.school_id;
+          (user as any).school_id = user.schoolId;
         }
       }
       done(null, user);
@@ -204,8 +203,10 @@ export function setupAuth(app: Express) {
 
       // 4. Create user with hashed password
       const newUser = await storage.createUser({
-        ...userData,
+        email: userData.email,
         password: hashedPassword,
+        role: userData.role,
+        name: userData.name,
       });
 
       console.log("new user ::", newUser);
@@ -243,8 +244,10 @@ export function setupAuth(app: Express) {
       // Create new user with hashed password
       const hashedPassword = await hashPassword(userData.password);
       const newUser = await storage.createUser({
-        ...userData,
+        email: userData.email,
         password: hashedPassword,
+        role: userData.role,
+        name: userData.name,
       });
 
       console.log("new user ::", newUser);
@@ -261,8 +264,8 @@ export function setupAuth(app: Express) {
 
         // Create school_admin record linking the user and school
         await storage.createSchoolAdmin({
-          user_id: newUser.id,
-          school_id: school.id,
+          user_id: newUser._id.toString(),
+          school_id: school._id.toString(),
           full_name: userData.name,
           phone_number: "", // This will be updated later
         });
