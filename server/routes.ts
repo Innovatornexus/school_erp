@@ -80,7 +80,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     requireRole(["super_admin", "school_admin", "teacher"]),
     async (req, res) => {
       try {
-        const id = parseInt(req.params.id);
+        const id = req.params.id; // MongoDB uses string IDs
         const school = await storage.getSchool(id);
 
         if (!school) {

@@ -116,7 +116,7 @@ export function setupAuth(app: Express) {
 
   // Serialize user to the session
   passport.serializeUser((user, done) => {
-    done(null, user.id);
+    done(null, user._id.toString());
   });
 
   // Deserialize user from the session
@@ -263,21 +263,21 @@ export function setupAuth(app: Express) {
         });
 
         // Update user with the school_id
-        const updatedUser = await storage.updateUser(newUser.id, {
-          school_id: school.id
+        const updatedUser = await storage.updateUser(newUser._id.toString(), {
+          school_id: school._id
         });
         
         // Create school_admin record linking the user and school
         await storage.createSchoolAdmin({
-          user_id: newUser.id,
-          school_id: school.id,
+          user_id: newUser._id.toString(),
+          school_id: school._id.toString(),
           full_name: userData.name,
           phone_number: "", // This will be updated later
         });
         
         // Update newUser object for login
         if (updatedUser) {
-          newUser.school_id = school.id;
+          newUser.school_id = school._id;
         }
       }
 
