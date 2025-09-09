@@ -154,7 +154,7 @@ export default function StaffPage() {
           email: data.email,
           password: data.password,
           confirmPassword: data.confirmPassword,
-          role: "staff",
+          role: "teacher",
         }),
       });
       if (!userRes.ok) throw new Error("Failed to create user");
