@@ -54,82 +54,43 @@ export default function AdminDashboardPage() {
     useQuery({
       queryKey: ["allStudentAttendance", classes],
       queryFn: async () => {
-        if (!classes || classes.length === 0) return null;
-        const today = new Date().toISOString().split("T")[0];
-
-        const attendancePromises = classes.map((c) =>
-          fetch(`/api/classes/${c.id}/attendance?date=${today}`).then((res) => {
-            if (!res.ok) {
-              return { classId: c.id, attendance: [] };
-            }
-            return res.json().then((data) => ({
-              classId: c.id,
-              attendance: data,
-            }));
-          })
-        );
-        const results = await Promise.all(attendancePromises);
-
-        const attendanceMap = results.reduce((acc, result) => {
-          if (result) {
-            acc[result.classId] = {
-              present: result.attendance.filter(
-                (a: any) => a.status === "present"
-              ).length,
-              absent: result.attendance.filter(
-                (a: any) => a.status === "absent"
-              ).length,
-            };
-          }
-          return acc;
-        }, {} as Record<number, { present: number; absent: number }>);
-
-        let totalStudentsPresent = 0;
-        let totalStudentsAbsent = 0;
-
-        const studentAttendanceByClass = classes.map((c) => {
-          const counts = attendanceMap[c.id] || { present: 0, absent: 0 };
-          totalStudentsPresent += counts.present;
-          totalStudentsAbsent += counts.absent;
+        if (!classes || classes.length === 0) {
           return {
-            name: "class " + c.grade + " " + c.section,
-            Present: counts.present,
-            Absent: counts.absent,
+            totalStudentsPresent: 0,
+            totalStudentsAbsent: 0,
+            studentAttendanceByClass: [],
           };
-        });
-
+        }
+        
+        // TODO: Implement attendance API endpoints in MongoDB backend
+        // For now, return mock data to prevent undefined errors
+        console.log("Attendance API not yet implemented - using placeholder data");
+        
         return {
-          totalStudentsPresent,
-          totalStudentsAbsent,
-          studentAttendanceByClass,
+          totalStudentsPresent: 0,
+          totalStudentsAbsent: 0,
+          studentAttendanceByClass: classes.map((c) => ({
+            name: "class " + c.grade + " " + c.section,
+            Present: 0,
+            Absent: 0,
+          })),
         };
       },
-      enabled: !!classes && classes.length > 0,
+      enabled: !!classes,
     });
-  console.log("student attendance data", studentAttendanceData);
-  console.log("classes data", classes);
-  console.log("enabled condition for attendance query", !!classes && classes.length > 0);
+  // Removed debug logs - attendance data now handled gracefully
 
   const { data: teacherAttendanceData, isLoading: isTeacherAttendanceLoading } =
     useQuery({
       queryKey: ["teacherAttendance", user?.school_id],
       queryFn: async () => {
-        if (!user?.school_id) return null;
-        const today = new Date().toISOString().split("T")[0];
-        const res = await fetch(
-          `/api/schools/${user.school_id}/teacher-attendance?date=${today}`
-        );
-        if (!res.ok) {
-          return { present: 0, absent: 0 };
-        }
-        const attendanceRecords = await res.json();
-        const presentCount = attendanceRecords.filter(
-          (record: any) => record.status === "present"
-        ).length;
-        const absentCount = attendanceRecords.filter(
-          (record: any) => record.status === "absent"
-        ).length;
-        return { present: presentCount, absent: absentCount };
+        if (!user?.school_id) return { present: 0, absent: 0 };
+        
+        // TODO: Implement teacher attendance API endpoint in MongoDB backend
+        // For now, return placeholder data to prevent undefined errors
+        console.log("Teacher attendance API not yet implemented - using placeholder data");
+        
+        return { present: 0, absent: 0 };
       },
       enabled: !!user?.school_id,
     });
