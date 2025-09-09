@@ -1,171 +1,186 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { z } from "zod";
 
-// Interface definitions
-export interface ISchool extends Document {
+// MongoDB Schema Definitions with camelCase naming
+
+// User Schema
+export interface IUser extends Document {
+  schoolId?: mongoose.Types.ObjectId;
+  classId?: mongoose.Types.ObjectId;
   name: string;
-  address: string;
-  contact: {
-    email: string;
-    phone: string;
-  };
+  email: string;
+  password: string;
+  role: 'super_admin' | 'school_admin' | 'teacher' | 'student' | 'parent';
   createdAt: Date;
 }
 
-export interface IUser extends Document {
-  email: string;
-  password: string;
-  schoolId: mongoose.Types.ObjectId;
-  role: 'super_admin' | 'school_admin' | 'teacher' | 'student' | 'parent';
-  profile: {
-    fullName: string;
-    phone?: string;
-    joiningDate?: Date;
-    subjectSpecialization?: string[];
-    dob?: Date;
-  };
-  classId?: mongoose.Types.ObjectId; // Only for students
-}
-
-export interface IClass extends Document {
-  schoolId: mongoose.Types.ObjectId;
-  grade: string;
-  section: string;
-  classTeacherId: mongoose.Types.ObjectId;
-  subjects: Array<{
-    subjectId: mongoose.Types.ObjectId;
-    subjectName: string;
-    teacherId: mongoose.Types.ObjectId;
-  }>;
-}
-
-export interface IAcademic extends Document {
-  schoolId: mongoose.Types.ObjectId;
-  classId: mongoose.Types.ObjectId;
-  subjectId: mongoose.Types.ObjectId;
-  teacherId: mongoose.Types.ObjectId;
-  type: 'homework' | 'test' | 'material' | 'lesson_plan';
-  title: string;
-  description?: string;
-  assignedDate: Date;
-  dueDate?: Date;
-  attachmentUrl?: string;
-  maxMarks?: number; // For tests
-  materialType?: string; // For materials
-}
-
-export interface IAttendance extends Document {
-  schoolId: mongoose.Types.ObjectId;
-  classId: mongoose.Types.ObjectId;
-  date: Date;
-  records: Array<{
-    studentId: mongoose.Types.ObjectId;
-    status: 'present' | 'absent' | 'late';
-  }>;
-}
-
-export interface ICommunication extends Document {
-  senderId: mongoose.Types.ObjectId;
-  content: string;
-  timestamp: Date;
-  recipients: Array<{
-    type: 'user' | 'class' | 'role';
-    id: mongoose.Types.ObjectId | string;
-  }>;
-}
-
-// Schema definitions
-const schoolSchema = new Schema<ISchool>({
+const userSchema = new Schema<IUser>({
+  schoolId: { type: Schema.Types.ObjectId, ref: 'School' },
+  classId: { type: Schema.Types.ObjectId, ref: 'Class' },
   name: { type: String, required: true },
-  address: { type: String, required: true },
-  contact: {
-    email: { type: String, required: true },
-    phone: { type: String, required: true }
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  role: { 
+    type: String, 
+    required: true,
+    enum: ['super_admin', 'school_admin', 'teacher', 'student', 'parent']
   },
   createdAt: { type: Date, default: Date.now }
 });
 
-const userSchema = new Schema<IUser>({
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  schoolId: { type: Schema.Types.ObjectId, ref: 'School', required: true },
-  role: { 
-    type: String, 
-    enum: ['super_admin', 'school_admin', 'teacher', 'student', 'parent'],
-    required: true 
-  },
-  profile: {
-    fullName: { type: String, required: true },
-    phone: { type: String },
-    joiningDate: { type: Date },
-    subjectSpecialization: [{ type: String }],
-    dob: { type: Date }
-  },
-  classId: { type: Schema.Types.ObjectId, ref: 'Class' }
+export const User = mongoose.model<IUser>('User', userSchema);
+
+// School Schema
+export interface ISchool extends Document {
+  name: string;
+  address: string;
+  contactEmail: string;
+  contactPhone: string;
+  createdAt: Date;
+}
+
+const schoolSchema = new Schema<ISchool>({
+  name: { type: String, required: true },
+  address: { type: String, default: "" },
+  contactEmail: { type: String, required: true },
+  contactPhone: { type: String, default: "" },
+  createdAt: { type: Date, default: Date.now }
 });
+
+export const School = mongoose.model<ISchool>('School', schoolSchema);
+
+// School Admin Schema
+export interface ISchoolAdmin extends Document {
+  userId: mongoose.Types.ObjectId;
+  schoolId: mongoose.Types.ObjectId;
+  fullName: string;
+  phoneNumber: string;
+}
+
+const schoolAdminSchema = new Schema<ISchoolAdmin>({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  schoolId: { type: Schema.Types.ObjectId, ref: 'School', required: true },
+  fullName: { type: String, required: true },
+  phoneNumber: { type: String, default: "" }
+});
+
+export const SchoolAdmin = mongoose.model<ISchoolAdmin>('SchoolAdmin', schoolAdminSchema);
+
+// Teacher Schema
+export interface ITeacher extends Document {
+  userId: mongoose.Types.ObjectId;
+  schoolId: mongoose.Types.ObjectId;
+  fullName: string;
+  email: string;
+  gender: string;
+  joiningDate: Date;
+  phoneNumber: string;
+  status: string;
+  subjectSpecialization?: string[];
+}
+
+const teacherSchema = new Schema<ITeacher>({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  schoolId: { type: Schema.Types.ObjectId, ref: 'School', required: true },
+  fullName: { type: String, required: true },
+  email: { type: String, required: true },
+  gender: { type: String, required: true },
+  joiningDate: { type: Date, required: true },
+  phoneNumber: { type: String, required: true },
+  status: { type: String, required: true },
+  subjectSpecialization: [{ type: String }]
+});
+
+export const Teacher = mongoose.model<ITeacher>('Teacher', teacherSchema);
+
+// Subject Schema
+export interface ISubject extends Document {
+  schoolId: mongoose.Types.ObjectId;
+  subjectName: string;
+  subjectDescription?: string;
+}
+
+const subjectSchema = new Schema<ISubject>({
+  schoolId: { type: Schema.Types.ObjectId, ref: 'School', required: true },
+  subjectName: { type: String, required: true },
+  subjectDescription: { type: String }
+});
+
+export const Subject = mongoose.model<ISubject>('Subject', subjectSchema);
+
+// Class Schema
+export interface IClass extends Document {
+  schoolId: mongoose.Types.ObjectId;
+  grade: string;
+  section: string;
+  classTeacherId?: mongoose.Types.ObjectId;
+  classTeacherName?: string;
+}
 
 const classSchema = new Schema<IClass>({
   schoolId: { type: Schema.Types.ObjectId, ref: 'School', required: true },
   grade: { type: String, required: true },
   section: { type: String, required: true },
-  classTeacherId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  subjects: [{
-    subjectId: { type: Schema.Types.ObjectId, required: true },
-    subjectName: { type: String, required: true },
-    teacherId: { type: Schema.Types.ObjectId, ref: 'User', required: true }
-  }]
+  classTeacherId: { type: Schema.Types.ObjectId, ref: 'Teacher' },
+  classTeacherName: { type: String }
 });
 
-const academicSchema = new Schema<IAcademic>({
-  schoolId: { type: Schema.Types.ObjectId, ref: 'School', required: true },
-  classId: { type: Schema.Types.ObjectId, ref: 'Class', required: true },
-  subjectId: { type: Schema.Types.ObjectId, required: true },
-  teacherId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  type: { 
-    type: String, 
-    enum: ['homework', 'test', 'material', 'lesson_plan'],
-    required: true 
-  },
-  title: { type: String, required: true },
-  description: { type: String },
-  assignedDate: { type: Date, required: true },
-  dueDate: { type: Date },
-  attachmentUrl: { type: String },
-  maxMarks: { type: Number }, // For tests
-  materialType: { type: String } // For materials
-});
-
-const attendanceSchema = new Schema<IAttendance>({
-  schoolId: { type: Schema.Types.ObjectId, ref: 'School', required: true },
-  classId: { type: Schema.Types.ObjectId, ref: 'Class', required: true },
-  date: { type: Date, required: true },
-  records: [{
-    studentId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    status: { 
-      type: String, 
-      enum: ['present', 'absent', 'late'],
-      required: true 
-    }
-  }]
-});
-
-const communicationSchema = new Schema<ICommunication>({
-  senderId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  content: { type: String, required: true },
-  timestamp: { type: Date, default: Date.now },
-  recipients: [{
-    type: { 
-      type: String, 
-      enum: ['user', 'class', 'role'],
-      required: true 
-    },
-    id: { type: Schema.Types.Mixed, required: true }
-  }]
-});
-
-// Create and export models
-export const School = mongoose.model<ISchool>('School', schoolSchema);
-export const User = mongoose.model<IUser>('User', userSchema);
 export const Class = mongoose.model<IClass>('Class', classSchema);
-export const Academic = mongoose.model<IAcademic>('Academic', academicSchema);
-export const Attendance = mongoose.model<IAttendance>('Attendance', attendanceSchema);
-export const Communication = mongoose.model<ICommunication>('Communication', communicationSchema);
+
+// Zod Validation Schemas (camelCase)
+export const insertUserSchema = z.object({
+  schoolId: z.string().optional(),
+  classId: z.string().optional(),
+  name: z.string().min(1),
+  email: z.string().email(),
+  password: z.string().min(6),
+  role: z.enum(['super_admin', 'school_admin', 'teacher', 'student', 'parent'])
+});
+
+export const insertSchoolSchema = z.object({
+  name: z.string().min(1),
+  address: z.string().default(""),
+  contactEmail: z.string().email(),
+  contactPhone: z.string().default("")
+});
+
+export const insertSchoolAdminSchema = z.object({
+  userId: z.string(),
+  schoolId: z.string(),
+  fullName: z.string().min(1),
+  phoneNumber: z.string().default("")
+});
+
+export const insertTeacherSchema = z.object({
+  userId: z.string(),
+  schoolId: z.string(),
+  fullName: z.string().min(1),
+  email: z.string().email(),
+  gender: z.string(),
+  joiningDate: z.date(),
+  phoneNumber: z.string(),
+  status: z.string(),
+  subjectSpecialization: z.array(z.string()).optional()
+});
+
+export const insertClassSchema = z.object({
+  schoolId: z.string(),
+  grade: z.string().min(1),
+  section: z.string().min(1),
+  classTeacherId: z.string().optional(),
+  classTeacherName: z.string().optional()
+});
+
+export const insertSubjectSchema = z.object({
+  schoolId: z.string(),
+  subjectName: z.string().min(1),
+  subjectDescription: z.string().optional()
+});
+
+// Type exports
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type InsertSchool = z.infer<typeof insertSchoolSchema>;
+export type InsertSchoolAdmin = z.infer<typeof insertSchoolAdminSchema>;
+export type InsertTeacher = z.infer<typeof insertTeacherSchema>;
+export type InsertClass = z.infer<typeof insertClassSchema>;
+export type InsertSubject = z.infer<typeof insertSubjectSchema>;
