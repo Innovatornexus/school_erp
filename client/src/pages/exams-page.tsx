@@ -1,6 +1,6 @@
 // src/pages/ExamsPage.tsx
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -101,6 +101,7 @@ export default function ExamsPage() {
   const {
     classes,
     subjects,
+    teachers,
     schoolData,
     loading: schoolDataLoading,
   } = useSchoolData();
@@ -146,6 +147,75 @@ export default function ExamsPage() {
     },
     enabled: !!schoolData?.id,
   });
+
+  // Get current teacher for staff role
+  const currentTeacher = useMemo(
+    () => teachers.find((t) => t.user_id === user?.id),
+    [teachers, user]
+  );
+
+  // Filter exams based on user role
+  const filteredExams = useMemo(() => {
+    if (user?.role === "staff" && currentTeacher) {
+      // Staff should see exams for classes/subjects they teach
+      return exams.filter((exam) => {
+        // Find the class for this exam
+        const examClass = classes.find(c => c.id === exam.class_id);
+        if (examClass && examClass.subjects) {
+          // Check if teacher teaches any subject in this class
+          return examClass.subjects.some(
+            (mapping: any) => mapping.teacher_id === currentTeacher.id
+          );
+        }
+        return false;
+      });
+    }
+    return exams; // Admins see all
+  }, [exams, user, currentTeacher, classes]);
+
+  // Available classes for staff (only classes they teach)
+  const availableClasses = useMemo(() => {
+    if (user?.role === "school_admin") {
+      return classes;
+    }
+    if (user?.role === "staff" && currentTeacher) {
+      const assignedClassIds = new Set();
+      classes.forEach((cls) => {
+        if (cls.subjects?.some((mapping: any) => mapping.teacher_id === currentTeacher.id)) {
+          assignedClassIds.add(cls.id);
+        }
+      });
+      return classes.filter((cls) => assignedClassIds.has(cls.id));
+    }
+    return [];
+  }, [classes, currentTeacher, user]);
+
+  // Available subjects for staff (only subjects they teach in selected class)
+  const availableSubjectsForForm = useMemo(() => {
+    const selectedClassId = form.watch("class_id");
+    if (!selectedClassId) return [];
+
+    const selectedClass = classes.find((c) => c.id === Number(selectedClassId));
+    if (!selectedClass?.subjects) return [];
+
+    if (user?.role === "school_admin") {
+      const subjectIdsInClass = new Set(
+        selectedClass.subjects.map((m: any) => m.subject_id)
+      );
+      return subjects.filter((s) => subjectIdsInClass.has(s.id));
+    }
+
+    if (user?.role === "staff" && currentTeacher) {
+      const taughtSubjectIds = new Set(
+        selectedClass.subjects
+          .filter((mapping: any) => mapping.teacher_id === currentTeacher.id)
+          .map((mapping: any) => mapping.subject_id)
+      );
+      return subjects.filter((s) => taughtSubjectIds.has(s.id));
+    }
+
+    return [];
+  }, [form.watch("class_id"), classes, subjects, currentTeacher, user]);
 
   const createExamMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -447,7 +517,7 @@ export default function ExamsPage() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {(classes || []).map((cls: any) => (
+                                {availableClasses.map((cls: any) => (
                                   <SelectItem
                                     key={cls.id}
                                     value={String(cls.id)}
@@ -531,7 +601,7 @@ export default function ExamsPage() {
                                         </SelectTrigger>
                                       </FormControl>
                                       <SelectContent>
-                                        {(subjects || []).map((s: any) => (
+                                        {availableSubjectsForForm.map((s: any) => (
                                           <SelectItem
                                             key={s.id}
                                             value={String(s.id)}
@@ -649,7 +719,7 @@ export default function ExamsPage() {
           </div>
         ) : exams.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {exams.map((exam) => (
+            {filteredExams.map((exam) => (
               <Card key={exam.id}>
                 <CardHeader>
                   <CardTitle>{exam.title}</CardTitle>
