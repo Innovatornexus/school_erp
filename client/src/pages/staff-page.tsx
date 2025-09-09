@@ -157,22 +157,40 @@ export default function StaffPage() {
           role: "teacher",
         }),
       });
-      if (!userRes.ok) throw new Error("Failed to create user");
+      
+      if (!userRes.ok) {
+        const errorData = await userRes.json();
+        console.error('User creation failed:', errorData);
+        throw new Error("Failed to create user");
+      }
+      
       const newUser = await userRes.json();
       const userId = newUser.id;
+      
+      if (!userId) {
+        console.error('No userId received:', newUser);
+        throw new Error("No userId received from user creation");
+      }
 
       // 2. Create staff profile
-      console.log("Creating staff with data:", { ...data, userId: userId });
+      const teacherData = {
+        fullName: data.fullName,
+        email: data.email,
+        gender: data.gender,
+        phoneNumber: data.phoneNumber,
+        status: data.status || "Active",
+        subjectSpecialization: data.subjectSpecialization || [],
+        joiningDate: data.joiningDate.toISOString(),
+        userId: userId,
+        schoolId: schoolData?.id,
+      };
+      
+      console.log("Creating staff with data:", teacherData);
 
       const staffRes = await fetch("/api/teachers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          userId: userId,
-          schoolId: schoolData?.id,
-          joiningDate: data.joiningDate ?? new Date(),
-        }),
+        body: JSON.stringify(teacherData),
       });
 
       if (!staffRes.ok) throw new Error("Failed to create staff");
