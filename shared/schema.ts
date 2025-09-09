@@ -41,9 +41,9 @@ export interface ISchool extends Document {
 
 const schoolSchema = new Schema<ISchool>({
   name: { type: String, required: true },
-  address: { type: String, required: true },
+  address: { type: String, default: "" },
   contact_email: { type: String, required: true },
-  contact_phone: { type: String, required: true },
+  contact_phone: { type: String, default: "" },
   created_at: { type: Date, default: Date.now }
 });
 
@@ -417,9 +417,9 @@ export const insertUserSchema = z.object({
 
 export const insertSchoolSchema = z.object({
   name: z.string().min(1),
-  address: z.string(),
+  address: z.string().default(""),
   contact_email: z.string().email(),
-  contact_phone: z.string()
+  contact_phone: z.string().default("")
 });
 
 export const insertSchoolAdminSchema = z.object({
