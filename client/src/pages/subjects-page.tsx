@@ -71,7 +71,7 @@ export default function SubjectsPage() {
   const { subjectData, high, medium, low } = useMemo(() => {
     // Return default data if the source arrays aren't ready yet
     if (!subjects.length || !teachers.length || !classes.length) {
-      const data = subjects.map((s: SubjectItem) => ({
+      const data = subjects.map((s: Subject) => ({
         ...s,
         teachers: 0,
         classCount: 0,
@@ -81,33 +81,33 @@ export default function SubjectsPage() {
     }
 
     // --- New, reliable calculation logic using class-subject mappings ---
-    const teacherIdsBySubjectId: Record<number, Set<number>> = {};
+    const teacherIdsBySubjectId: Record<string, Set<string>> = {};
     const classInfoBySubjectId: Record<
-      number,
+      string,
       { count: number; names: string[] }
     > = {};
 
     // Iterate through all classes and their subject mappings
-    classes.forEach((cls: ClassItem) => {
+    classes.forEach((cls: Class) => ({
       const className = `Class ${cls.grade} ${cls.section}`;
       (cls.subjects || []).forEach(
-        (mapping: { subject_id: number; teacher_id: number | null }) => {
-          const { subject_id, teacher_id } = mapping;
+        (mapping: { subjectId: string; teacherId: string | null }) => {
+          const { subjectId, teacherId } = mapping;
 
           // Aggregate unique teacher IDs for each subject
-          if (teacher_id) {
-            if (!teacherIdsBySubjectId[subject_id]) {
-              teacherIdsBySubjectId[subject_id] = new Set();
+          if (teacherId) {
+            if (!teacherIdsBySubjectId[subjectId]) {
+              teacherIdsBySubjectId[subjectId] = new Set();
             }
-            teacherIdsBySubjectId[subject_id].add(teacher_id);
+            teacherIdsBySubjectId[subjectId].add(teacherId);
           }
 
           // Aggregate class counts and names for each subject
-          if (!classInfoBySubjectId[subject_id]) {
-            classInfoBySubjectId[subject_id] = { count: 0, names: [] };
+          if (!classInfoBySubjectId[subjectId]) {
+            classInfoBySubjectId[subjectId] = { count: 0, names: [] };
           }
-          classInfoBySubjectId[subject_id].count += 1;
-          classInfoBySubjectId[subject_id].names.push(className);
+          classInfoBySubjectId[subjectId].count += 1;
+          classInfoBySubjectId[subjectId].names.push(className);
         }
       );
     });
