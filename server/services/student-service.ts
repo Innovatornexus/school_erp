@@ -8,10 +8,14 @@ export class StudentService {
     const studentObj = student.toObject();
     return {
       ...studentObj,
-      id: student._id.toString(),
+      id: (student._id as any).toString(),
       userId: student.userId ? student.userId.toString() : null,
       schoolId: student.schoolId.toString(),
       classId: student.classId ? student.classId.toString() : null,
+      dateOfBirth: student.dateOfBirth.toISOString().split('T')[0], // Convert Date to string
+      admissionDate: student.admissionDate.toISOString().split('T')[0], // Convert Date to string
+      createdAt: student.createdAt.toISOString(),
+      updatedAt: student.createdAt.toISOString(), // MongoDB doesn't have updatedAt, use createdAt
     };
   }
 
@@ -96,7 +100,7 @@ export class StudentService {
   }
 
   // Update student status
-  static async updateStudentStatus(id: string, status: string) {
+  static async updateStudentStatus(id: string, status: 'Active' | 'Inactive') {
     const student = await storage.updateStudent(id, { status });
     return student ? this.transformStudentToFrontend(student) : null;
   }
