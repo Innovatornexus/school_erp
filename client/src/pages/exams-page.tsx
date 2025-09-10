@@ -64,6 +64,7 @@ import { queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import DashboardLayout from "@/layout/dashboard-layout";
 import { useSchoolData } from "@/context/SchoolDataContext";
+import { Exam, Subject, Class, Teacher } from "@/types";
 
 // No changes to schema needed here
 const examSubjectSchema = z.object({
@@ -82,18 +83,7 @@ const examFormSchema = z.object({
     .min(1, "At least one subject is required"),
 });
 
-// Define the type for an exam fetched from the API
-interface Exam {
-  id: number;
-  title: string;
-  term: string;
-  classId: number;
-  className: string;
-  startDate: string;
-  endDate: string;
-  createdAt: string;
-  subjectsCount: number; // ✨ ADDED: Expect this from the API
-}
+// Using shared types from types.ts
 
 export default function ExamsPage() {
   const { user } = useAuth();
@@ -338,11 +328,11 @@ export default function ExamsPage() {
       ),
       subjects: data.subjects.map((subject) => {
         const selectedSubject = subjects.find(
-          (s) => s._id === subject.subjectId
+          (s) => s.id === subject.subjectId
         );
         return {
           subjectId: subject.subjectId,
-          subject_name: selectedSubject?.subject_name || "",
+          subjectName: selectedSubject?.subjectName || "",
           examDate: subject.examDate,
           startTime: subject.startTime,
           endTime: subject.endTime,
@@ -614,7 +604,7 @@ export default function ExamsPage() {
                                               key={s.id}
                                               value={String(s.id)}
                                             >
-                                              {s.subject_name}
+                                              {s.subjectName}
                                             </SelectItem>
                                           )
                                         )}

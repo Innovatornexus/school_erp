@@ -6,18 +6,9 @@ import React, {
   useCallback,
 } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { School, Class, Subject, Student, Teacher, SchoolDataContextType } from "@/types";
 
-// Define the shape of the context data
-interface SchoolDataContextType {
-  schoolData: any;
-  classes: any[];
-  subjects: any[];
-  students: any[];
-  teachers: any[];
-  loading: boolean;
-  ispending?: boolean;
-  refetchData: () => Promise<void>;
-}
+// Using shared types from types.ts instead of duplicating
 
 // Create the context
 const SchoolDataContext = createContext<SchoolDataContextType | undefined>(
