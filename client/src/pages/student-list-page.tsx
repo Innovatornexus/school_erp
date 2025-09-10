@@ -123,38 +123,37 @@ export const StudentManager = ({
 
   const createStudent = async (data: StudentFormValues) => {
     try {
-      const userRes = await fetch("/api/register/user", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: data.fullName,
-          email: data.email,
-          password: data.password,
-          confirmPassword: data.confirmPassword,
-          role: "student",
-        }),
-      });
-
-      if (!userRes.ok) {
-        const errorData = await userRes.json();
-        throw new Error(errorData.message || "Failed to create user");
-      }
-      const newUser = await userRes.json();
-      const userId = newUser.id;
-
+      console.log("Creating student with data:", data);
+      
+      // Use single API endpoint that handles both user and student creation
       const studentRes = await fetch("/api/students", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...data,
-          userId: userId,
-          schoolId: user?.schoolId,
-          admissionDate: format(data.admissionDate, "yyyy-MM-dd"),
-          dob: format(data.dateOfBirth, "yyyy-MM-dd"),
+          fullName: data.fullName,
+          email: data.email,
+          password: data.password,
+          gender: data.gender,
+          dateOfBirth: data.dateOfBirth,
+          admissionDate: data.admissionDate,
+          parentName: data.parentName || "",
+          parentContact: data.parentContact,
+          parentId: data.parentId || undefined,
+          address: data.address || "",
+          status: data.status,
+          classId: data.classId,
+          schoolId: user?.schoolId || data.schoolId,
         }),
       });
 
-      if (!studentRes.ok) throw new Error("Failed to create student");
+      if (!studentRes.ok) {
+        const errorData = await studentRes.json();
+        console.error("Student creation failed:", errorData);
+        throw new Error(errorData.message || "Failed to create student");
+      }
+      
+      const result = await studentRes.json();
+      console.log("Student created successfully:", result);
       await fetchStudents();
     } catch (error) {
       console.error("Error creating student:", error);
@@ -170,9 +169,18 @@ export const StudentManager = ({
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            ...data,
-            dob: format(data.dateOfBirth, "yyyy-MM-dd"),
-            admissionDate: format(data.admissionDate, "yyyy-MM-dd"),
+            fullName: data.fullName,
+            email: data.email,
+            gender: data.gender,
+            dateOfBirth: data.dateOfBirth,
+            admissionDate: data.admissionDate,
+            parentName: data.parentName || "",
+            parentContact: data.parentContact,
+            parentId: data.parentId || undefined,
+            address: data.address || "",
+            status: data.status,
+            classId: data.classId,
+            schoolId: data.schoolId,
           }),
         });
         if (!res.ok) throw new Error("Failed to update student");
