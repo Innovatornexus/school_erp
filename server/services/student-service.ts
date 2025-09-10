@@ -15,9 +15,50 @@ export class StudentService {
     };
   }
 
+  // Generate roll number based on class grade, section and student count
+  static async generateRollNumber(classId: string): Promise<string> {
+    try {
+      // Get class information
+      const classInfo = await storage.getClass(classId);
+      if (!classInfo) {
+        throw new Error("Class not found");
+      }
+
+      const grade = classInfo.grade;
+      const section = classInfo.section.toUpperCase();
+      
+      // Convert section letter to alphabetical number (A=01, B=02, C=03, etc.)
+      const sectionNumber = (section.charCodeAt(0) - 'A'.charCodeAt(0) + 1)
+        .toString().padStart(2, '0');
+      
+      // Count existing students in this class to get the next student number
+      const existingStudentsCount = await storage.getStudentCountByClass(classId);
+      const studentNumber = (existingStudentsCount + 1).toString().padStart(2, '0');
+      
+      // Format: [grade][section number][student number]
+      const rollNumber = `${grade}${sectionNumber}${studentNumber}`;
+      
+      return rollNumber;
+    } catch (error) {
+      console.error('Error generating roll number:', error);
+      throw new Error('Failed to generate roll number');
+    }
+  }
+
   // Create a new student
   static async createStudent(studentData: InsertStudent) {
-    const student = await storage.createStudent(studentData);
+    // Generate roll number if classId is provided
+    let rollNo = '';
+    if (studentData.classId) {
+      rollNo = await this.generateRollNumber(studentData.classId);
+    }
+    
+    const studentWithRollNo = {
+      ...studentData,
+      rollNo
+    };
+    
+    const student = await storage.createStudent(studentWithRollNo);
     return this.transformStudentToFrontend(student);
   }
 

@@ -51,6 +51,7 @@ export interface IStorage {
   getStudent(id: string): Promise<IStudent | null>;
   getStudentsBySchool(schoolId: string): Promise<IStudent[]>;
   getStudentsByClass(classId: string): Promise<IStudent[]>;
+  getStudentCountByClass(classId: string): Promise<number>;
   updateStudent(id: string, studentData: Partial<IStudent>): Promise<IStudent | null>;
   deleteStudent(id: string): Promise<boolean>;
 }
@@ -299,6 +300,13 @@ export class MongoDBStorage implements IStorage {
       return [];
     }
     return await Student.find({ classId: new mongoose.Types.ObjectId(classId) }).exec();
+  }
+
+  async getStudentCountByClass(classId: string): Promise<number> {
+    if (!mongoose.Types.ObjectId.isValid(classId)) {
+      return 0;
+    }
+    return await Student.countDocuments({ classId: new mongoose.Types.ObjectId(classId) }).exec();
   }
 
   async updateStudent(id: string, studentData: Partial<IStudent>): Promise<IStudent | null> {
