@@ -54,7 +54,9 @@ const studentFormSchema = z
   .object({
     fullName: z.string().min(2, "Full name must be at least 2 characters"),
     email: z.string().email("Please enter a valid email address"),
-    status: z.enum(["Active", "Inactive"], {required_error: "Please select a status"}),
+    status: z.enum(["Active", "Inactive"], {
+      required_error: "Please select a status",
+    }),
     password: z.string().min(6, "Password must be at least 6 characters"),
     confirmPassword: z
       .string()
@@ -124,7 +126,7 @@ export const StudentManager = ({
   const createStudent = async (data: StudentFormValues) => {
     try {
       console.log("Creating student with data:", data);
-      
+
       // Use single API endpoint that handles both user and student creation
       const studentRes = await fetch("/api/students", {
         method: "POST",
@@ -151,7 +153,7 @@ export const StudentManager = ({
         console.error("Student creation failed:", errorData);
         throw new Error(errorData.message || "Failed to create student");
       }
-      
+
       const result = await studentRes.json();
       console.log("Student created successfully:", result);
       await fetchStudents();
@@ -289,7 +291,9 @@ export const StudentManager = ({
       header: "Class",
       accessorKey: "classId",
       cell: (student: StudentItem) => {
-        const classItem = classData.find((cls) => String(cls.id) === student.classId);
+        const classItem = classData.find(
+          (cls) => String(cls.id) === student.classId
+        );
         return classItem
           ? `Class ${classItem.grade} ${classItem.section}`
           : "N/A";
@@ -305,7 +309,8 @@ export const StudentManager = ({
     {
       header: "Date of Birth",
       accessorKey: "dateOfBirth",
-      cell: (student: StudentItem) => format(new Date(student.dateOfBirth), "PPP"),
+      cell: (student: StudentItem) =>
+        format(new Date(student.dateOfBirth), "PPP"),
     },
     { header: "Parent Contact", accessorKey: "parentContact" },
     {
@@ -361,7 +366,9 @@ export const StudentManager = ({
 
   const filteredStudents = useMemo(() => {
     return studentData.filter((student) => {
-      const studentClass = classData.find((cls) => String(cls.id) === student.classId);
+      const studentClass = classData.find(
+        (cls) => String(cls.id) === student.classId
+      );
       const matchesSearchTerm =
         student.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.email?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -522,10 +529,8 @@ export const StudentManager = ({
                         <FormItem>
                           <FormLabel>Class</FormLabel>
                           <Select
-                            onValueChange={(value) =>
-                              field.onChange(Number(value))
-                            }
-                            value={field.value?.toString()}
+                            onValueChange={(value) => field.onChange(value)}
+                            value={field.value}
                           >
                             <FormControl>
                               <SelectTrigger>
