@@ -313,32 +313,32 @@ export default function ExamsPage() {
       return;
     }
 
-    const selectedClass = classes.find((cls) => cls.id === data.class_id);
+    const selectedClass = classes.find((cls) => cls.id === data.classId);
 
     const transformedData = {
       title: data.title,
       term: data.term,
-      class_id: data.class_id,
+      classId: data.classId,
       class_name: selectedClass
         ? `${selectedClass.grade} - ${selectedClass.section}`
         : "N/A",
       school_id: schoolData.id,
       start_date: data.subjects.reduce(
-        (earliest, s) => (s.exam_date < earliest ? s.exam_date : earliest),
-        data.subjects[0].exam_date
+        (earliest, s) => (s.examDate < earliest ? s.examDate : earliest),
+        data.subjects[0].examDate
       ),
       end_date: data.subjects.reduce(
-        (latest, s) => (s.exam_date > latest ? s.exam_date : latest),
-        data.subjects[0].exam_date
+        (latest, s) => (s.examDate > latest ? s.examDate : latest),
+        data.subjects[0].examDate
       ),
       subjects: data.subjects.map((subject) => {
-        const selectedSubject = subjects.find(s => s.id === subject.subject_id);
+        const selectedSubject = subjects.find(s => s.id === subject.subjectId);
         return {
-          subject_id: subject.subject_id,
+          subjectId: subject.subjectId,
           subject_name: selectedSubject?.subject_name || '',
-          exam_date: subject.exam_date,
-          start_time: subject.start_time,
-          end_time: subject.end_time,
+          examDate: subject.examDate,
+          startTime: subject.startTime,
+          endTime: subject.endTime,
           max_marks: 100,
         };
       }),
@@ -361,12 +361,12 @@ export default function ExamsPage() {
       form.reset({
         title: exam.title,
         term: exam.term,
-        class_id: exam.class_id,
+        classId: exam.classId,
         subjects: examSubjects.map((s: any) => ({
-          subject_id: s.subject_id,
-          exam_date: s.exam_date,
-          start_time: s.start_time || "",
-          end_time: s.end_time || "",
+          subjectId: s.subjectId,
+          examDate: s.examDate,
+          startTime: s.startTime || "",
+          endTime: s.endTime || "",
         })),
       });
       setIsDialogOpen(true);
@@ -501,7 +501,7 @@ export default function ExamsPage() {
                       />
                       <FormField
                         control={form.control}
-                        name="class_id"
+                        name="classId"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Class</FormLabel>
@@ -546,10 +546,10 @@ export default function ExamsPage() {
                               form.setValue("subjects", [
                                 ...form.getValues("subjects"),
                                 {
-                                  subject_id: 0,
-                                  exam_date: "",
-                                  start_time: "",
-                                  end_time: "",
+                                  subjectId: 0,
+                                  examDate: "",
+                                  startTime: "",
+                                  endTime: "",
                                 },
                               ])
                             }
@@ -585,7 +585,7 @@ export default function ExamsPage() {
                             <div className="grid grid-cols-2 gap-4">
                               <FormField
                                 control={form.control}
-                                name={`subjects.${index}.subject_id`}
+                                name={`subjects.${index}.subjectId`}
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormLabel>Subject</FormLabel>
@@ -617,7 +617,7 @@ export default function ExamsPage() {
                               />
                               <FormField
                                 control={form.control}
-                                name={`subjects.${index}.exam_date`}
+                                name={`subjects.${index}.examDate`}
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormLabel>Exam Date</FormLabel>
@@ -632,7 +632,7 @@ export default function ExamsPage() {
                             <div className="grid grid-cols-2 gap-4">
                               <FormField
                                 control={form.control}
-                                name={`subjects.${index}.start_time`}
+                                name={`subjects.${index}.startTime`}
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormLabel>Start Time</FormLabel>
@@ -645,7 +645,7 @@ export default function ExamsPage() {
                               />
                               <FormField
                                 control={form.control}
-                                name={`subjects.${index}.end_time`}
+                                name={`subjects.${index}.endTime`}
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormLabel>End Time</FormLabel>
