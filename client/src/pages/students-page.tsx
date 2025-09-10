@@ -85,7 +85,7 @@ type StudentFormValues = z.infer<typeof studentFormSchema>;
 
 export default function StudentsPage() {
   const { user } = useAuth();
-  const { students, classes, teachers, loading, refetchData } = useSchoolData();
+  const { students, classes, teachers, loading, fetchData } = useSchoolData();
   const { toast } = useToast();
 
   if (loading) {

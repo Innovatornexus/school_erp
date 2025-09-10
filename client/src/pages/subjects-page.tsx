@@ -48,7 +48,7 @@ type SubjectFormValues = z.infer<typeof subjectFormSchema>;
 
 export default function SubjectsPage() {
   const { user } = useAuth();
-  const { subjects, teachers, classes, loading, schoolData, refetchData } =
+  const { subjects, teachers, classes, loading, schoolData, fetchData } =
     useSchoolData();
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
