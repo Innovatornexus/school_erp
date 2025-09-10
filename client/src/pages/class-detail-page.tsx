@@ -16,7 +16,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { StudentManager } from "./student-list-page";
-import { StudentItem, ClassItem, StaffItem } from "./type";
+import { Student, Class, Teacher } from "@/types";
 import { useSchoolData } from "@/context/SchoolDataContext";
 
 /**
@@ -25,25 +25,25 @@ import { useSchoolData } from "@/context/SchoolDataContext";
  */
 // Student form schema aligned with DB schema
 const studentFormSchema = z.object({
-  full_name: z.string().min(2, "Full name must be at least 2 characters"),
-  student_email: z.string().min(3, "email  must be at least 3 characters"),
+  fullName: z.string().min(2, "Full name must be at least 2 characters"),
+  email: z.string().email("Please enter a valid email address"),
   status: z.enum(["Active", "Inactive"]),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  dob: z.date({
+  dateOfBirth: z.date({
     required_error: "Date of birth is required",
   }),
   gender: z.enum(["male", "female", "other"], {
     required_error: "Please select a gender",
   }),
-  class_id: z.string({
+  classId: z.string({
     required_error: "Please select a class",
   }),
   parentId: z.string().optional(),
-  parent_contact: z.string().min(10, "Please enter a valid contact number"),
+  parentContact: z.string().min(10, "Please enter a valid contact number"),
   admissionDate: z.date({
     required_error: "Admission date is required",
   }),
-  parent_name: z.string().optional(), // Added to match API
+  parentName: z.string().optional(),
   address: z.string().optional(),
 });
 
@@ -54,7 +54,7 @@ export default function ClassDetailPage() {
   const [match, params] = useRoute("/classes/:gradeId/:sectionId");
   const [, navigate] = useLocation();
   const { user } = useAuth();
-  const { classes, students, schoolData, refetchData, loading, subjects } =
+  const { classes, students, schoolData, fetchData, loading, subjects } =
     useSchoolData();
 
   // Redirect if not school_admin or staff
@@ -71,32 +71,32 @@ export default function ClassDetailPage() {
   const section = params?.sectionId;
 
   const selectedClass = classes.find(
-    (cls: ClassItem) => cls.grade === grade && cls.section === section
+    (cls: Class) => cls.grade.toString() === grade && cls.section === section
   );
 
   const studentsInClass = students.filter(
-    (student: StudentItem) => student.classId === selectedClass?.id
+    (student: Student) => student.classId === selectedClass?.id
   );
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingStudent, setEditingStudent] = useState<StudentItem | null>(
+  const [editingStudent, setEditingStudent] = useState<Student | null>(
     null
   );
-  const [studentToDelete, setStudentToDelete] = useState<number | null>(null);
+  const [studentToDelete, setStudentToDelete] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   // Initialize form (moved to top-level)
   const form = useForm<StudentFormValues>({
     resolver: zodResolver(studentFormSchema),
     defaultValues: {
-      full_name: "",
-      student_email: "",
+      fullName: "",
+      email: "",
       password: "",
-      dob: undefined,
+      dateOfBirth: undefined,
       gender: "male",
-      class_id: "",
-      parent_contact: "",
-      parent_name: "",
+      classId: "",
+      parentContact: "",
+      parentName: "",
       admissionDate: new Date(),
       address: "",
     },
@@ -129,7 +129,7 @@ export default function ClassDetailPage() {
         description: `Status changed to ${newStatus}`,
       });
 
-      refetchData(); // Refresh data from context
+      fetchData(); // Refresh data from context
     } catch (error) {
       toast({
         title: "Error",
@@ -140,27 +140,27 @@ export default function ClassDetailPage() {
   };
 
   // Handle student delete
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: string) => {
     setStudentToDelete(id);
     setIsDeleteModalOpen(true);
   };
 
   // Handle edit student
-  const openEditDialog = (student: StudentItem) => {
+  const openEditDialog = (student: Student) => {
     setEditingStudent(student);
     const classItem = classes.find(
-      (cls: ClassItem) => cls.id === student.classId
+      (cls: Class) => cls.id === student.classId
     );
 
     form.reset({
-      full_name: student.fullName,
-      student_email: student.email,
+      fullName: student.fullName,
+      email: student.email,
       gender: student.gender as "male" | "female" | "other",
-      dob: student.dateOfBirth,
-      class_id: classItem?.id.toString() || "",
-      parent_contact: student.parentContact,
-      admissionDate: student.admissionDate,
-      parent_name: student.parentName,
+      dateOfBirth: new Date(student.dateOfBirth),
+      classId: classItem?.id.toString() || "",
+      parentContact: student.parentContact,
+      admissionDate: new Date(student.admissionDate),
+      parentName: student.parentName,
     });
     setIsDialogOpen(true);
   };
