@@ -93,7 +93,7 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ message: "Validation error", errors: error.errors });
     }
     
-    res.status(500).json({ message: "Failed to create student", error: error.message || error });
+    res.status(500).json({ message: "Failed to create student", error: error instanceof Error ? error.message : String(error) });
   }
 });
 
