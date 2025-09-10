@@ -68,7 +68,7 @@ import { Exam, Subject, Class, Teacher } from "@/types";
 
 // No changes to schema needed here
 const examSubjectSchema = z.object({
-  subjectId: z.number().min(1, "Subject is required"),
+  subjectId: z.string().min(1, "Subject is required"),
   examDate: z.string().min(1, "Exam date is required"),
   startTime: z.string().min(1, "Start time is required"),
   endTime: z.string().min(1, "End time is required"),
@@ -77,7 +77,7 @@ const examSubjectSchema = z.object({
 const examFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
   term: z.string().min(1, "Term is required"),
-  classId: z.number().min(1, "Class is required"),
+  classId: z.string().min(1, "Class is required"),
   subjects: z
     .array(examSubjectSchema)
     .min(1, "At least one subject is required"),
@@ -104,7 +104,7 @@ export default function ExamsPage() {
     defaultValues: {
       title: "",
       term: "",
-      classId: 0,
+      classId: "",
       subjects: [],
     },
   });
@@ -115,7 +115,7 @@ export default function ExamsPage() {
       form.reset({
         title: "",
         term: "",
-        classId: 0,
+        classId: "",
         subjects: [],
       });
     }
@@ -190,7 +190,7 @@ export default function ExamsPage() {
     const selectedClassId = form.watch("classId");
     if (!selectedClassId) return [];
 
-    const selectedClass = classes.find((c) => c.id === Number(selectedClassId));
+    const selectedClass = classes.find((c) => c.id === selectedClassId);
     if (!selectedClass?.subjects) return [];
 
     if (user?.role === "school_admin") {
@@ -336,7 +336,7 @@ export default function ExamsPage() {
           examDate: subject.examDate,
           startTime: subject.startTime,
           endTime: subject.endTime,
-          max_marks: 100,
+          maxMarks: 100,
         };
       }),
     };

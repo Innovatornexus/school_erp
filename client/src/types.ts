@@ -30,8 +30,14 @@ export interface Class {
   grade: number;
   section: string;
   academicYear: string;
+  subjects?: ClassSubjectMapping[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ClassSubjectMapping {
+  subjectId: string;
+  teacherId?: string;
 }
 
 // Subject Types

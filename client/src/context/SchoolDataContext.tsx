@@ -326,7 +326,7 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({
         students,
         teachers,
         loading,
-        refetchData: fetchData,
+        fetchData: fetchData,
       }}
     >
       {children}
