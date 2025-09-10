@@ -31,9 +31,8 @@ export class StudentService {
       const grade = classInfo.grade;
       const section = classInfo.section.toUpperCase();
       
-      // Convert section letter to alphabetical number (A=01, B=02, C=03, etc.)
-      const sectionNumber = (section.charCodeAt(0) - 'A'.charCodeAt(0) + 1)
-        .toString().padStart(2, '0');
+      // Convert section letter to single digit (A=1, B=2, C=3, etc.)
+      const sectionNumber = section.charCodeAt(0) - 'A'.charCodeAt(0) + 1;
       
       // Count existing students in this class to get the next student number
       const existingStudentsCount = await storage.getStudentCountByClass(classId);
@@ -80,6 +79,10 @@ export class StudentService {
 
   // Update student
   static async updateStudent(id: string, studentData: any) {
+    // Get current student data to check if class changed
+    const currentStudent = await storage.getStudent(id);
+    const oldClassId = currentStudent?.classId?.toString();
+    
     // Convert string IDs to ObjectIds for database operations
     const processedData: any = { ...studentData };
     if (studentData.schoolId && typeof studentData.schoolId === 'string') {
@@ -95,7 +98,23 @@ export class StudentService {
       processedData.parentId = new mongoose.Types.ObjectId(studentData.parentId);
     }
     
+    // If class is changing, generate new roll number
+    const newClassId = studentData.classId;
+    if (newClassId && newClassId !== oldClassId) {
+      const newRollNo = await this.generateRollNumber(newClassId);
+      processedData.rollNo = newRollNo;
+    }
+    
     const student = await storage.updateStudent(id, processedData);
+    
+    // If class changed, reorder roll numbers in both old and new classes
+    if (newClassId && newClassId !== oldClassId) {
+      if (oldClassId) {
+        await this.reorderRollNumbers(oldClassId);
+      }
+      await this.reorderRollNumbers(newClassId);
+    }
+    
     return student ? this.transformStudentToFrontend(student) : null;
   }
 
@@ -105,8 +124,53 @@ export class StudentService {
     return student ? this.transformStudentToFrontend(student) : null;
   }
 
-  // Delete student
+  // Delete student and reorder roll numbers
   static async deleteStudent(id: string) {
-    return await storage.deleteStudent(id);
+    // Get student details before deletion
+    const student = await storage.getStudent(id);
+    if (!student || !student.classId) {
+      return await storage.deleteStudent(id);
+    }
+    
+    const classId = student.classId.toString();
+    const deletedRollNo = student.rollNo;
+    
+    // Delete the student
+    const result = await storage.deleteStudent(id);
+    
+    if (result) {
+      // Reorder roll numbers for remaining students in the same class
+      await this.reorderRollNumbers(classId);
+    }
+    
+    return result;
+  }
+  
+  // Reorder roll numbers for all students in a class
+  static async reorderRollNumbers(classId: string) {
+    try {
+      // Get class information
+      const classInfo = await storage.getClass(classId);
+      if (!classInfo) return;
+      
+      const grade = classInfo.grade;
+      const section = classInfo.section.toUpperCase();
+      const sectionNumber = section.charCodeAt(0) - 'A'.charCodeAt(0) + 1;
+      
+      // Get all students in the class ordered by roll number
+      const students = await storage.getStudentsByClass(classId);
+      
+      // Update roll numbers sequentially
+      for (let i = 0; i < students.length; i++) {
+        const studentNumber = (i + 1).toString().padStart(2, '0');
+        const newRollNo = `${grade}${sectionNumber}${studentNumber}`;
+        
+        if (students[i].rollNo !== newRollNo) {
+          await storage.updateStudent(students[i]._id.toString(), { rollNo: newRollNo });
+        }
+      }
+    } catch (error) {
+      console.error('Error reordering roll numbers:', error);
+    }
   }
 }
