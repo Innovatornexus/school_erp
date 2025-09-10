@@ -97,7 +97,7 @@ export default function ExamsPage() {
   } = useSchoolData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
-  const [deleteExamId, setDeleteExamId] = useState<number | null>(null);
+  const [deleteExamId, setDeleteExamId] = useState<string | null>(null);
   const { toast } = useToast();
   const form = useForm<z.infer<typeof examFormSchema>>({
     resolver: zodResolver(examFormSchema),
@@ -243,7 +243,7 @@ export default function ExamsPage() {
   });
 
   const updateExamMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
       const response = await fetch(`/api/exams/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -273,7 +273,7 @@ export default function ExamsPage() {
   });
 
   const deleteExamMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       const response = await fetch(`/api/exams/${id}`, { method: "DELETE" });
       if (!response.ok && response.status !== 204) {
         const errorData = await response.json();
@@ -376,7 +376,7 @@ export default function ExamsPage() {
     }
   };
 
-  const handleDelete = (examId: number) => setDeleteExamId(examId);
+  const handleDelete = (examId: string) => setDeleteExamId(examId);
   const confirmDelete = () => {
     if (deleteExamId) {
       deleteExamMutation.mutate(deleteExamId);
@@ -543,7 +543,7 @@ export default function ExamsPage() {
                               form.setValue("subjects", [
                                 ...form.getValues("subjects"),
                                 {
-                                  subjectId: 0,
+                                  subjectId: "",
                                   examDate: "",
                                   startTime: "",
                                   endTime: "",

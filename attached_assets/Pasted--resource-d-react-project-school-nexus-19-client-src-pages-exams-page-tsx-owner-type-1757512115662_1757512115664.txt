@@ -1,0 +1,315 @@
+[{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2322",
+	"severity": 8,
+	"message": "Type 'string' is not assignable to type 'number'.",
+	"source": "ts",
+	"startLineNumber": 345,
+	"startColumn": 35,
+	"endLineNumber": 345,
+	"endColumn": 37,
+	"relatedInformation": [
+		{
+			"startLineNumber": 246,
+			"startColumn": 40,
+			"endLineNumber": 246,
+			"endColumn": 42,
+			"message": "The expected type comes from property 'id' which is declared here on type '{ id: number; data: any; }'",
+			"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx"
+		}
+	],
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2322",
+	"severity": 8,
+	"message": "Type '{ subjectId: string; examDate: string; startTime: string; endTime: string; } | { subjectId: number; examDate: string; startTime: string; endTime: string; }' is not assignable to type '{ subjectId: string; examDate: string; startTime: string; endTime: string; }'.\n  Type '{ subjectId: number; examDate: string; startTime: string; endTime: string; }' is not assignable to type '{ subjectId: string; examDate: string; startTime: string; endTime: string; }'.\n    Types of property 'subjectId' are incompatible.\n      Type 'number' is not assignable to type 'string'.",
+	"source": "ts",
+	"startLineNumber": 544,
+	"startColumn": 33,
+	"endLineNumber": 544,
+	"endColumn": 62,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2322",
+	"severity": 8,
+	"message": "Type 'number' is not assignable to type 'string'.",
+	"source": "ts",
+	"startLineNumber": 546,
+	"startColumn": 35,
+	"endLineNumber": 546,
+	"endColumn": 44,
+	"relatedInformation": [
+		{
+			"startLineNumber": 71,
+			"startColumn": 3,
+			"endLineNumber": 71,
+			"endColumn": 54,
+			"message": "The expected type comes from property 'subjectId' which is declared here on type '{ subjectId: string; examDate: string; startTime: string; endTime: string; }'",
+			"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx"
+		}
+	],
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2345",
+	"severity": 8,
+	"message": "Argument of type 'string' is not assignable to parameter of type 'number'.",
+	"source": "ts",
+	"startLineNumber": 784,
+	"startColumn": 55,
+	"endLineNumber": 784,
+	"endColumn": 62,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/students-page.tsx",
+	"owner": "typescript",
+	"code": "2339",
+	"severity": 8,
+	"message": "Property 'refetchData' does not exist on type 'SchoolDataContextType'.",
+	"source": "ts",
+	"startLineNumber": 88,
+	"startColumn": 49,
+	"endLineNumber": 88,
+	"endColumn": 60,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/students-page.tsx",
+	"owner": "typescript",
+	"code": "2322",
+	"severity": 8,
+	"message": "Type 'Student[]' is not assignable to type 'StudentItem[]'.\n  Type 'Student' is missing the following properties from type 'StudentItem': gender, admissionDate, status",
+	"source": "ts",
+	"startLineNumber": 154,
+	"startColumn": 11,
+	"endLineNumber": 154,
+	"endColumn": 22,
+	"relatedInformation": [
+		{
+			"startLineNumber": 47,
+			"startColumn": 3,
+			"endLineNumber": 47,
+			"endColumn": 14,
+			"message": "The expected type comes from property 'studentData' which is declared here on type 'IntrinsicAttributes & Props'",
+			"resource": "/d:/react project/school-nexus-19/client/src/pages/student-list-page.tsx"
+		}
+	],
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/students-page.tsx",
+	"owner": "typescript",
+	"code": "2339",
+	"severity": 8,
+	"message": "Property 'classTeacherId' does not exist on type 'Class'.",
+	"source": "ts",
+	"startLineNumber": 165,
+	"startColumn": 34,
+	"endLineNumber": 165,
+	"endColumn": 48,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/students-page.tsx",
+	"owner": "typescript",
+	"code": "2322",
+	"severity": 8,
+	"message": "Type 'Class[]' is not assignable to type 'ClassItem[]'.\n  Type 'Class' is missing the following properties from type 'ClassItem': name, classTeacherId, studentCount",
+	"source": "ts",
+	"startLineNumber": 177,
+	"startColumn": 11,
+	"endLineNumber": 177,
+	"endColumn": 20,
+	"relatedInformation": [
+		{
+			"startLineNumber": 48,
+			"startColumn": 3,
+			"endLineNumber": 48,
+			"endColumn": 12,
+			"message": "The expected type comes from property 'classData' which is declared here on type 'IntrinsicAttributes & Props'",
+			"resource": "/d:/react project/school-nexus-19/client/src/pages/student-list-page.tsx"
+		}
+	],
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/subjects-page.tsx",
+	"owner": "typescript",
+	"code": "2339",
+	"severity": 8,
+	"message": "Property 'refetchData' does not exist on type 'SchoolDataContextType'.",
+	"source": "ts",
+	"startLineNumber": 51,
+	"startColumn": 61,
+	"endLineNumber": 51,
+	"endColumn": 72,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/subjects-page.tsx",
+	"owner": "typescript",
+	"code": "2345",
+	"severity": 8,
+	"message": "Argument of type '(s: SubjectItem) => { teachers: number; classCount: number; classNames: never[]; id: number; schoolId: number; subjectName: string; subjectDescription: string; }' is not assignable to parameter of type '(value: Subject, index: number, array: Subject[]) => { teachers: number; classCount: number; classNames: never[]; id: number; schoolId: number; subjectName: string; subjectDescription: string; }'.\n  Types of parameters 's' and 'value' are incompatible.\n    Type 'Subject' is not assignable to type 'SubjectItem'.\n      Types of property 'id' are incompatible.\n        Type 'string' is not assignable to type 'number'.",
+	"source": "ts",
+	"startLineNumber": 74,
+	"startColumn": 33,
+	"endLineNumber": 79,
+	"endColumn": 9,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/subjects-page.tsx",
+	"owner": "typescript",
+	"code": "2345",
+	"severity": 8,
+	"message": "Argument of type '(cls: ClassItem) => void' is not assignable to parameter of type '(value: Class, index: number, array: Class[]) => void'.\n  Types of parameters 'cls' and 'value' are incompatible.\n    Type 'Class' is missing the following properties from type 'ClassItem': name, classTeacherId, studentCount",
+	"source": "ts",
+	"startLineNumber": 91,
+	"startColumn": 21,
+	"endLineNumber": 91,
+	"endColumn": 42,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/subjects-page.tsx",
+	"owner": "typescript",
+	"code": "2345",
+	"severity": 8,
+	"message": "Argument of type '(mapping: { subject_id: number; teacher_id: number | null; }) => void' is not assignable to parameter of type '(value: { subjectId: number; teacherId: number | null; }, index: number, array: { subjectId: number; teacherId: number | null; }[]) => void'.\n  Types of parameters 'mapping' and 'value' are incompatible.\n    Type '{ subjectId: number; teacherId: number | null; }' is missing the following properties from type '{ subject_id: number; teacher_id: number | null; }': subject_id, teacher_id",
+	"source": "ts",
+	"startLineNumber": 94,
+	"startColumn": 9,
+	"endLineNumber": 94,
+	"endColumn": 74,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/subjects-page.tsx",
+	"owner": "typescript",
+	"code": "7015",
+	"severity": 8,
+	"message": "Element implicitly has an 'any' type because index expression is not of type 'number'.",
+	"source": "ts",
+	"startLineNumber": 120,
+	"startColumn": 39,
+	"endLineNumber": 120,
+	"endColumn": 49,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/subjects-page.tsx",
+	"owner": "typescript",
+	"code": "7015",
+	"severity": 8,
+	"message": "Element implicitly has an 'any' type because index expression is not of type 'number'.",
+	"source": "ts",
+	"startLineNumber": 121,
+	"startColumn": 40,
+	"endLineNumber": 121,
+	"endColumn": 50,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/subjects-page.tsx",
+	"owner": "typescript",
+	"code": "7015",
+	"severity": 8,
+	"message": "Element implicitly has an 'any' type because index expression is not of type 'number'.",
+	"source": "ts",
+	"startLineNumber": 122,
+	"startColumn": 40,
+	"endLineNumber": 122,
+	"endColumn": 50,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/subjects-page.tsx",
+	"owner": "typescript",
+	"code": "2345",
+	"severity": 8,
+	"message": "Argument of type '{ teachers: number; classCount: number; classNames: never[]; id: number; schoolId: number; subjectName: string; subjectDescription: string; } | { teachers: any; classCount: any; classNames: any; ... 5 more ...; updatedAt: string; }' is not assignable to parameter of type 'SetStateAction<SubjectItem | undefined>'.\n  Type '{ teachers: any; classCount: any; classNames: any; id: string; schoolId: string; subjectName: string; subjectDescription?: string; createdAt: string; updatedAt: string; }' is not assignable to type 'SetStateAction<SubjectItem | undefined>'.\n    Type '{ teachers: any; classCount: any; classNames: any; id: string; schoolId: string; subjectName: string; subjectDescription?: string; createdAt: string; updatedAt: string; }' is not assignable to type 'SubjectItem'.\n      Types of property 'id' are incompatible.\n        Type 'string' is not assignable to type 'number'.",
+	"source": "ts",
+	"startLineNumber": 144,
+	"startColumn": 25,
+	"endLineNumber": 144,
+	"endColumn": 32,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/subjects-page.tsx",
+	"owner": "typescript",
+	"code": "2345",
+	"severity": 8,
+	"message": "Argument of type 'string | number' is not assignable to parameter of type 'number'.\n  Type 'string' is not assignable to type 'number'.",
+	"source": "ts",
+	"startLineNumber": 306,
+	"startColumn": 41,
+	"endLineNumber": 306,
+	"endColumn": 51,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/subjects-page.tsx",
+	"owner": "typescript",
+	"code": "2322",
+	"severity": 8,
+	"message": "Type '({ header: string; accessorKey: string; cell?: undefined; } | { header: string; accessorKey: string; cell: (subject: { teachers: number; classCount: number; classNames: never[]; id: number; schoolId: number; subjectName: string; subjectDescription: string; } | { ...; }) => Element; })[]' is not assignable to type 'DataTableColumn<{ teachers: number; classCount: number; classNames: never[]; id: number; schoolId: number; subjectName: string; subjectDescription: string; } | { teachers: any; classCount: any; classNames: any; ... 5 more ...; updatedAt: string; }>[]'.\n  Type '{ header: string; accessorKey: string; cell?: undefined; } | { header: string; accessorKey: string; cell: (subject: { teachers: number; classCount: number; classNames: never[]; id: number; schoolId: number; subjectName: string; subjectDescription: string; } | { ...; }) => Element; }' is not assignable to type 'DataTableColumn<{ teachers: number; classCount: number; classNames: never[]; id: number; schoolId: number; subjectName: string; subjectDescription: string; } | { teachers: any; classCount: any; classNames: any; ... 5 more ...; updatedAt: string; }>'.\n    Type '{ header: string; accessorKey: string; cell?: undefined; }' is not assignable to type 'DataTableColumn<{ teachers: number; classCount: number; classNames: never[]; id: number; schoolId: number; subjectName: string; subjectDescription: string; } | { teachers: any; classCount: any; classNames: any; ... 5 more ...; updatedAt: string; }>'.\n      Types of property 'accessorKey' are incompatible.\n        Type 'string' is not assignable to type '\"id\" | \"teachers\" | \"schoolId\" | \"subjectName\" | \"subjectDescription\" | \"classCount\" | \"classNames\"'.",
+	"source": "ts",
+	"startLineNumber": 499,
+	"startColumn": 13,
+	"endLineNumber": 499,
+	"endColumn": 20,
+	"relatedInformation": [
+		{
+			"startLineNumber": 22,
+			"startColumn": 3,
+			"endLineNumber": 22,
+			"endColumn": 10,
+			"message": "The expected type comes from property 'columns' which is declared here on type 'IntrinsicAttributes & DataTableProps<{ teachers: number; classCount: number; classNames: never[]; id: number; schoolId: number; subjectName: string; subjectDescription: string; } | { ...; }>'",
+			"resource": "/d:/react project/school-nexus-19/client/src/components/ui/data-table.tsx"
+		}
+	],
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/server/routes/subject-routes.ts",
+	"owner": "typescript",
+	"code": "2345",
+	"severity": 8,
+	"message": "Argument of type '{ schoolId?: string | undefined; subjectName?: string | undefined; subjectDescription?: string | undefined; }' is not assignable to parameter of type 'Partial<ISubject>'.\n  Types of property 'schoolId' are incompatible.\n    Type 'string | undefined' is not assignable to type 'ObjectId | undefined'.\n      Type 'string' is not assignable to type 'ObjectId'.",
+	"source": "ts",
+	"startLineNumber": 49,
+	"startColumn": 71,
+	"endLineNumber": 49,
+	"endColumn": 81,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/server/routes/teacher-routes.ts",
+	"owner": "typescript",
+	"code": "2345",
+	"severity": 8,
+	"message": "Argument of type '{ name: string; email: string; password: any; role: string; schoolId: string; }' is not assignable to parameter of type '{ name: string; email: string; password: string; role: \"school_admin\" | \"teacher\" | \"super_admin\" | \"student\" | \"parent\"; schoolId?: string | undefined; classId?: string | undefined; }'.\n  Types of property 'role' are incompatible.\n    Type 'string' is not assignable to type '\"school_admin\" | \"teacher\" | \"super_admin\" | \"student\" | \"parent\"'.",
+	"source": "ts",
+	"startLineNumber": 60,
+	"startColumn": 47,
+	"endLineNumber": 60,
+	"endColumn": 55,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/server/routes/teacher-routes.ts",
+	"owner": "typescript",
+	"code": "18046",
+	"severity": 8,
+	"message": "'error' is of type 'unknown'.",
+	"source": "ts",
+	"startLineNumber": 95,
+	"startColumn": 72,
+	"endLineNumber": 95,
+	"endColumn": 77,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/server/services/subject-service.ts",
+	"owner": "typescript",
+	"code": "18046",
+	"severity": 8,
+	"message": "'subject._id' is of type 'unknown'.",
+	"source": "ts",
+	"startLineNumber": 10,
+	"startColumn": 11,
+	"endLineNumber": 10,
+	"endColumn": 22,
+	"origin": "extHost1"
+}]
