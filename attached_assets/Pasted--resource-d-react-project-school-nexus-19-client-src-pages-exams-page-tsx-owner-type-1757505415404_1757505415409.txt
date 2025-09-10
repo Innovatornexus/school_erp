@@ -1,0 +1,537 @@
+[{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2551",
+	"severity": 8,
+	"message": "Property 'class_id' does not exist on type '{ classId: number; title: string; term: string; subjects: { subjectId: number; examDate: string; startTime: string; endTime: string; }[]; }'. Did you mean 'classId'?",
+	"source": "ts",
+	"startLineNumber": 320,
+	"startColumn": 65,
+	"endLineNumber": 320,
+	"endColumn": 73,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2551",
+	"severity": 8,
+	"message": "Property 'class_id' does not exist on type '{ classId: number; title: string; term: string; subjects: { subjectId: number; examDate: string; startTime: string; endTime: string; }[]; }'. Did you mean 'classId'?",
+	"source": "ts",
+	"startLineNumber": 325,
+	"startColumn": 22,
+	"endLineNumber": 325,
+	"endColumn": 30,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2551",
+	"severity": 8,
+	"message": "Property 'exam_date' does not exist on type '{ subjectId: number; examDate: string; startTime: string; endTime: string; }'. Did you mean 'examDate'?",
+	"source": "ts",
+	"startLineNumber": 331,
+	"startColumn": 29,
+	"endLineNumber": 331,
+	"endColumn": 38,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2551",
+	"severity": 8,
+	"message": "Property 'exam_date' does not exist on type '{ subjectId: number; examDate: string; startTime: string; endTime: string; }'. Did you mean 'examDate'?",
+	"source": "ts",
+	"startLineNumber": 331,
+	"startColumn": 54,
+	"endLineNumber": 331,
+	"endColumn": 63,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2551",
+	"severity": 8,
+	"message": "Property 'exam_date' does not exist on type '{ subjectId: number; examDate: string; startTime: string; endTime: string; }'. Did you mean 'examDate'?",
+	"source": "ts",
+	"startLineNumber": 332,
+	"startColumn": 26,
+	"endLineNumber": 332,
+	"endColumn": 35,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2551",
+	"severity": 8,
+	"message": "Property 'exam_date' does not exist on type '{ subjectId: number; examDate: string; startTime: string; endTime: string; }'. Did you mean 'examDate'?",
+	"source": "ts",
+	"startLineNumber": 335,
+	"startColumn": 27,
+	"endLineNumber": 335,
+	"endColumn": 36,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2551",
+	"severity": 8,
+	"message": "Property 'exam_date' does not exist on type '{ subjectId: number; examDate: string; startTime: string; endTime: string; }'. Did you mean 'examDate'?",
+	"source": "ts",
+	"startLineNumber": 335,
+	"startColumn": 50,
+	"endLineNumber": 335,
+	"endColumn": 59,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2551",
+	"severity": 8,
+	"message": "Property 'exam_date' does not exist on type '{ subjectId: number; examDate: string; startTime: string; endTime: string; }'. Did you mean 'examDate'?",
+	"source": "ts",
+	"startLineNumber": 336,
+	"startColumn": 26,
+	"endLineNumber": 336,
+	"endColumn": 35,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2551",
+	"severity": 8,
+	"message": "Property 'subject_id' does not exist on type '{ subjectId: number; examDate: string; startTime: string; endTime: string; }'. Did you mean 'subjectId'?",
+	"source": "ts",
+	"startLineNumber": 340,
+	"startColumn": 35,
+	"endLineNumber": 340,
+	"endColumn": 45,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2551",
+	"severity": 8,
+	"message": "Property 'subject_id' does not exist on type '{ subjectId: number; examDate: string; startTime: string; endTime: string; }'. Did you mean 'subjectId'?",
+	"source": "ts",
+	"startLineNumber": 343,
+	"startColumn": 31,
+	"endLineNumber": 343,
+	"endColumn": 41,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2551",
+	"severity": 8,
+	"message": "Property 'exam_date' does not exist on type '{ subjectId: number; examDate: string; startTime: string; endTime: string; }'. Did you mean 'examDate'?",
+	"source": "ts",
+	"startLineNumber": 345,
+	"startColumn": 30,
+	"endLineNumber": 345,
+	"endColumn": 39,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2551",
+	"severity": 8,
+	"message": "Property 'start_time' does not exist on type '{ subjectId: number; examDate: string; startTime: string; endTime: string; }'. Did you mean 'startTime'?",
+	"source": "ts",
+	"startLineNumber": 346,
+	"startColumn": 31,
+	"endLineNumber": 346,
+	"endColumn": 41,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2551",
+	"severity": 8,
+	"message": "Property 'end_time' does not exist on type '{ subjectId: number; examDate: string; startTime: string; endTime: string; }'. Did you mean 'endTime'?",
+	"source": "ts",
+	"startLineNumber": 347,
+	"startColumn": 29,
+	"endLineNumber": 347,
+	"endColumn": 37,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2353",
+	"severity": 8,
+	"message": "Object literal may only specify known properties, and 'class_id' does not exist in type '{ classId: number; title: string; term: string; subjects: { subjectId: number; examDate: string; startTime: string; endTime: string; }[]; } | { classId?: number | undefined; title?: string | undefined; term?: string | undefined; subjects?: ({ ...; } | undefined)[] | undefined; } | ResetAction<...>'.",
+	"source": "ts",
+	"startLineNumber": 370,
+	"startColumn": 9,
+	"endLineNumber": 370,
+	"endColumn": 17,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2551",
+	"severity": 8,
+	"message": "Property 'class_id' does not exist on type 'Exam'. Did you mean 'classId'?",
+	"source": "ts",
+	"startLineNumber": 370,
+	"startColumn": 24,
+	"endLineNumber": 370,
+	"endColumn": 32,
+	"relatedInformation": [
+		{
+			"startLineNumber": 90,
+			"startColumn": 3,
+			"endLineNumber": 90,
+			"endColumn": 10,
+			"message": "'classId' is declared here.",
+			"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx"
+		}
+	],
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2820",
+	"severity": 8,
+	"message": "Type '\"class_id\"' is not assignable to type '\"classId\" | \"title\" | \"term\" | \"subjects\" | `subjects.${number}` | `subjects.${number}.subjectId` | `subjects.${number}.examDate` | `subjects.${number}.startTime` | `subjects.${number}.endTime`'. Did you mean '\"classId\"'?",
+	"source": "ts",
+	"startLineNumber": 510,
+	"startColumn": 25,
+	"endLineNumber": 510,
+	"endColumn": 29,
+	"relatedInformation": [
+		{
+			"startLineNumber": 20,
+			"startColumn": 5,
+			"endLineNumber": 20,
+			"endColumn": 9,
+			"message": "The expected type comes from property 'name' which is declared here on type 'IntrinsicAttributes & { render: ({ field, fieldState, formState, }: { field: ControllerRenderProps<{ classId: number; title: string; term: string; subjects: { subjectId: number; examDate: string; startTime: string; endTime: string; }[]; }, \"classId\" | ... 7 more ... | `subjects.${number}.endTime`>; fieldState: Contr...'",
+			"resource": "/d:/react project/school-nexus-19/node_modules/react-hook-form/dist/types/controller.d.ts"
+		}
+	],
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2322",
+	"severity": 8,
+	"message": "Type '{ subjectId: number; examDate: string; startTime: string; endTime: string; } | { subject_id: number; exam_date: string; start_time: string; end_time: string; }' is not assignable to type '{ subjectId: number; examDate: string; startTime: string; endTime: string; }'.\n  Object literal may only specify known properties, but 'subject_id' does not exist in type '{ subjectId: number; examDate: string; startTime: string; endTime: string; }'. Did you mean to write 'subjectId'?",
+	"source": "ts",
+	"startLineNumber": 552,
+	"startColumn": 35,
+	"endLineNumber": 552,
+	"endColumn": 45,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2561",
+	"severity": 8,
+	"message": "Object literal may only specify known properties, but 'subject_id' does not exist in type '{ subjectId: number; examDate: string; startTime: string; endTime: string; }'. Did you mean to write 'subjectId'?",
+	"source": "ts",
+	"startLineNumber": 552,
+	"startColumn": 35,
+	"endLineNumber": 552,
+	"endColumn": 45,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2322",
+	"severity": 8,
+	"message": "Type '`subjects.${number}.subject_id`' is not assignable to type '\"classId\" | \"title\" | \"term\" | \"subjects\" | `subjects.${number}` | `subjects.${number}.subjectId` | `subjects.${number}.examDate` | `subjects.${number}.startTime` | `subjects.${number}.endTime`'.",
+	"source": "ts",
+	"startLineNumber": 591,
+	"startColumn": 33,
+	"endLineNumber": 591,
+	"endColumn": 37,
+	"relatedInformation": [
+		{
+			"startLineNumber": 20,
+			"startColumn": 5,
+			"endLineNumber": 20,
+			"endColumn": 9,
+			"message": "The expected type comes from property 'name' which is declared here on type 'IntrinsicAttributes & { render: ({ field, fieldState, formState, }: { field: ControllerRenderProps<{ classId: number; title: string; term: string; subjects: { subjectId: number; examDate: string; startTime: string; endTime: string; }[]; }, \"classId\" | ... 7 more ... | `subjects.${number}.endTime`>; fieldState: Contr...'",
+			"resource": "/d:/react project/school-nexus-19/node_modules/react-hook-form/dist/types/controller.d.ts"
+		}
+	],
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2322",
+	"severity": 8,
+	"message": "Type '`subjects.${number}.exam_date`' is not assignable to type '\"classId\" | \"title\" | \"term\" | \"subjects\" | `subjects.${number}` | `subjects.${number}.subjectId` | `subjects.${number}.examDate` | `subjects.${number}.startTime` | `subjects.${number}.endTime`'.",
+	"source": "ts",
+	"startLineNumber": 625,
+	"startColumn": 33,
+	"endLineNumber": 625,
+	"endColumn": 37,
+	"relatedInformation": [
+		{
+			"startLineNumber": 20,
+			"startColumn": 5,
+			"endLineNumber": 20,
+			"endColumn": 9,
+			"message": "The expected type comes from property 'name' which is declared here on type 'IntrinsicAttributes & { render: ({ field, fieldState, formState, }: { field: ControllerRenderProps<{ classId: number; title: string; term: string; subjects: { subjectId: number; examDate: string; startTime: string; endTime: string; }[]; }, \"classId\" | ... 7 more ... | `subjects.${number}.endTime`>; fieldState: Contr...'",
+			"resource": "/d:/react project/school-nexus-19/node_modules/react-hook-form/dist/types/controller.d.ts"
+		}
+	],
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2322",
+	"severity": 8,
+	"message": "Type '{ onChange: (...event: any[]) => void; onBlur: Noop; value: string | number | { subjectId: number; examDate: string; startTime: string; endTime: string; } | { subjectId: number; examDate: string; startTime: string; endTime: string; }[]; disabled?: boolean | undefined; name: \"classId\" | ... 7 more ... | `subjects.${n...' is not assignable to type 'Omit<DetailedHTMLProps<InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>, \"ref\">'.\n  Types of property 'value' are incompatible.\n    Type 'string | number | { subjectId: number; examDate: string; startTime: string; endTime: string; } | { subjectId: number; examDate: string; startTime: string; endTime: string; }[]' is not assignable to type 'string | number | readonly string[] | undefined'.\n      Type '{ subjectId: number; examDate: string; startTime: string; endTime: string; }' is not assignable to type 'string | number | readonly string[] | undefined'.",
+	"source": "ts",
+	"startLineNumber": 630,
+	"startColumn": 40,
+	"endLineNumber": 630,
+	"endColumn": 45,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2322",
+	"severity": 8,
+	"message": "Type '`subjects.${number}.start_time`' is not assignable to type '\"classId\" | \"title\" | \"term\" | \"subjects\" | `subjects.${number}` | `subjects.${number}.subjectId` | `subjects.${number}.examDate` | `subjects.${number}.startTime` | `subjects.${number}.endTime`'.",
+	"source": "ts",
+	"startLineNumber": 640,
+	"startColumn": 33,
+	"endLineNumber": 640,
+	"endColumn": 37,
+	"relatedInformation": [
+		{
+			"startLineNumber": 20,
+			"startColumn": 5,
+			"endLineNumber": 20,
+			"endColumn": 9,
+			"message": "The expected type comes from property 'name' which is declared here on type 'IntrinsicAttributes & { render: ({ field, fieldState, formState, }: { field: ControllerRenderProps<{ classId: number; title: string; term: string; subjects: { subjectId: number; examDate: string; startTime: string; endTime: string; }[]; }, \"classId\" | ... 7 more ... | `subjects.${number}.endTime`>; fieldState: Contr...'",
+			"resource": "/d:/react project/school-nexus-19/node_modules/react-hook-form/dist/types/controller.d.ts"
+		}
+	],
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2322",
+	"severity": 8,
+	"message": "Type '{ onChange: (...event: any[]) => void; onBlur: Noop; value: string | number | { subjectId: number; examDate: string; startTime: string; endTime: string; } | { subjectId: number; examDate: string; startTime: string; endTime: string; }[]; disabled?: boolean | undefined; name: \"classId\" | ... 7 more ... | `subjects.${n...' is not assignable to type 'Omit<DetailedHTMLProps<InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>, \"ref\">'.\n  Types of property 'value' are incompatible.\n    Type 'string | number | { subjectId: number; examDate: string; startTime: string; endTime: string; } | { subjectId: number; examDate: string; startTime: string; endTime: string; }[]' is not assignable to type 'string | number | readonly string[] | undefined'.\n      Type '{ subjectId: number; examDate: string; startTime: string; endTime: string; }' is not assignable to type 'string | number | readonly string[] | undefined'.",
+	"source": "ts",
+	"startLineNumber": 645,
+	"startColumn": 40,
+	"endLineNumber": 645,
+	"endColumn": 45,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2322",
+	"severity": 8,
+	"message": "Type '`subjects.${number}.end_time`' is not assignable to type '\"classId\" | \"title\" | \"term\" | \"subjects\" | `subjects.${number}` | `subjects.${number}.subjectId` | `subjects.${number}.examDate` | `subjects.${number}.startTime` | `subjects.${number}.endTime`'.",
+	"source": "ts",
+	"startLineNumber": 653,
+	"startColumn": 33,
+	"endLineNumber": 653,
+	"endColumn": 37,
+	"relatedInformation": [
+		{
+			"startLineNumber": 20,
+			"startColumn": 5,
+			"endLineNumber": 20,
+			"endColumn": 9,
+			"message": "The expected type comes from property 'name' which is declared here on type 'IntrinsicAttributes & { render: ({ field, fieldState, formState, }: { field: ControllerRenderProps<{ classId: number; title: string; term: string; subjects: { subjectId: number; examDate: string; startTime: string; endTime: string; }[]; }, \"classId\" | ... 7 more ... | `subjects.${number}.endTime`>; fieldState: Contr...'",
+			"resource": "/d:/react project/school-nexus-19/node_modules/react-hook-form/dist/types/controller.d.ts"
+		}
+	],
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2322",
+	"severity": 8,
+	"message": "Type '{ onChange: (...event: any[]) => void; onBlur: Noop; value: string | number | { subjectId: number; examDate: string; startTime: string; endTime: string; } | { subjectId: number; examDate: string; startTime: string; endTime: string; }[]; disabled?: boolean | undefined; name: \"classId\" | ... 7 more ... | `subjects.${n...' is not assignable to type 'Omit<DetailedHTMLProps<InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>, \"ref\">'.\n  Types of property 'value' are incompatible.\n    Type 'string | number | { subjectId: number; examDate: string; startTime: string; endTime: string; } | { subjectId: number; examDate: string; startTime: string; endTime: string; }[]' is not assignable to type 'string | number | readonly string[] | undefined'.\n      Type '{ subjectId: number; examDate: string; startTime: string; endTime: string; }' is not assignable to type 'string | number | readonly string[] | undefined'.",
+	"source": "ts",
+	"startLineNumber": 658,
+	"startColumn": 40,
+	"endLineNumber": 658,
+	"endColumn": 45,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2551",
+	"severity": 8,
+	"message": "Property 'class_name' does not exist on type 'Exam'. Did you mean 'className'?",
+	"source": "ts",
+	"startLineNumber": 732,
+	"startColumn": 41,
+	"endLineNumber": 732,
+	"endColumn": 51,
+	"relatedInformation": [
+		{
+			"startLineNumber": 91,
+			"startColumn": 3,
+			"endLineNumber": 91,
+			"endColumn": 12,
+			"message": "'className' is declared here.",
+			"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx"
+		}
+	],
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2551",
+	"severity": 8,
+	"message": "Property 'start_date' does not exist on type 'Exam'. Did you mean 'startDate'?",
+	"source": "ts",
+	"startLineNumber": 737,
+	"startColumn": 46,
+	"endLineNumber": 737,
+	"endColumn": 56,
+	"relatedInformation": [
+		{
+			"startLineNumber": 92,
+			"startColumn": 3,
+			"endLineNumber": 92,
+			"endColumn": 12,
+			"message": "'startDate' is declared here.",
+			"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx"
+		}
+	],
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2551",
+	"severity": 8,
+	"message": "Property 'end_date' does not exist on type 'Exam'. Did you mean 'endDate'?",
+	"source": "ts",
+	"startLineNumber": 737,
+	"startColumn": 63,
+	"endLineNumber": 737,
+	"endColumn": 71,
+	"relatedInformation": [
+		{
+			"startLineNumber": 93,
+			"startColumn": 3,
+			"endLineNumber": 93,
+			"endColumn": 10,
+			"message": "'endDate' is declared here.",
+			"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx"
+		}
+	],
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2551",
+	"severity": 8,
+	"message": "Property 'start_date' does not exist on type 'Exam'. Did you mean 'startDate'?",
+	"source": "ts",
+	"startLineNumber": 738,
+	"startColumn": 44,
+	"endLineNumber": 738,
+	"endColumn": 54,
+	"relatedInformation": [
+		{
+			"startLineNumber": 92,
+			"startColumn": 3,
+			"endLineNumber": 92,
+			"endColumn": 12,
+			"message": "'startDate' is declared here.",
+			"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx"
+		}
+	],
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2551",
+	"severity": 8,
+	"message": "Property 'start_date' does not exist on type 'Exam'. Did you mean 'startDate'?",
+	"source": "ts",
+	"startLineNumber": 740,
+	"startColumn": 58,
+	"endLineNumber": 740,
+	"endColumn": 68,
+	"relatedInformation": [
+		{
+			"startLineNumber": 92,
+			"startColumn": 3,
+			"endLineNumber": 92,
+			"endColumn": 12,
+			"message": "'startDate' is declared here.",
+			"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx"
+		}
+	],
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2551",
+	"severity": 8,
+	"message": "Property 'start_date' does not exist on type 'Exam'. Did you mean 'startDate'?",
+	"source": "ts",
+	"startLineNumber": 748,
+	"startColumn": 42,
+	"endLineNumber": 748,
+	"endColumn": 52,
+	"relatedInformation": [
+		{
+			"startLineNumber": 92,
+			"startColumn": 3,
+			"endLineNumber": 92,
+			"endColumn": 12,
+			"message": "'startDate' is declared here.",
+			"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx"
+		}
+	],
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2551",
+	"severity": 8,
+	"message": "Property 'end_date' does not exist on type 'Exam'. Did you mean 'endDate'?",
+	"source": "ts",
+	"startLineNumber": 749,
+	"startColumn": 42,
+	"endLineNumber": 749,
+	"endColumn": 50,
+	"relatedInformation": [
+		{
+			"startLineNumber": 93,
+			"startColumn": 3,
+			"endLineNumber": 93,
+			"endColumn": 10,
+			"message": "'endDate' is declared here.",
+			"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx"
+		}
+	],
+	"origin": "extHost1"
+},{
+	"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx",
+	"owner": "typescript",
+	"code": "2551",
+	"severity": 8,
+	"message": "Property 'subjects_count' does not exist on type 'Exam'. Did you mean 'subjectsCount'?",
+	"source": "ts",
+	"startLineNumber": 755,
+	"startColumn": 35,
+	"endLineNumber": 755,
+	"endColumn": 49,
+	"relatedInformation": [
+		{
+			"startLineNumber": 95,
+			"startColumn": 3,
+			"endLineNumber": 95,
+			"endColumn": 16,
+			"message": "'subjectsCount' is declared here.",
+			"resource": "/d:/react project/school-nexus-19/client/src/pages/exams-page.tsx"
+		}
+	],
+	"origin": "extHost1"
+}]
