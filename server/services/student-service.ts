@@ -136,22 +136,34 @@ export class StudentService {
   static async deleteStudent(id: string) {
     // Get student details before deletion
     const student = await storage.getStudent(id);
-    if (!student || !student.classId) {
-      return await storage.deleteStudent(id);
+    if (!student) {
+      return false;
     }
 
-    const classId = student.classId.toString();
-    const deletedRollNo = student.rollNo;
+    const classId = student.classId?.toString();
+    const userId = student.userId?.toString();
 
     // Delete the student
-    const result = await storage.deleteStudent(id);
+    const studentDeleted = await storage.deleteStudent(id);
 
-    if (result) {
+    if (studentDeleted) {
+      // Also delete the corresponding user record
+      if (userId) {
+        try {
+          await storage.deleteUser(userId);
+        } catch (error) {
+          console.error(`Error deleting user ${userId} for student ${id}:`, error);
+          // Continue with roll number reordering even if user deletion fails
+        }
+      }
+
       // Reorder roll numbers for remaining students in the same class
-      await this.reorderRollNumbers(classId);
+      if (classId) {
+        await this.reorderRollNumbers(classId);
+      }
     }
 
-    return result;
+    return studentDeleted;
   }
 
   // Reorder roll numbers for all students in a class

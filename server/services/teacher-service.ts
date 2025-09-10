@@ -8,7 +8,7 @@ export class TeacherService {
     const teacherObj = teacher.toObject();
     return {
       ...teacherObj,
-      id: teacher._id.toString(),
+      id: (teacher._id as any).toString(),
       userId: teacher.userId.toString(),
       schoolId: teacher.schoolId.toString(),
     };
@@ -55,6 +55,29 @@ export class TeacherService {
 
   // Delete teacher
   static async deleteTeacher(id: string) {
-    return await storage.deleteTeacher(id);
+    // Get teacher details before deletion to get the userId
+    const teacher = await storage.getTeacher(id);
+    if (!teacher) {
+      return false;
+    }
+
+    const userId = teacher.userId?.toString();
+
+    // Delete the teacher
+    const teacherDeleted = await storage.deleteTeacher(id);
+
+    if (teacherDeleted) {
+      // Also delete the corresponding user record
+      if (userId) {
+        try {
+          await storage.deleteUser(userId);
+        } catch (error) {
+          console.error(`Error deleting user ${userId} for teacher ${id}:`, error);
+          // Don't fail the teacher deletion if user deletion fails
+        }
+      }
+    }
+
+    return teacherDeleted;
   }
 }
