@@ -70,6 +70,7 @@ export interface Student {
   gender: 'male' | 'female' | 'other';
   admissionDate: string;
   status: 'Active' | 'Inactive';
+  rollNo: string;
   createdAt: string;
   updatedAt: string;
 }

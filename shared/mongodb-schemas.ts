@@ -180,6 +180,7 @@ export interface IStudent extends mongoose.Document {
   parentId?: mongoose.Types.ObjectId;
   address?: string;
   status: 'Active' | 'Inactive';
+  rollNo: string;
   createdAt: Date;
 }
 
@@ -197,6 +198,7 @@ const studentSchema = new Schema<IStudent>({
   parentId: { type: Schema.Types.ObjectId, ref: 'User' },
   address: String,
   status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },
+  rollNo: { type: String, required: true, unique: true },
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -221,7 +223,8 @@ export const insertStudentSchema = z.object({
   parentContact: z.string().min(1),
   parentId: z.string().optional(),
   address: z.string().optional(),
-  status: z.enum(['Active', 'Inactive']).default('Active')
+  status: z.enum(['Active', 'Inactive']).default('Active'),
+  rollNo: z.string().optional() // Auto-generated
 });
 
 export const insertClassSchema = z.object({
