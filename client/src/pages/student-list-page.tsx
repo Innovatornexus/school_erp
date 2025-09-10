@@ -40,12 +40,12 @@ import {
 import { format } from "date-fns";
 import { CalendarIcon, Edit, Trash, UserPlus } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ClassItem, StudentItem } from "./type";
+import { Class, Student } from "@/types";
 import { useAuth } from "@/hooks/use-auth";
 
 type Props = {
-  studentData: StudentItem[];
-  classData: ClassItem[];
+  studentData: Student[];
+  classData: Class[];
   fetchStudents: () => Promise<void>;
 };
 

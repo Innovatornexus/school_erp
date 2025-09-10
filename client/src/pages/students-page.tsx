@@ -171,7 +171,7 @@ export default function StudentsPage() {
               : students
           }
           classData={classes}
-          fetchStudents={refetchData}
+          fetchStudents={fetchData}
         />
       </div>
     </DashboardLayout>

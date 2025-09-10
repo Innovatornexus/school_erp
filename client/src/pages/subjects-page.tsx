@@ -88,7 +88,7 @@ export default function SubjectsPage() {
     > = {};
 
     // Iterate through all classes and their subject mappings
-    classes.forEach((cls: Class) => ({
+    classes.forEach((cls: Class) => {
       const className = `Class ${cls.grade} ${cls.section}`;
       (cls.subjects || []).forEach(
         (mapping: { subjectId: string; teacherId: string | null }) => {
@@ -197,7 +197,7 @@ export default function SubjectsPage() {
         }.`,
       });
 
-      refetchData();
+      fetchData();
       setIsDialogOpen(false);
     } catch (error: any) {
       toast({
@@ -232,7 +232,7 @@ export default function SubjectsPage() {
           description: "Subject successfully deleted.",
         });
 
-        refetchData();
+        fetchData();
         setIsDeleteModalOpen(false);
       } catch (error: any) {
         toast({

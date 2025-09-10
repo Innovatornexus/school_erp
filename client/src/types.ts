@@ -43,7 +43,7 @@ export type ClassItem = Class;
 
 export interface ClassSubjectMapping {
   subjectId: string;
-  teacherId?: string;
+  teacherId?: string | null;
 }
 
 // Subject Types
