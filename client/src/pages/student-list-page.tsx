@@ -92,9 +92,7 @@ export const StudentManager = ({
   fetchStudents,
 }: Props) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingStudent, setEditingStudent] = useState<Student | null>(
-    null
-  );
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGrade, setSelectedGrade] = useState("");
   const [selectedSection, setSelectedSection] = useState("");
@@ -227,7 +225,7 @@ export const StudentManager = ({
       parentContact: student.parentContact,
       admissionDate: new Date(student.admissionDate),
       parentName: student.parentName || "",
-      address: student.address || "",
+
       status: student.status,
       schoolId: student.schoolId,
       password: "dummyPassword", // Set dummy passwords for validation
@@ -309,8 +307,7 @@ export const StudentManager = ({
     {
       header: "Date of Birth",
       accessorKey: "dateOfBirth",
-      cell: (student: Student) =>
-        format(new Date(student.dateOfBirth), "PPP"),
+      cell: (student: Student) => format(new Date(student.dateOfBirth), "PPP"),
     },
     { header: "Parent Contact", accessorKey: "parentContact" },
     {

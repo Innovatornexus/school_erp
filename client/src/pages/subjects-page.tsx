@@ -303,7 +303,7 @@ export default function SubjectsPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => handleDelete(subject.id)}
+            onClick={() => handleDelete(Number(subject.id))}
           >
             <Trash className="h-4 w-4" />
           </Button>

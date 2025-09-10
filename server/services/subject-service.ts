@@ -7,7 +7,7 @@ export class SubjectService {
     const subjectObj = subject.toObject();
     return {
       ...subjectObj,
-      id: subject._id.toString(),
+      id: subject.id.toString(),
       schoolId: subject.schoolId.toString(),
     };
   }
@@ -27,7 +27,7 @@ export class SubjectService {
   // Get subjects by school
   static async getSubjectsBySchool(schoolId: string) {
     const subjects = await storage.getSubjectsBySchool(schoolId);
-    return subjects.map(subject => this.transformSubjectToFrontend(subject));
+    return subjects.map((subject) => this.transformSubjectToFrontend(subject));
   }
 
   // Update subject
