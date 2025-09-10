@@ -30,14 +30,14 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useSchoolData } from "@/context/SchoolDataContext";
-import { ClassItem, SubjectItem, StaffItem } from "./type";
+import { Class, Subject, Teacher } from "@/types";
 
 type ClassSubjectMapping = {
-  id: number;
-  subject_name: string;
-  teacher_name: string | null;
-  teacher_id: number | null;
-  subject_id: number;
+  id: string;
+  subjectName: string;
+  teacherName: string | null;
+  teacherId: string | null;
+  subjectId: string;
 };
 
 export default function ClassSubjectsPage() {
@@ -56,14 +56,14 @@ export default function ClassSubjectsPage() {
 
   const [match, params] = useRoute("/classes/:gradeId/:sectionId/subjects");
   const [, navigate] = useLocation();
-  const { schoolData, classes, subjects, teachers, refetchData, loading } =
+  const { schoolData, classes, subjects, teachers, fetchData, loading } =
     useSchoolData();
 
   const grade = params?.gradeId;
   const section = params?.sectionId;
 
   const selectedClass = classes.find(
-    (cls: ClassItem) => cls.grade === grade && cls.section === section
+    (cls: Class) => cls.grade.toString() === grade && cls.section === section
   );
 
   const [mappings, setMappings] = useState<ClassSubjectMapping[]>([]);
@@ -80,16 +80,16 @@ export default function ClassSubjectsPage() {
     if (selectedClass && subjects.length > 0 && teachers) {
       const classSubjects = selectedClass.subjects || [];
       const processedMappings = classSubjects.map((mapping: any) => {
-        const subject = subjects.find((s) => s.id === mapping.subject_id);
+        const subject = subjects.find((s) => s.id === mapping.subjectId);
         const teacher = teachers.find(
-          (t: StaffItem) => t.id === mapping.teacher_id
+          (t: Teacher) => t.id === mapping.teacherId
         );
         return {
-          id: mapping.id,
-          subject_id: mapping.subject_id,
-          teacher_id: mapping.teacher_id,
-          subject_name: subject?.subjectName || "Unknown Subject",
-          teacher_name: teacher?.fullName || null,
+          id: mapping.id || `${mapping.subjectId}-${mapping.teacherId}`,
+          subjectId: mapping.subjectId,
+          teacherId: mapping.teacherId,
+          subjectName: subject?.subjectName || "Unknown Subject",
+          teacherName: teacher?.fullName || null,
         };
       });
       setMappings(processedMappings);
@@ -110,12 +110,12 @@ export default function ClassSubjectsPage() {
     if (!selectedClass?.id || !selectedSubject) return;
     const payload = {
       role: "school_admin",
-      class_id: selectedClass.id,
-      teacher_id:
+      classId: selectedClass.id,
+      teacherId:
         selectedTeacher && selectedTeacher !== "unassigned"
           ? Number(selectedTeacher)
           : null,
-      subject_id: Number(selectedSubject),
+      subjectId: Number(selectedSubject),
     };
     console.log("Assigning subject with payload:", payload);
     const res = await fetch("/api/class-subjects", {
@@ -135,21 +135,21 @@ export default function ClassSubjectsPage() {
       if (mappingsRes.ok) {
         type Mapping = {
           id: number;
-          subject_id: number;
-          teacher_id: number | null;
+          subjectId: number;
+          teacherId: number | null;
         };
         const rawMappings: Mapping[] = await mappingsRes.json();
         const processedMappings = rawMappings.map((mapping) => {
-          const subject = subjects.find((s) => s.id === mapping.subject_id);
+          const subject = subjects.find((s) => s.id === mapping.subjectId);
           const teacher = teachers.find(
-            (t: StaffItem) => t.id === mapping.teacher_id
+            (t: StaffItem) => t.id === mapping.teacherId
           );
           return {
             id: mapping.id,
-            subject_id: mapping.subject_id,
-            teacher_id: mapping.teacher_id,
-            subject_name: subject?.subjectName || "Unknown Subject",
-            teacher_name: teacher?.fullName || null,
+            subjectId: mapping.subjectId,
+            teacherId: mapping.teacherId,
+            subjectName: subject?.subjectName || "Unknown Subject",
+            teacherName: teacher?.fullName || null,
           };
         });
         setMappings(processedMappings);
@@ -165,7 +165,7 @@ export default function ClassSubjectsPage() {
 
   const openEditDialog = (mapping: ClassSubjectMapping) => {
     setEditingMapping(mapping);
-    setSelectedTeacher(mapping.teacher_id ? mapping.teacher_id.toString() : "");
+    setSelectedTeacher(mapping.teacherId ? mapping.teacherId.toString() : "");
     setIsEditDialogOpen(true);
   };
 
@@ -173,7 +173,7 @@ export default function ClassSubjectsPage() {
     if (!editingMapping) return;
 
     const payload = {
-      teacher_id: selectedTeacher ? Number(selectedTeacher) : null,
+      teacherId: selectedTeacher ? Number(selectedTeacher) : null,
     };
 
     try {
@@ -196,21 +196,21 @@ export default function ClassSubjectsPage() {
       if (mappingsRes.ok) {
         type Mapping = {
           id: number;
-          subject_id: number;
-          teacher_id: number | null;
+          subjectId: number;
+          teacherId: number | null;
         };
         const rawMappings: Mapping[] = await mappingsRes.json();
         const processedMappings = rawMappings.map((mapping) => {
-          const subject = subjects.find((s) => s.id === mapping.subject_id);
+          const subject = subjects.find((s) => s.id === mapping.subjectId);
           const teacher = teachers.find(
-            (t: StaffItem) => t.id === mapping.teacher_id
+            (t: StaffItem) => t.id === mapping.teacherId
           );
           return {
             id: mapping.id,
-            subject_id: mapping.subject_id,
-            teacher_id: mapping.teacher_id,
-            subject_name: subject?.subjectName || "Unknown Subject",
-            teacher_name: teacher?.fullName || null,
+            subjectId: mapping.subjectId,
+            teacherId: mapping.teacherId,
+            subjectName: subject?.subjectName || "Unknown Subject",
+            teacherName: teacher?.fullName || null,
           };
         });
         setMappings(processedMappings);
@@ -314,17 +314,17 @@ export default function ClassSubjectsPage() {
                       <TableCell>
                         {user?.role === "staff" ? (
                           <Link
-                            href={`/teacher/classes/${selectedClass?.id}/subjects/${m.subject_id}`}
+                            href={`/teacher/classes/${selectedClass?.id}/subjects/${m.subjectId}`}
                           >
                             <Button variant="link" className="p-0 h-auto">
-                              {m.subject_name}
+                              {m.subjectName}
                             </Button>
                           </Link>
                         ) : (
-                          m.subject_name
+                          m.subjectName
                         )}
                       </TableCell>
-                      <TableCell>{m.teacher_name || "Unassigned"}</TableCell>
+                      <TableCell>{m.teacherName || "Unassigned"}</TableCell>
                       <TableCell>
                         <Button
                           variant="ghost"
@@ -353,7 +353,7 @@ export default function ClassSubjectsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              Edit Teacher for {editingMapping?.subject_name}
+              Edit Teacher for {editingMapping?.subjectName}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">

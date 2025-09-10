@@ -49,7 +49,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { SchoolItem, StaffItem } from "./type";
+import { School, Teacher } from "@/types";
 import { useAuth } from "@/hooks/use-auth";
 import { useSchoolData } from "@/context/SchoolDataContext";
 import { Redirect } from "wouter";
@@ -103,12 +103,12 @@ type StaffFormValues = z.infer<typeof staffFormSchema>;
 export default function StaffPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { schoolData, refetchData, teachers, subjects } = useSchoolData();
+  const { schoolData, fetchData, teachers, subjects } = useSchoolData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [staffData, setStaffData] = useState<StaffItem[]>([]);
+  const [staffData, setStaffData] = useState<Teacher[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [editingStaff, setEditingStaff] = useState<StaffItem | null>(null);
+  const [editingStaff, setEditingStaff] = useState<Teacher | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [staffToDelete, setStaffToDelete] = useState<number | null>(null);
   const form = useForm<StaffFormValues>({
@@ -183,7 +183,7 @@ export default function StaffPage() {
         throw new Error(errorData.message || "Failed to create teacher");
       }
 
-      await refetchData(); // Refresh data from context
+      await fetchData(); // Refresh data from context
     } catch (error) {
       console.error("Error creating teacher:", error);
       throw error;
@@ -204,7 +204,7 @@ export default function StaffPage() {
   }, [staffData, searchTerm]);
 
   //toggle staff status
-  const toggleStaffStatus = async (staff: StaffItem) => {
+  const toggleStaffStatus = async (staff: Teacher) => {
     const newStatus = staff.status === "Active" ? "Inactive" : "Active";
 
     try {
@@ -221,7 +221,7 @@ export default function StaffPage() {
         description: `Status changed to ${newStatus}`,
       });
 
-      await refetchData(); // Refresh data
+      await fetchData(); // Refresh data
     } catch (error) {
       toast({
         title: "Error",
@@ -267,7 +267,7 @@ export default function StaffPage() {
           : "New staff added successfully",
       });
       setIsDialogOpen(false);
-      await refetchData();
+      await fetchData();
     } catch (error) {
       console.log("error ::", error);
       toast({
@@ -281,7 +281,7 @@ export default function StaffPage() {
   };
 
   // Set form values when editing
-  const openEditDialog = (staff: StaffItem) => {
+  const openEditDialog = (staff: Teacher) => {
     setEditingStaff(staff);
     form.reset({
       email: staff.email,
@@ -326,7 +326,7 @@ export default function StaffPage() {
         return;
       }
 
-      await refetchData();
+      await fetchData();
       toast({
         title: "Success",
         description: "Teacher removed successfully",
@@ -344,7 +344,7 @@ export default function StaffPage() {
   };
 
   // DataTable columns configuration
-  const columns: DataTableColumn<StaffItem>[] = [
+  const columns: DataTableColumn<Teacher>[] = [
     {
       header: "Name",
       accessorKey: "fullName",
@@ -356,7 +356,7 @@ export default function StaffPage() {
     {
       header: "Subject",
       accessorKey: "subjectSpecialization",
-      cell: (staff: StaffItem) => {
+      cell: (staff: Teacher) => {
         if (!staff?.subjectSpecialization) return "-";
 
         const specializations = staff.subjectSpecialization;
@@ -372,7 +372,7 @@ export default function StaffPage() {
     {
       header: "Joining Date",
       accessorKey: "joiningDate",
-      cell: (staff: StaffItem) => {
+      cell: (staff: Teacher) => {
         const date = new Date(staff.joiningDate);
         return isNaN(date.getTime()) ? "-" : format(date, "PPP");
       },
@@ -380,7 +380,7 @@ export default function StaffPage() {
     {
       header: "Status",
       accessorKey: "status",
-      cell: (staff: StaffItem) => {
+      cell: (staff: Teacher) => {
         return (
           <Button
             variant={staff.status === "Active" ? "outline" : "secondary"}
@@ -399,7 +399,7 @@ export default function StaffPage() {
     {
       header: "Actions",
       accessorKey: "id",
-      cell: (staff: StaffItem) => {
+      cell: (staff: Teacher) => {
         return (
           <div className="flex space-x-2">
             <Button

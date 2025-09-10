@@ -20,7 +20,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { useSchoolData } from "@/context/SchoolDataContext";
-import { ClassItem, SubjectItem, StaffItem } from "../type";
+import { Class, Subject, Teacher } from "@/types";
 
 export default function TeacherSubjectDetailPage() {
   const [match, params] = useRoute(
@@ -31,12 +31,12 @@ export default function TeacherSubjectDetailPage() {
   const { toast } = useToast();
   const { schoolData, classes, subjects, teachers, loading } = useSchoolData();
 
-  const classId = parseInt(params?.classId || "0");
-  const subjectId = parseInt(params?.subjectId || "0");
+  const classId = params?.classId || "";
+  const subjectId = params?.subjectId || "";
 
-  const selectedClass = classes.find((cls: ClassItem) => cls.id === classId);
+  const selectedClass = classes.find((cls: Class) => cls.id === classId);
   const selectedSubject = subjects.find(
-    (sub: SubjectItem) => sub.id === subjectId
+    (sub: Subject) => sub.id === subjectId
   );
 
   // Find the teacher assigned to this specific class-subject mapping
@@ -46,7 +46,7 @@ export default function TeacherSubjectDetailPage() {
   if (user?.role === "staff") {
     // Find the teacher record for the current user
     const currentUserTeacher = teachers.find(
-      (teacher: any) => teacher.user_id === user.id
+      (teacher: any) => teacher.userId === user.id
     );
     teacherId = currentUserTeacher?.id;
 

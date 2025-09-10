@@ -22,28 +22,28 @@ import { useSchoolData } from "@/context/SchoolDataContext";
 import { useAuth } from "@/hooks/use-auth";
 
 interface ExamResult {
-  id: number;
+  id: string;
   title: string;
   term: string;
-  class_name: string;
-  start_date: string;
-  end_date: string;
+  className: string;
+  startDate: string;
+  endDate: string;
   subjects: ExamSubjectResult[];
 }
 
 interface ExamSubjectResult {
-  id: number;
-  subject_name: string;
-  exam_date: string;
-  max_marks: number;
+  id: string;
+  subjectName: string;
+  examDate: string;
+  maxMarks: number;
   marks: StudentMark[];
 }
 
 interface StudentMark {
-  student_id: number;
-  student_name: string;
-  roll_no: number;
-  marks_obtained: number;
+  studentId: string;
+  studentName: string;
+  rollNo: string;
+  marksObtained: number;
   percentage: number;
 }
 
@@ -91,36 +91,35 @@ export default function ExamResultsPage() {
       return rawExamResult;
     }
     console.log(`[DEBUG] Creating default exam structure with students`);
-    const examClassId = rawExamResult.class_id;
+    const examClassId = rawExamResult.classId;
     if (!students) {
       return null;
     }
     const examClassStudents = students.filter(
-      (student) => student.class_id === examClassId
+      (student) => student.classId === examClassId
     );
     return {
       ...rawExamResult,
       subjects:
-        rawExamResult.subject_ids?.map((id: number, index: number) => ({
+        rawExamResult.subjectIds?.map((id: string, index: number) => ({
           id,
-          subject_name: rawExamResult.subject_names?.[index] || "",
-          exam_date: rawExamResult.subject_exam_dates?.[index] || "",
-          start_time: rawExamResult.subject_exam_start_times?.[index] || "",
-          end_time: rawExamResult.subject_exam_end_times?.[index] || "",
-          max_marks: 100,
+          subjectName: rawExamResult.subjectNames?.[index] || "",
+          examDate: rawExamResult.subjectExamDates?.[index] || "",
+          startTime: rawExamResult.subjectExamStartTimes?.[index] || "",
+          endTime: rawExamResult.subjectExamEndTimes?.[index] || "",
+          maxMarks: 100,
           marks: examClassStudents.map((student, studentIndex) => ({
-            student_id: student.id,
-            student_name:
-              student.full_name || student.name || student.student_name,
-            roll_no: student.roll_no || studentIndex + 1,
-            marks_obtained: 0,
+            studentId: student.id,
+            studentName: student.fullName || student.name,
+            rollNo: student.rollNo || `${studentIndex + 1}`.padStart(2, '0'),
+            marksObtained: 0,
             percentage: 0,
           })),
         })) || [],
     };
   }, [rawExamResult, students]);
 
-  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(
     null
   );
   const [isEditMode, setIsEditMode] = useState(false);

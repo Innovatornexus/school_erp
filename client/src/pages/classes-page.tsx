@@ -41,7 +41,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Edit, FolderPlus, Search, Trash } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { ClassItem, StaffItem } from "./type";
+import { Class, Teacher } from "@/types";
 import { useSchoolData } from "@/context/SchoolDataContext";
 import { Input } from "@/components/ui/input";
 
@@ -49,22 +49,22 @@ import { Input } from "@/components/ui/input";
 const formSchema = z.object({
   grade: z.string().min(1, "Grade is required"),
   section: z.string().min(1, "Section is required"),
-  class_teacher_id: z.coerce.number().optional().nullable(),
+  classTeacherId: z.string().optional().nullable(),
 });
 
 export default function ClassesPage() {
   const { user } = useAuth();
-  const { classes, loading, schoolData, refetchData, teachers } =
+  const { classes, loading, schoolData, fetchData, teachers } =
     useSchoolData();
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [editingClass, setEditingClass] = useState<ClassItem | undefined>(
+  const [editingClass, setEditingClass] = useState<Class | undefined>(
     undefined
   );
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [classToDelete, setClassToDelete] = useState<number | null>(null);
+  const [classToDelete, setClassToDelete] = useState<string | null>(null);
 
   // Inside the ClassesPage component, after other state declarations
   const [searchTerm, setSearchTerm] = useState("");
@@ -73,7 +73,7 @@ export default function ClassesPage() {
     defaultValues: {
       grade: "",
       section: "",
-      class_teacher_id: undefined,
+      classTeacherId: undefined,
     },
   });
 
@@ -130,14 +130,14 @@ export default function ClassesPage() {
       form.reset({
         grade: classItem.grade ?? "",
         section: classItem.section ?? "",
-        class_teacher_id: classItem.classTeacherId ?? undefined,
+        classTeacherId: classItem.classTeacherId ?? undefined,
       });
     } else {
       setEditingClass(undefined);
       form.reset({
         grade: "",
         section: "",
-        class_teacher_id: undefined,
+        classTeacherId: undefined,
       });
     }
     setIsDialogOpen(true);
@@ -231,7 +231,7 @@ export default function ClassesPage() {
       accessorKey: "classTeacherId",
       cell: (classItem: ClassItem) => {
         const teacher = teachers?.find(
-          (staff: StaffItem) => staff.id === classItem.classTeacherId
+          (staff: Teacher) => staff.id === classItem.classTeacherId
         );
         return teacher?.fullName || "Unassigned";
       },
@@ -471,7 +471,7 @@ export default function ClassesPage() {
                       {/* Class Teacher Field */}
                       <FormField
                         control={form.control}
-                        name="class_teacher_id"
+                        name="classTeacherId"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Class Teacher</FormLabel>
@@ -487,7 +487,7 @@ export default function ClassesPage() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {teachers?.map((staff: StaffItem) => (
+                                {teachers?.map((staff: Teacher) => (
                                   <SelectItem
                                     key={staff.id}
                                     value={staff.id.toString()}
