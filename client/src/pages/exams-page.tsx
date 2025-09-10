@@ -319,15 +319,15 @@ export default function ExamsPage() {
       title: data.title,
       term: data.term,
       classId: data.classId,
-      class_name: selectedClass
+      className: selectedClass
         ? `${selectedClass.grade} - ${selectedClass.section}`
         : "N/A",
-      school_id: schoolData.id,
-      start_date: data.subjects.reduce(
+      schoolId: schoolData.id,
+      startDate: data.subjects.reduce(
         (earliest, s) => (s.examDate < earliest ? s.examDate : earliest),
         data.subjects[0].examDate
       ),
-      end_date: data.subjects.reduce(
+      endDate: data.subjects.reduce(
         (latest, s) => (s.examDate > latest ? s.examDate : latest),
         data.subjects[0].examDate
       ),
@@ -724,15 +724,15 @@ export default function ExamsPage() {
                 <CardHeader>
                   <CardTitle>{exam.title}</CardTitle>
                   <CardDescription>
-                    {exam.term} • {exam.class_name}
+                    {exam.term} • {exam.className}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between text-sm">
-                    {getExamStatusBadge(exam.start_date, exam.end_date)}
-                    {getDaysUntilExam(exam.start_date) > 0 && (
+                    {getExamStatusBadge(exam.startDate, exam.endDate)}
+                    {getDaysUntilExam(exam.startDate) > 0 && (
                       <span className="text-muted-foreground">
-                        Starts in {getDaysUntilExam(exam.start_date)} days
+                        Starts in {getDaysUntilExam(exam.startDate)} days
                       </span>
                     )}
                   </div>
@@ -740,14 +740,14 @@ export default function ExamsPage() {
                     <div className="flex items-center">
                       <Calendar className="mr-2 h-4 w-4" />
                       <span>
-                        {formatDate(exam.start_date)} -{" "}
-                        {formatDate(exam.end_date)}
+                        {formatDate(exam.startDate)} -{" "}
+                        {formatDate(exam.endDate)}
                       </span>
                     </div>
                     <div className="flex items-center">
-                      {/* ✨ FIX: Use the new subjects_count property from the API */}
+                      {/* ✨ FIX: Use the new subjectsCount property from the API */}
                       <BookOpen className="mr-2 h-4 w-4" />
-                      <span>{exam.subjects_count || 0} subjects</span>
+                      <span>{exam.subjectsCount || 0} subjects</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between pt-2 border-t">
