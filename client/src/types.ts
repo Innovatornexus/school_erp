@@ -30,10 +30,16 @@ export interface Class {
   grade: number;
   section: string;
   academicYear: string;
+  name?: string;
+  classTeacherId?: string;
+  studentCount?: number;
   subjects?: ClassSubjectMapping[];
   createdAt: string;
   updatedAt: string;
 }
+
+// Legacy type alias for compatibility
+export type ClassItem = Class;
 
 export interface ClassSubjectMapping {
   subjectId: string;
@@ -61,9 +67,15 @@ export interface Student {
   classId: string;
   parentName: string;
   parentContact: string;
+  gender: 'male' | 'female' | 'other';
+  admissionDate: string;
+  status: 'Active' | 'Inactive';
   createdAt: string;
   updatedAt: string;
 }
+
+// Legacy type alias for compatibility
+export type StudentItem = Student;
 
 // Teacher Types  
 export interface Teacher {

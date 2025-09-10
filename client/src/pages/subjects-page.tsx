@@ -34,7 +34,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, Edit, PlusCircle, Trash } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { SubjectItem, StaffItem, ClassItem } from "./type";
+import { Subject, Teacher, Class } from "@/types";
 import { useSchoolData } from "@/context/SchoolDataContext";
 import { Redirect } from "wouter";
 
@@ -54,11 +54,11 @@ export default function SubjectsPage() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [editingSubject, setEditingSubject] = useState<SubjectItem | undefined>(
+  const [editingSubject, setEditingSubject] = useState<Subject | undefined>(
     undefined
   );
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [subjectToDelete, setSubjectToDelete] = useState<number | null>(null);
+  const [subjectToDelete, setSubjectToDelete] = useState<string | null>(null);
 
   const form = useForm<SubjectFormValues>({
     resolver: zodResolver(subjectFormSchema),

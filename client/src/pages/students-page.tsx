@@ -52,7 +52,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useQuery } from "@tanstack/react-query";
 import { StudentManager } from "./student-list-page";
-import { ClassItem, SchoolItem, StaffItem, StudentItem } from "./type";
+import { Class, School, Teacher, Student } from "@/types";
 import { useAuth } from "@/hooks/use-auth";
 import { useSchoolData } from "@/context/SchoolDataContext";
 
@@ -62,9 +62,7 @@ const studentFormSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   status: z.enum(["Active", "Inactive"]).default("Active"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  dateOfBirth: z.date({
-    required_error: "Date of birth is required",
-  }),
+  dateOfBirth: z.string().min(1, "Date of birth is required"),
   gender: z.enum(["male", "female", "other"], {
     required_error: "Please select a gender",
   }),
@@ -73,9 +71,7 @@ const studentFormSchema = z.object({
   }),
   parentId: z.string().optional(),
   parentContact: z.string().min(10, "Please enter a valid contact number"),
-  admissionDate: z.date({
-    required_error: "Admission date is required",
-  }),
+  admissionDate: z.string().min(1, "Admission date is required"),
   parentName: z.string().optional(),
   address: z.string().optional(),
   schoolId: z.string(), // Add schoolId to schema
