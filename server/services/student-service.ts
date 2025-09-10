@@ -166,7 +166,7 @@ export class StudentService {
         const newRollNo = `${grade}${sectionNumber}${studentNumber}`;
         
         if (students[i].rollNo !== newRollNo) {
-          await storage.updateStudent(students[i]._id.toString(), { rollNo: newRollNo });
+          await storage.updateStudent((students[i]._id as any).toString(), { rollNo: newRollNo });
         }
       }
     } catch (error) {
