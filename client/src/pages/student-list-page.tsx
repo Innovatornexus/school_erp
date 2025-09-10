@@ -99,7 +99,7 @@ export const StudentManager = ({
 
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [studentToDelete, setStudentToDelete] = useState<number | null>(null);
+  const [studentToDelete, setStudentToDelete] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const form = useForm<StudentFormValues>({
@@ -228,7 +228,6 @@ export const StudentManager = ({
       address: student.address || "",
       status: student.status,
       schoolId: student.schoolId,
-      status: student.status,
       password: "dummyPassword", // Set dummy passwords for validation
       confirmPassword: "dummyPassword",
     });
@@ -258,7 +257,7 @@ export const StudentManager = ({
     }
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: string) => {
     setStudentToDelete(id);
     setIsDeleteModalOpen(true);
   };
@@ -290,7 +289,7 @@ export const StudentManager = ({
       header: "Class",
       accessorKey: "classId",
       cell: (student: StudentItem) => {
-        const classItem = classData.find((cls) => cls.id === student.classId);
+        const classItem = classData.find((cls) => String(cls.id) === student.classId);
         return classItem
           ? `Class ${classItem.grade} ${classItem.section}`
           : "N/A";
@@ -362,10 +361,10 @@ export const StudentManager = ({
 
   const filteredStudents = useMemo(() => {
     return studentData.filter((student) => {
-      const studentClass = classData.find((cls) => cls.id === student.classId);
+      const studentClass = classData.find((cls) => String(cls.id) === student.classId);
       const matchesSearchTerm =
         student.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.studentEmail?.toLowerCase().includes(searchTerm.toLowerCase());
+        student.email?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesGrade =
         !selectedGrade || studentClass?.grade.toString() === selectedGrade;
       const matchesSection =
