@@ -1,20 +1,20 @@
-# TODO for Exam Results Page Update
+# Fix Student Creation Type Error
 
-- [x] Import ToggleGroup and ToggleGroupItem in exam-results-page.tsx
-- [x] Add selectedSubjectId state and remove expandedSubjects state
-- [x] Wrap page content inside DashboardLayout with title
-- [x] Replace vertical subject cards with horizontal ToggleGroup
-- [x] Implement conditional rendering of selected subject info below toggles
-- [ ] Test the updated page functionality and layout
+## Issue
 
-# TODO for getExamResults Improvement
+"Expected string, received number while creating student" - classId is being sent as number instead of string to backend.
 
-- [x] Add error handling in getExamResults method in server/storage.ts
-- [x] Add missing API endpoint `/api/exams/:examId/results` in server/routes.ts
-- [ ] Optimize database queries in getExamResults to reduce calls using joins
-- [ ] Add optional filtering parameters to getExamResults (e.g., by subject or student)
-- [ ] Update return type of getExamResults for better type safety
-- [ ] Review and update client/src/pages/exam-results-page.tsx for UI changes if needed
-- [ ] Test the updated getExamResults method with sample data
-- [ ] Run the application and verify functionality
+## Root Cause
+
+In `client/src/pages/student-list-page.tsx`, the classId form field converts the selected value to number using `Number(value)` in onValueChange, but backend expects string.
+
+## Tasks
+
+- [ ] Fix classId conversion in student-list-page.tsx (remove Number() conversion)
+- [ ] Test student creation functionality
+- [ ] Verify no other similar type mismatches exist
+
+## Files to Edit
+
+- client/src/pages/student-list-page.tsx
 - [ ] Update frontend components if necessary

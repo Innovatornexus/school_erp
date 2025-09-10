@@ -41,7 +41,7 @@ import { Redirect } from "wouter";
 // Subject form schema
 const subjectFormSchema = z.object({
   subjectName: z.string().min(2, "Subject name must be at least 2 characters"),
-  subject_description: z.string().optional(),
+  subjectDescription: z.string().optional(),
 });
 
 type SubjectFormValues = z.infer<typeof subjectFormSchema>;
@@ -64,7 +64,7 @@ export default function SubjectsPage() {
     resolver: zodResolver(subjectFormSchema),
     defaultValues: {
       subjectName: "",
-      subject_description: "",
+      subjectDescription: "",
     },
   });
 
@@ -144,13 +144,13 @@ export default function SubjectsPage() {
       setEditingSubject(subject);
       form.reset({
         subjectName: subject.subjectName,
-        subject_description: subject.subject_description,
+        subjectDescription: subject.subjectDescription,
       });
     } else {
       setEditingSubject(undefined);
       form.reset({
         subjectName: "",
-        subject_description: "",
+        subjectDescription: "",
       });
     }
     setIsDialogOpen(true);
@@ -165,7 +165,7 @@ export default function SubjectsPage() {
   };
   const openAddDialog = () => {
     setEditingSubject(undefined); // Clear any previous editing state
-    form.reset({ subjectName: "", subject_description: "" }); // Reset the form to be blank
+    form.reset({ subjectName: "", subjectDescription: "" }); // Reset the form to be blank
     setIsDialogOpen(true); // Open the dialog
   };
   const onSubmit = async (values: SubjectFormValues) => {
@@ -253,10 +253,10 @@ export default function SubjectsPage() {
     },
     {
       header: "Description",
-      accessorKey: "subject_description",
+      accessorKey: "subjectDescription",
       cell: (subject: SubjectData) => (
         <span className="text-sm text-gray-600">
-          {subject.subject_description || "N/A"}
+          {subject.subjectDescription || "N/A"}
         </span>
       ),
     },
@@ -464,7 +464,7 @@ export default function SubjectsPage() {
                       />
                       <FormField
                         control={form.control}
-                        name="subject_description"
+                        name="subjectDescription"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Description</FormLabel>

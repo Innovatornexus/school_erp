@@ -118,6 +118,7 @@ export default function ExamsPage() {
       subjects: [],
     },
   });
+  console.log("subjects :", subjects);
 
   useEffect(() => {
     if (isDialogOpen && !editingExam) {
@@ -160,7 +161,7 @@ export default function ExamsPage() {
       // Staff should see exams for classes/subjects they teach
       return exams.filter((exam) => {
         // Find the class for this exam
-        const examClass = classes.find(c => c.id === exam.classId);
+        const examClass = classes.find((c) => c.id === exam.classId);
         if (examClass && examClass.subjects) {
           // Check if teacher teaches any subject in this class
           return examClass.subjects.some(
@@ -181,7 +182,11 @@ export default function ExamsPage() {
     if (user?.role === "staff" && currentTeacher) {
       const assignedClassIds = new Set();
       classes.forEach((cls) => {
-        if (cls.subjects?.some((mapping: any) => mapping.teacherId === currentTeacher.id)) {
+        if (
+          cls.subjects?.some(
+            (mapping: any) => mapping.teacherId === currentTeacher.id
+          )
+        ) {
           assignedClassIds.add(cls.id);
         }
       });
@@ -332,10 +337,12 @@ export default function ExamsPage() {
         data.subjects[0].examDate
       ),
       subjects: data.subjects.map((subject) => {
-        const selectedSubject = subjects.find(s => s.id === subject.subjectId);
+        const selectedSubject = subjects.find(
+          (s) => s._id === subject.subjectId
+        );
         return {
           subjectId: subject.subjectId,
-          subject_name: selectedSubject?.subject_name || '',
+          subject_name: selectedSubject?.subject_name || "",
           examDate: subject.examDate,
           startTime: subject.startTime,
           endTime: subject.endTime,
@@ -507,7 +514,7 @@ export default function ExamsPage() {
                             <FormLabel>Class</FormLabel>
                             <Select
                               onValueChange={(value) =>
-                                field.onChange(Number(value))
+                                field.onChange(String(value))
                               }
                               value={String(field.value)}
                             >
@@ -601,14 +608,16 @@ export default function ExamsPage() {
                                         </SelectTrigger>
                                       </FormControl>
                                       <SelectContent>
-                                        {availableSubjectsForForm.map((s: any) => (
-                                          <SelectItem
-                                            key={s.id}
-                                            value={String(s.id)}
-                                          >
-                                            {s.subject_name}
-                                          </SelectItem>
-                                        ))}
+                                        {availableSubjectsForForm.map(
+                                          (s: any) => (
+                                            <SelectItem
+                                              key={s.id}
+                                              value={String(s.id)}
+                                            >
+                                              {s.subject_name}
+                                            </SelectItem>
+                                          )
+                                        )}
                                       </SelectContent>
                                     </Select>
                                     <FormMessage />
