@@ -85,7 +85,12 @@ export interface Teacher {
   schoolId: string;
   fullName: string;
   email: string;
-  dateOfBirth: string;
+  dateOfBirth?: string;
+  phoneNumber?: string;
+  gender?: 'male' | 'female' | 'other';
+  subjectSpecialization?: string;
+  joiningDate?: string;
+  status?: 'Active' | 'Inactive';
   subjectsTaught: string[];
   classesAssigned: string[];
   createdAt: string;
