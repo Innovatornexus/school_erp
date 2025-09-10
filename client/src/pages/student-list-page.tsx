@@ -92,7 +92,7 @@ export const StudentManager = ({
   fetchStudents,
 }: Props) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingStudent, setEditingStudent] = useState<StudentItem | null>(
+  const [editingStudent, setEditingStudent] = useState<Student | null>(
     null
   );
   const [searchTerm, setSearchTerm] = useState("");
@@ -216,7 +216,7 @@ export const StudentManager = ({
     setIsDialogOpen(open);
   };
 
-  const openEditDialog = (student: StudentItem) => {
+  const openEditDialog = (student: Student) => {
     setEditingStudent(student);
     form.reset({
       fullName: student.fullName,
@@ -236,7 +236,7 @@ export const StudentManager = ({
     setIsDialogOpen(true);
   };
 
-  const handleToggleStatus = async (student: StudentItem) => {
+  const handleToggleStatus = async (student: Student) => {
     const newStatus = student.status === "Active" ? "Inactive" : "Active";
     try {
       const res = await fetch(`/api/students/${student.id}/status`, {
@@ -284,13 +284,13 @@ export const StudentManager = ({
     }
   };
 
-  const columns: DataTableColumn<StudentItem>[] = [
+  const columns: DataTableColumn<Student>[] = [
     { header: "Roll No", accessorKey: "rollNo" },
     { header: "Name", accessorKey: "fullName" },
     {
       header: "Class",
       accessorKey: "classId",
-      cell: (student: StudentItem) => {
+      cell: (student: Student) => {
         const classItem = classData.find(
           (cls) => String(cls.id) === student.classId
         );
@@ -302,14 +302,14 @@ export const StudentManager = ({
     {
       header: "Gender",
       accessorKey: "gender",
-      cell: (student: StudentItem) => (
+      cell: (student: Student) => (
         <span className="capitalize">{student.gender}</span>
       ),
     },
     {
       header: "Date of Birth",
       accessorKey: "dateOfBirth",
-      cell: (student: StudentItem) =>
+      cell: (student: Student) =>
         format(new Date(student.dateOfBirth), "PPP"),
     },
     { header: "Parent Contact", accessorKey: "parentContact" },
@@ -332,7 +332,7 @@ export const StudentManager = ({
     {
       header: "Actions",
       accessorKey: "id",
-      cell: (student: StudentItem) => (
+      cell: (student: Student) => (
         <div className="flex space-x-2">
           <Button
             variant="ghost"
