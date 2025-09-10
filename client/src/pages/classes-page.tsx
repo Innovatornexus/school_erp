@@ -83,7 +83,7 @@ export default function ClassesPage() {
     // First, filter based on user role (staff sees only their classes)
     const roleBasedClasses =
       user?.role === "staff"
-        ? classes.filter((c) => c.class_teacher_id === user.id) // Assuming user.id corresponds to teacher.user_id
+        ? classes.filter((c) => c.classTeacherId === user.id) // Assuming user.id corresponds to teacher.user_id
         : classes;
 
     // Then, apply the search term filter
@@ -93,9 +93,9 @@ export default function ClassesPage() {
 
     return roleBasedClasses.filter((cls) => {
       const teacher = teachers?.find(
-        (staff) => staff.id === cls.class_teacher_id
+        (staff) => staff.id === cls.classTeacherId
       );
-      const teacherName = teacher?.full_name || "";
+      const teacherName = teacher?.fullName || "";
       const className = `Class ${cls.grade} ${cls.section}`;
 
       // Check if search term is in the class name or teacher's name
@@ -130,7 +130,7 @@ export default function ClassesPage() {
       form.reset({
         grade: classItem.grade ?? "",
         section: classItem.section ?? "",
-        class_teacher_id: classItem.class_teacher_id ?? undefined,
+        class_teacher_id: classItem.classTeacherId ?? undefined,
       });
     } else {
       setEditingClass(undefined);
@@ -156,7 +156,7 @@ export default function ClassesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...values,
-          schoolId: schoolData.id,
+          schoolId: schoolData?.id,
         }),
       });
 
@@ -228,12 +228,12 @@ export default function ClassesPage() {
     },
     {
       header: "Class Teacher",
-      accessorKey: "class_teacher_id",
+      accessorKey: "classTeacherId",
       cell: (classItem: ClassItem) => {
         const teacher = teachers?.find(
-          (staff: StaffItem) => staff.id === classItem.class_teacher_id
+          (staff: StaffItem) => staff.id === classItem.classTeacherId
         );
-        return teacher?.full_name || "Unassigned";
+        return teacher?.fullName || "Unassigned";
       },
     },
     {
@@ -492,7 +492,7 @@ export default function ClassesPage() {
                                     key={staff.id}
                                     value={staff.id.toString()}
                                   >
-                                    {staff.full_name}
+                                    {staff.fullName}
                                   </SelectItem>
                                 ))}
                               </SelectContent>

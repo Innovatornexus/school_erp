@@ -75,7 +75,7 @@ export default function ClassDetailPage() {
   );
 
   const studentsInClass = students.filter(
-    (student: StudentItem) => student.class_id === selectedClass?.id
+    (student: StudentItem) => student.classId === selectedClass?.id
   );
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -110,8 +110,6 @@ export default function ClassDetailPage() {
       </DashboardLayout>
     );
   }
-
-  
 
   //handle student toggle
   const handleToggleStatus = async (student: StudentItem) => {
@@ -151,18 +149,18 @@ export default function ClassDetailPage() {
   const openEditDialog = (student: StudentItem) => {
     setEditingStudent(student);
     const classItem = classes.find(
-      (cls: ClassItem) => cls.id === student.class_id
+      (cls: ClassItem) => cls.id === student.classId
     );
 
     form.reset({
-      full_name: student.full_name,
-      student_email: student.student_email,
+      full_name: student.fullName,
+      student_email: student.email,
       gender: student.gender as "male" | "female" | "other",
-      dob: student.dob,
+      dob: student.dateOfBirth,
       class_id: classItem?.id.toString() || "",
-      parent_contact: student.parent_contact,
+      parent_contact: student.parentContact,
       admissionDate: student.admissionDate,
-      parent_name: student.parent_name,
+      parent_name: student.parentName,
     });
     setIsDialogOpen(true);
   };
@@ -187,8 +185,6 @@ export default function ClassDetailPage() {
             </Button>
           </div>
         </div>
-
-        
 
         {/* Class Information */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg p-6 mb-6">
@@ -218,7 +214,7 @@ export default function ClassDetailPage() {
               <div>
                 <p className="text-sm opacity-75">Class Teacher</p>
                 <p className="text-xl font-semibold">
-                  {selectedClass?.class_teacher_name || "Not Assigned"}
+                  {selectedClass?.classTeacherId || "Not Assigned"}
                 </p>
               </div>
             </div>

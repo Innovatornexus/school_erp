@@ -113,7 +113,7 @@ export default function TeacherSubjectDetailPage() {
         </div>
 
         <h1 className="text-2xl font-bold mb-4">
-          {selectedSubject.subject_name} - Class {selectedClass.grade}
+          {selectedSubject.subjectName} - Class {selectedClass.grade}
           {selectedClass.section}
         </h1>
 

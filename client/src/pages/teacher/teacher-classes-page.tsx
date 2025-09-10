@@ -23,8 +23,8 @@ export default function TeacherClassesPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Find the teacher record for the current user
-  const currentTeacher = useMemo(() => 
-    teachers.find((t) => t.user_id === user?.id),
+  const currentTeacher = useMemo(
+    () => teachers.find((t) => t.userId === user?.id),
     [teachers, user?.id]
   );
 
@@ -34,7 +34,9 @@ export default function TeacherClassesPage() {
 
       try {
         setLoading(true);
-        const response = await fetch(`/api/teachers/${currentTeacher.id}/classes`);
+        const response = await fetch(
+          `/api/teachers/${currentTeacher.id}/classes`
+        );
         if (!response.ok) {
           throw new Error("Failed to fetch classes");
         }
@@ -52,7 +54,7 @@ export default function TeacherClassesPage() {
     fetchClasses();
   }, [currentTeacher?.id]);
   console.log("classes by teacher , ", classes);
-  
+
   if (schoolDataLoading || loading) {
     return (
       <DashboardLayout title="My Classes">

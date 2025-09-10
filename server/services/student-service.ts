@@ -12,13 +12,12 @@ export class StudentService {
       userId: student.userId ? student.userId.toString() : null,
       schoolId: student.schoolId.toString(),
       classId: student.classId ? student.classId.toString() : null,
-      dateOfBirth: student.dateOfBirth.toISOString().split('T')[0], // Convert Date to string
-      admissionDate: student.admissionDate.toISOString().split('T')[0], // Convert Date to string
+      dateOfBirth: student.dateOfBirth.toISOString().split("T")[0], // Convert Date to string
+      admissionDate: student.admissionDate.toISOString().split("T")[0], // Convert Date to string
       createdAt: student.createdAt.toISOString(),
       updatedAt: student.createdAt.toISOString(), // MongoDB doesn't have updatedAt, use createdAt
     };
   }
-
   // Generate roll number based on class grade, section and student count
   static async generateRollNumber(classId: string): Promise<string> {
     try {
@@ -28,39 +27,44 @@ export class StudentService {
         throw new Error("Class not found");
       }
 
-      const grade = classInfo.grade;
+      // Grade (no leading zero)
+      const grade = classInfo.grade.toString();
+
+      // Section letter → number (A=1, B=2, …)
       const section = classInfo.section.toUpperCase();
-      
-      // Convert section letter to single digit (A=1, B=2, C=3, etc.)
-      const sectionNumber = section.charCodeAt(0) - 'A'.charCodeAt(0) + 1;
-      
-      // Count existing students in this class to get the next student number
-      const existingStudentsCount = await storage.getStudentCountByClass(classId);
-      const studentNumber = (existingStudentsCount + 1).toString().padStart(2, '0');
-      
+      const sectionNumber = section.charCodeAt(0) - "A".charCodeAt(0) + 1;
+
+      // Student number (always 2 digits)
+      const existingStudentsCount = await storage.getStudentCountByClass(
+        classId
+      );
+      const studentNumber = (existingStudentsCount + 1)
+        .toString()
+        .padStart(2, "0");
+
       // Format: [grade][section number][student number]
       const rollNumber = `${grade}${sectionNumber}${studentNumber}`;
-      
+
       return rollNumber;
     } catch (error) {
-      console.error('Error generating roll number:', error);
-      throw new Error('Failed to generate roll number');
+      console.error("Error generating roll number:", error);
+      throw new Error("Failed to generate roll number");
     }
   }
 
   // Create a new student
   static async createStudent(studentData: InsertStudent) {
     // Generate roll number if classId is provided
-    let rollNo = '';
+    let rollNo = "";
     if (studentData.classId) {
       rollNo = await this.generateRollNumber(studentData.classId);
     }
-    
+
     const studentWithRollNo = {
       ...studentData,
-      rollNo
+      rollNo,
     };
-    
+
     const student = await storage.createStudent(studentWithRollNo);
     return this.transformStudentToFrontend(student);
   }
@@ -74,7 +78,7 @@ export class StudentService {
   // Get students by school
   static async getStudentsBySchool(schoolId: string) {
     const students = await storage.getStudentsBySchool(schoolId);
-    return students.map(student => this.transformStudentToFrontend(student));
+    return students.map((student) => this.transformStudentToFrontend(student));
   }
 
   // Update student
@@ -82,31 +86,35 @@ export class StudentService {
     // Get current student data to check if class changed
     const currentStudent = await storage.getStudent(id);
     const oldClassId = currentStudent?.classId?.toString();
-    
+
     // Convert string IDs to ObjectIds for database operations
     const processedData: any = { ...studentData };
-    if (studentData.schoolId && typeof studentData.schoolId === 'string') {
-      processedData.schoolId = new mongoose.Types.ObjectId(studentData.schoolId);
+    if (studentData.schoolId && typeof studentData.schoolId === "string") {
+      processedData.schoolId = new mongoose.Types.ObjectId(
+        studentData.schoolId
+      );
     }
-    if (studentData.userId && typeof studentData.userId === 'string') {
+    if (studentData.userId && typeof studentData.userId === "string") {
       processedData.userId = new mongoose.Types.ObjectId(studentData.userId);
     }
-    if (studentData.classId && typeof studentData.classId === 'string') {
+    if (studentData.classId && typeof studentData.classId === "string") {
       processedData.classId = new mongoose.Types.ObjectId(studentData.classId);
     }
-    if (studentData.parentId && typeof studentData.parentId === 'string') {
-      processedData.parentId = new mongoose.Types.ObjectId(studentData.parentId);
+    if (studentData.parentId && typeof studentData.parentId === "string") {
+      processedData.parentId = new mongoose.Types.ObjectId(
+        studentData.parentId
+      );
     }
-    
+
     // If class is changing, generate new roll number
     const newClassId = studentData.classId;
     if (newClassId && newClassId !== oldClassId) {
       const newRollNo = await this.generateRollNumber(newClassId);
       processedData.rollNo = newRollNo;
     }
-    
+
     const student = await storage.updateStudent(id, processedData);
-    
+
     // If class changed, reorder roll numbers in both old and new classes
     if (newClassId && newClassId !== oldClassId) {
       if (oldClassId) {
@@ -114,12 +122,12 @@ export class StudentService {
       }
       await this.reorderRollNumbers(newClassId);
     }
-    
+
     return student ? this.transformStudentToFrontend(student) : null;
   }
 
   // Update student status
-  static async updateStudentStatus(id: string, status: 'Active' | 'Inactive') {
+  static async updateStudentStatus(id: string, status: "Active" | "Inactive") {
     const student = await storage.updateStudent(id, { status });
     return student ? this.transformStudentToFrontend(student) : null;
   }
@@ -131,46 +139,48 @@ export class StudentService {
     if (!student || !student.classId) {
       return await storage.deleteStudent(id);
     }
-    
+
     const classId = student.classId.toString();
     const deletedRollNo = student.rollNo;
-    
+
     // Delete the student
     const result = await storage.deleteStudent(id);
-    
+
     if (result) {
       // Reorder roll numbers for remaining students in the same class
       await this.reorderRollNumbers(classId);
     }
-    
+
     return result;
   }
-  
+
   // Reorder roll numbers for all students in a class
   static async reorderRollNumbers(classId: string) {
     try {
       // Get class information
       const classInfo = await storage.getClass(classId);
       if (!classInfo) return;
-      
+
       const grade = classInfo.grade;
       const section = classInfo.section.toUpperCase();
-      const sectionNumber = section.charCodeAt(0) - 'A'.charCodeAt(0) + 1;
-      
+      const sectionNumber = section.charCodeAt(0) - "A".charCodeAt(0) + 1;
+
       // Get all students in the class ordered by roll number
       const students = await storage.getStudentsByClass(classId);
-      
+
       // Update roll numbers sequentially
       for (let i = 0; i < students.length; i++) {
-        const studentNumber = (i + 1).toString().padStart(2, '0');
+        const studentNumber = (i + 1).toString().padStart(2, "0");
         const newRollNo = `${grade}${sectionNumber}${studentNumber}`;
-        
+
         if (students[i].rollNo !== newRollNo) {
-          await storage.updateStudent((students[i]._id as any).toString(), { rollNo: newRollNo });
+          await storage.updateStudent((students[i]._id as any).toString(), {
+            rollNo: newRollNo,
+          });
         }
       }
     } catch (error) {
-      console.error('Error reordering roll numbers:', error);
+      console.error("Error reordering roll numbers:", error);
     }
   }
 }

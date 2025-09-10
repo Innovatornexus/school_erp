@@ -88,8 +88,8 @@ export default function ClassSubjectsPage() {
           id: mapping.id,
           subject_id: mapping.subject_id,
           teacher_id: mapping.teacher_id,
-          subject_name: subject?.subject_name || "Unknown Subject",
-          teacher_name: teacher?.full_name || null,
+          subject_name: subject?.subjectName || "Unknown Subject",
+          teacher_name: teacher?.fullName || null,
         };
       });
       setMappings(processedMappings);
@@ -142,14 +142,14 @@ export default function ClassSubjectsPage() {
         const processedMappings = rawMappings.map((mapping) => {
           const subject = subjects.find((s) => s.id === mapping.subject_id);
           const teacher = teachers.find(
-          (t: StaffItem) => t.id === mapping.teacher_id
-        );
+            (t: StaffItem) => t.id === mapping.teacher_id
+          );
           return {
             id: mapping.id,
             subject_id: mapping.subject_id,
             teacher_id: mapping.teacher_id,
-            subject_name: subject?.subject_name || "Unknown Subject",
-            teacher_name: teacher?.full_name || null,
+            subject_name: subject?.subjectName || "Unknown Subject",
+            teacher_name: teacher?.fullName || null,
           };
         });
         setMappings(processedMappings);
@@ -203,14 +203,14 @@ export default function ClassSubjectsPage() {
         const processedMappings = rawMappings.map((mapping) => {
           const subject = subjects.find((s) => s.id === mapping.subject_id);
           const teacher = teachers.find(
-          (t: StaffItem) => t.id === mapping.teacher_id
-        );
+            (t: StaffItem) => t.id === mapping.teacher_id
+          );
           return {
             id: mapping.id,
             subject_id: mapping.subject_id,
             teacher_id: mapping.teacher_id,
-            subject_name: subject?.subject_name || "Unknown Subject",
-            teacher_name: teacher?.full_name || null,
+            subject_name: subject?.subjectName || "Unknown Subject",
+            teacher_name: teacher?.fullName || null,
           };
         });
         setMappings(processedMappings);
@@ -259,7 +259,7 @@ export default function ClassSubjectsPage() {
                     <SelectContent>
                       {subjects.map((s: SubjectItem) => (
                         <SelectItem key={s.id} value={s.id.toString()}>
-                          {s.subject_name}
+                          {s.subjectName}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -278,7 +278,7 @@ export default function ClassSubjectsPage() {
                       <SelectItem value="unassigned">Unassigned</SelectItem>
                       {teachers.map((t: StaffItem) => (
                         <SelectItem key={t.id} value={t.id.toString()}>
-                          {t.full_name}
+                          {t.fullName}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -370,7 +370,7 @@ export default function ClassSubjectsPage() {
                   <SelectItem value="unassigned">Unassigned</SelectItem>
                   {teachers.map((t: StaffItem) => (
                     <SelectItem key={t.id} value={t.id.toString()}>
-                      {t.full_name}
+                      {t.fullName}
                     </SelectItem>
                   ))}
                 </SelectContent>
