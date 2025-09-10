@@ -218,13 +218,16 @@ export const StudentManager = ({
     setEditingStudent(student);
     form.reset({
       fullName: student.fullName,
-      studentEmail: student.studentEmail,
+      email: student.email,
       gender: student.gender as "male" | "female" | "other",
-      dob: new Date(student.dob),
+      dateOfBirth: new Date(student.dateOfBirth),
       classId: student.classId,
       parentContact: student.parentContact,
       admissionDate: new Date(student.admissionDate),
-      parentName: student.parentName,
+      parentName: student.parentName || "",
+      address: student.address || "",
+      status: student.status,
+      schoolId: student.schoolId,
       status: student.status,
       password: "dummyPassword", // Set dummy passwords for validation
       confirmPassword: "dummyPassword",
@@ -303,7 +306,7 @@ export const StudentManager = ({
     {
       header: "Date of Birth",
       accessorKey: "dateOfBirth",
-      cell: (student: StudentItem) => format(new Date(student.dob), "PPP"),
+      cell: (student: StudentItem) => format(new Date(student.dateOfBirth), "PPP"),
     },
     { header: "Parent Contact", accessorKey: "parentContact" },
     {

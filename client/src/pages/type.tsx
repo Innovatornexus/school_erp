@@ -1,18 +1,20 @@
 // src/types.ts
 export type StudentItem = {
-  studentEmail: string | undefined;
-  id: number;
+  id: string;
+  userId: string;
+  schoolId: string;
+  classId: string;
   fullName: string;
-
+  email: string;
   gender: "male" | "female" | "other";
-  dob: Date;
-  classId: number;
+  dateOfBirth: Date;
   parentName: string;
   parentContact: string;
+  parentId?: string;
   admissionDate: Date;
   status: "Active" | "Inactive";
-  address: string;
-  rollNo: number;
+  address?: string;
+  rollNo?: number;
 };
 // export type ClassItem = {
 //   id: number;
