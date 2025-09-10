@@ -52,7 +52,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useQuery } from "@tanstack/react-query";
 import { StudentManager } from "./student-list-page";
-import { Class, School, Teacher, Student } from "@/types";
+import { Class, School, Teacher, Student } from "@/pages/type";
 import { useAuth } from "@/hooks/use-auth";
 import { useSchoolData } from "@/context/SchoolDataContext";
 

@@ -20,7 +20,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { useSchoolData } from "@/context/SchoolDataContext";
-import { Class, Subject, Teacher } from "@/types";
+import { Class, Subject, Teacher } from "@/pages/type";
 
 export default function TeacherSubjectDetailPage() {
   const [match, params] = useRoute(
@@ -35,9 +35,7 @@ export default function TeacherSubjectDetailPage() {
   const subjectId = params?.subjectId || "";
 
   const selectedClass = classes.find((cls: Class) => cls.id === classId);
-  const selectedSubject = subjects.find(
-    (sub: Subject) => sub.id === subjectId
-  );
+  const selectedSubject = subjects.find((sub: Subject) => sub.id === subjectId);
 
   // Find the teacher assigned to this specific class-subject mapping
   let assignedTeacher = null;

@@ -40,7 +40,7 @@ import {
 import { format } from "date-fns";
 import { CalendarIcon, Edit, Trash, UserPlus } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Class, Student } from "@/types";
+import { Class, Student } from "@/pages/type";
 import { useAuth } from "@/hooks/use-auth";
 
 type Props = {

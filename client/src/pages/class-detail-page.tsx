@@ -16,8 +16,9 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { StudentManager } from "./student-list-page";
-import { Student, Class, Teacher } from "@/types";
+import { Student, Class, Teacher } from "@/pages/type";
 import { useSchoolData } from "@/context/SchoolDataContext";
+import { StudentItem } from "./type";
 
 /**
  * Class detail page that displays students of a specific grade-section combination
@@ -79,9 +80,7 @@ export default function ClassDetailPage() {
   );
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingStudent, setEditingStudent] = useState<Student | null>(
-    null
-  );
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [studentToDelete, setStudentToDelete] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
@@ -148,9 +147,7 @@ export default function ClassDetailPage() {
   // Handle edit student
   const openEditDialog = (student: Student) => {
     setEditingStudent(student);
-    const classItem = classes.find(
-      (cls: Class) => cls.id === student.classId
-    );
+    const classItem = classes.find((cls: Class) => cls.id === student.classId);
 
     form.reset({
       fullName: student.fullName,
@@ -267,7 +264,7 @@ export default function ClassDetailPage() {
         <StudentManager
           studentData={studentsInClass}
           classData={classes}
-          fetchStudents={refetchData}
+          fetchStudents={fetchData}
         />
       </div>
     </DashboardLayout>

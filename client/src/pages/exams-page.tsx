@@ -64,7 +64,7 @@ import { queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import DashboardLayout from "@/layout/dashboard-layout";
 import { useSchoolData } from "@/context/SchoolDataContext";
-import { Exam, Subject, Class, Teacher } from "@/types";
+import { Exam, Subject, Class, Teacher } from "@/pages/type";
 
 // No changes to schema needed here
 const examSubjectSchema = z.object({

@@ -49,7 +49,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { School, Teacher } from "@/types";
+import { School, Teacher } from "@/pages/type";
 import { useAuth } from "@/hooks/use-auth";
 import { useSchoolData } from "@/context/SchoolDataContext";
 import { Redirect } from "wouter";
@@ -158,7 +158,7 @@ export default function StaffPage() {
         // Include password for backend user creation
         password: data.password,
       };
-      
+
       console.log("Creating teacher with data:", teacherData);
 
       const response = await fetch("/api/teachers", {
@@ -170,16 +170,18 @@ export default function StaffPage() {
       if (!response.ok) {
         const errorData = await response.json();
         console.log("Teacher creation failed:", errorData);
-        
+
         // Handle specific error cases
         if (errorData.error && errorData.error.code === 11000) {
           // Duplicate key error
           if (errorData.error.keyValue && errorData.error.keyValue.email) {
-            throw new Error(`A user with email '${errorData.error.keyValue.email}' already exists`);
+            throw new Error(
+              `A user with email '${errorData.error.keyValue.email}' already exists`
+            );
           }
           throw new Error("A user with this email already exists");
         }
-        
+
         throw new Error(errorData.message || "Failed to create teacher");
       }
 
@@ -292,9 +294,7 @@ export default function StaffPage() {
       phoneNumber: staff.phoneNumber,
       // Join the array back into a string for the Textarea field
       subjectSpecialization: staff.subjectSpecialization, // ✅ no need to join
-      joiningDate: staff.joiningDate
-        ? new Date(staff.joiningDate)
-        : new Date(),
+      joiningDate: staff.joiningDate ? new Date(staff.joiningDate) : new Date(),
       status: staff.status,
     });
     setIsDialogOpen(true);

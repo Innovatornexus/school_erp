@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useSchoolData } from "@/context/SchoolDataContext";
-import { Class, Subject, Teacher } from "@/types";
+import { Class, StaffItem, Subject, SubjectItem, Teacher } from "@/pages/type";
 
 type ClassSubjectMapping = {
   id: string;

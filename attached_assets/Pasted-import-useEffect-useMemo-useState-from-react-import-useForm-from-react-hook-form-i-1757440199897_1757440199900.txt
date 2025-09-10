@@ -103,7 +103,7 @@ type StaffFormValues = z.infer<typeof staffFormSchema>;
 export default function StaffPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { schoolData, refetchData, teachers, subjects } = useSchoolData();
+  const { schoolData, fetchData, teachers, subjects } = useSchoolData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [staffData, setStaffData] = useState<StaffItem[]>([]);
@@ -209,7 +209,7 @@ export default function StaffPage() {
         throw new Error(errorData.message || "Failed to create staff");
       }
 
-      await refetchData(); // Refresh data from context
+      await fetchData(); // Refresh data from context
     } catch (error) {
       console.error("Error creating staff:", error);
       throw error;
@@ -247,7 +247,7 @@ export default function StaffPage() {
         description: `Status changed to ${newStatus}`,
       });
 
-      await refetchData(); // Refresh data
+      await fetchData(); // Refresh data
     } catch (error) {
       toast({
         title: "Error",
@@ -293,7 +293,7 @@ export default function StaffPage() {
           : "New staff added successfully",
       });
       setIsDialogOpen(false);
-      await refetchData();
+      await fetchData();
     } catch (error) {
       console.log("error ::", error);
       toast({
@@ -352,7 +352,7 @@ export default function StaffPage() {
         return;
       }
 
-      await refetchData();
+      await fetchData();
       toast({
         title: "Success",
         description: "Teacher removed successfully",

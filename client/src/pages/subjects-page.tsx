@@ -34,7 +34,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, Edit, PlusCircle, Trash } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { Subject, Teacher, Class } from "@/types";
+import { Subject, Teacher, Class } from "@/pages/type";
 import { useSchoolData } from "@/context/SchoolDataContext";
 import { Redirect } from "wouter";
 

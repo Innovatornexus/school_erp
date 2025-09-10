@@ -41,7 +41,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Edit, FolderPlus, Search, Trash } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { Class, Teacher } from "@/types";
+import { Class, ClassItem, Teacher } from "@/pages/type";
 import { useSchoolData } from "@/context/SchoolDataContext";
 import { Input } from "@/components/ui/input";
 
@@ -54,8 +54,7 @@ const formSchema = z.object({
 
 export default function ClassesPage() {
   const { user } = useAuth();
-  const { classes, loading, schoolData, fetchData, teachers } =
-    useSchoolData();
+  const { classes, loading, schoolData, fetchData, teachers } = useSchoolData();
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -172,7 +171,7 @@ export default function ClassesPage() {
         }.`,
       });
 
-      refetchData();
+      fetchData();
       setIsDialogOpen(false);
     } catch (error: any) {
       toast({
@@ -207,7 +206,7 @@ export default function ClassesPage() {
           description: "Class successfully deleted.",
         });
 
-        refetchData();
+        fetchData();
         setIsDeleteModalOpen(false);
       } catch (error: any) {
         toast({

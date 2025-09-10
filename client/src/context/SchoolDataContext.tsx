@@ -6,7 +6,14 @@ import React, {
   useCallback,
 } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { School, Class, Subject, Student, Teacher, SchoolDataContextType } from "@/types";
+import {
+  School,
+  Class,
+  Subject,
+  Student,
+  Teacher,
+  SchoolDataContextType,
+} from "@/pages/type";
 
 // Using shared types from types.ts instead of duplicating
 
@@ -59,10 +66,10 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({
           throw new Error("Failed to fetch schools for super admin");
         const schools = await schoolsRes.json();
         console.log("SchoolDataProvider: Fetched all schools:", schools);
-        
+
         // For super admin, we'll use the first school or empty data if no schools
         const firstSchool = schools.length > 0 ? schools[0] : null;
-        
+
         schoolDataResponse = {
           school: firstSchool,
           classes: [],
@@ -70,7 +77,7 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({
           students: [],
           teachers: [],
         };
-        
+
         // If there's a school, fetch its data
         if (firstSchool) {
           const [classesRes, subjectsRes, studentsRes, teachersRes] =
